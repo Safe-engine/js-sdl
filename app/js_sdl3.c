@@ -154,6 +154,33 @@ static JSValue js_drawTexture(
     return JS_UNDEFINED;
 }
 
+/* --- Binding: drawTextureRotated(id, x, y, w, h, angle, flipX, flipY) --- */
+static JSValue js_drawTextureRotated(
+    JSContext *ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst *argv)
+{
+    int id, flipX, flipY;
+    double dx, dy, dw, dh, angle;
+    JS_ToInt32(ctx, &id,    argv[0]);
+    JS_ToFloat64(ctx, &dx,  argv[1]);
+    JS_ToFloat64(ctx, &dy,  argv[2]);
+    JS_ToFloat64(ctx, &dw,  argv[3]);
+    JS_ToFloat64(ctx, &dh,  argv[4]);
+    JS_ToFloat64(ctx, &angle, argv[5]);
+    JS_ToInt32(ctx, &flipX, argv[6]);
+    JS_ToInt32(ctx, &flipY, argv[7]);
+
+    SDL_FRect dst = { (float)dx, (float)dy, (float)dw, (float)dh };
+    SDL_FlipMode flip = SDL_FLIP_NONE;
+    if (flipX) flip |= SDL_FLIP_HORIZONTAL;
+    if (flipY) flip |= SDL_FLIP_VERTICAL;
+
+    SDL_RenderTextureRotated(g_renderer, g_textures[id], NULL, &dst, (double)angle, NULL, flip);
+    return JS_UNDEFINED;
+}
+
 /* --- Binding: drawLabelTTF(id, text, x, y) --- */
 static JSValue js_drawLabelTTF(
     JSContext *ctx,
@@ -284,6 +311,7 @@ static const JSCFunctionListEntry funcs[] =
     JS_CFUNC_DEF("loadFont",                2, js_loadFont),
     JS_CFUNC_DEF("clear",                   0, js_clear),
     JS_CFUNC_DEF("drawTexture",             3, js_drawTexture),
+    JS_CFUNC_DEF("drawTextureRotated",      8, js_drawTextureRotated),
     JS_CFUNC_DEF("drawLabelTTF",            4, js_drawLabelTTF),
     JS_CFUNC_DEF("present",                 0, js_present),
     JS_CFUNC_DEF("onInit",                  1, js_onInit),

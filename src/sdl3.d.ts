@@ -22,6 +22,13 @@ declare module "sdl3" {
   /** Draw a previously-loaded texture at (x, y). */
   export function drawTexture(id: number, x: number, y: number): void;
 
+  /** Draw a texture with rotation, scale, and flip support. */
+  export function drawTextureRotated(
+    id: number, x: number, y: number,
+    w: number, h: number,
+    angle: number, flipX: boolean, flipY: boolean
+  ): void;
+
   /** Draw text using a previously-loaded font. */
   export function drawLabelTTF(
     fontId: number,

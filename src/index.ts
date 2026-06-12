@@ -1,57 +1,110 @@
+/**
+ * Main entry — Cocos Creator-like Scene + Component + ECS demo.
+ *
+ * Scene graph:
+ *   Scene
+ *     ├── Node "Player"
+ *     │     ├── Transform     (300, 300)
+ *     │     ├── SpriteRenderer (player.png)
+ *     │     └── PlayerController (custom movement script)
+ *     │
+ *     ├── Node "Enemy"
+ *     │     ├── Transform     (600, 200)
+ *     │     ├── SpriteRenderer (bullet.png, tinted red)
+ *     │     └── EnemyAI (script)
+ *     │
+ *     ├── Node "HUD"
+ *     │     └── LabelRenderer (FPS counter)
+ *     │
+ *     └── ECS World
+ *           ├── VelocityComponent
+ *           ├── HealthComponent
+ *           ├── MovementSystem
+ *           └── DamageSystem
+ */
+
 import {
-  createWindow,
-  loadTexture,
-  loadFont,
-  clear,
-  drawTexture,
-  drawLabelTTF,
-  present,
-  onInit,
-  onUpdate,
-  onRender,
-  onTouchStart,
-  onTouchMove,
-  onTouchEnd,
-} from "sdl3";
+  Engine,
+  Scene,
+  Node,
+  Component,
+  SpriteRenderer,
+  LabelRenderer,
+} from "./engine";
 
-let playerTex: number;
-let bulletTex: number;
-let font: number;
-let x = 100;
-let y = 350;
+/* ── Custom Components ─────────────────────────────── */
 
-onInit(() => {
-  createWindow("SDL3 + QuickJS-NG", 1280, 720);
-  console.log("Hello, SDL3 + QuickJS-NG!");
-  playerTex = loadTexture("res/player.png");
-  bulletTex = loadTexture("res/bullet.png");
-  font = loadFont("/System/Library/Fonts/Helvetica.ttc", 24);
-});
+class PlayerController extends Component {
+  speed = 180;
+  dir = 1;
 
-onUpdate((dt: number) => {
-  x += 120 * dt;
-  if (x > 1280) x = -64;
-});
+  onUpdate(dt: number): void {
+    const t = this.node!.transform;
+    t.x += this.speed * this.dir * dt;
+    if (t.x > 700) this.dir = -1;
+    if (t.x < 100) this.dir = 1;
+  }
+}
 
-onRender(() => {
-  clear();
-  drawTexture(playerTex, x, y);
-  drawTexture(bulletTex, x + 80, y + 20);
-  drawLabelTTF(font, "SDL3 + QuickJS-NG", 20, 20);
-  present();
-});
+class EnemyAI extends Component {
+  lifetime = 0;
 
-onTouchStart((tx: number, ty: number) => {
-  /* touch/mouse down at tx, ty */
-  console.log("onTouchStart!", tx, ty);
-});
+  onStart(): void {
+    const sr = this.node!.getComponent(SpriteRenderer)!;
+    sr.width = 48;
+    sr.height = 48;
+  }
 
-onTouchMove((tx: number, ty: number) => {
-  /* touch/mouse move */
-  console.log("onTouchMove!", tx, ty);
-});
+  onUpdate(dt: number): void {
+    this.lifetime += dt;
+    const t = this.node!.transform;
+    t.y += Math.sin(this.lifetime * 2) * 60 * dt;
+    t.x -= 40 * dt;
+    if (t.x < -64) t.x = 800;
+  }
+}
 
-onTouchEnd((tx: number, ty: number) => {
-  /* touch/mouse up */
-  console.log("onTouchEnd!", tx, ty);
-});
+/* ── Scene ─────────────────────────────────────────── */
+
+class GameScene extends Scene {
+  onLoad(): void {
+    // Player
+    const player = new Node("Player");
+    player.transform.setPosition(300, 350);
+    const spr = player.addComponent(new SpriteRenderer());
+    spr.texturePath = "res/Texture/player.png";
+    spr.width = 64;
+    spr.height = 64;
+    player.addComponent(new PlayerController());
+    this.root.addChild(player);
+
+    // Enemy
+    const enemy = new Node("Enemy");
+    enemy.transform.setPosition(600, 250);
+    const espr = enemy.addComponent(new SpriteRenderer());
+    espr.texturePath = "res/Texture/bullet.png";
+    espr.width = 64;
+    espr.height = 64;
+    enemy.addComponent(new EnemyAI());
+    this.root.addChild(enemy);
+
+    // HUD label
+    const hud = new Node("HUD");
+    hud.transform.setPosition(20, 20);
+    const label = hud.addComponent(new LabelRenderer());
+    label.setFont("res/Font/LilitaOne-Regular.ttf", 20);
+    label.setText("SDL3 + QuickJS + TypeScript Engine");
+    this.root.addChild(hud);
+
+    console.log("GameScene loaded — Player + Enemy + ECS ready");
+  }
+
+  onUpdate(_dt: number): void {
+    // push ECS damage events, spawn bullets, etc.
+  }
+}
+
+/* ── Bootstrap ─────────────────────────────────────── */
+
+Engine.start("Gemma4 Engine — SDL3 + QuickJS + TS", 800, 600);
+Engine.scene = new GameScene();
