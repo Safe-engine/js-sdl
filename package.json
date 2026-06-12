@@ -1,0 +1,20 @@
+{
+  "name": "gemma4-sdl",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "sync-res": "bun ./node_modules/safex-sync-res/src/index.ts",
+    "predev": "bun run sync-res",
+    "build": "vite build",
+    "dev": "vite build --watch"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vite": "^6.3.0"
+  },
+  "dependencies": {
+    "entityx-ts": "^2.3.1",
+    "safex-sync-res": "^1.4.2",
+    "vite-plugin-safex-transform": "^1.0.4"
+  }
+}

@@ -18,10 +18,10 @@ int main()
     ctx = JS_NewContext(rt);
     js_init_sdl3(ctx);
 
-    /* eval main.js module */
-    FILE *fp = fopen("src/main.js", "rb");
+    /* eval bundled dist/index.js */
+    FILE *fp = fopen("dist/index.js", "rb");
     if (!fp) {
-        fprintf(stderr, "cannot open src/main.js\n");
+        fprintf(stderr, "cannot open dist/index.js (run: npm run build)\n");
         return 1;
     }
     fseek(fp, 0, SEEK_END);

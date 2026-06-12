@@ -238,3 +238,9 @@ release_note_draft.txt
 *.hprof
 
 .env
+
+# TypeScript / Vite build output
+dist/
+
+# Node.js dependencies
+node_modules/
