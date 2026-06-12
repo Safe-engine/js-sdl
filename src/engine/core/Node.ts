@@ -1,3 +1,4 @@
+import { Constructor } from "entityx-ts";
 import { Component } from "./Component";
 import { Transform } from "./Transform";
 
@@ -10,23 +11,22 @@ export class Node {
 
   constructor(name: string = "") {
     this.name = name;
-    this.addComponent(new Transform());
+    this.addComponent(Transform);
   }
 
   get transform(): Transform {
     return this.getComponent(Transform)!;
   }
 
-  addComponent<T extends Component>(c: T): T {
-    c.node = this;
-    this.components.push(c);
-    c.onAwake();
-    return c;
+  addComponent<T extends Component>(c: Constructor<T>): T {
+    const component = new c();
+    component.node = this;
+    this.components.push(component);
+    component.onAwake();
+    return component;
   }
 
-  getComponent<T extends Component>(
-    type: new (...args: any[]) => T
-  ): T | null {
+  getComponent<T extends Component>(type: Constructor<T>): T | null {
     for (const c of this.components) {
       if (c instanceof type) return c as T;
     }

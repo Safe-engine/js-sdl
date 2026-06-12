@@ -1,16 +1,13 @@
 import { Node } from "./Node";
-import { ECSManager } from "../ecs/ECSManager";
 
 export class Scene {
   readonly name: string;
   readonly root: Node;
-  ecs: ECSManager;
   private _started = false;
 
   constructor(name: string = "Scene") {
     this.name = name;
     this.root = new Node("root");
-    this.ecs = new ECSManager();
   }
 
   /** Override: called once when scene starts. */
@@ -29,7 +26,6 @@ export class Scene {
       this._started = true;
     }
     this.onUpdate(dt);
-    this.ecs.update(dt);
     this.root._updateTree(dt);
   }
 

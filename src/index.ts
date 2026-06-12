@@ -71,27 +71,27 @@ class GameScene extends Scene {
     // Player
     const player = new Node("Player");
     player.transform.setPosition(300, 350);
-    const spr = player.addComponent(new SpriteRenderer());
+    const spr = player.addComponent(SpriteRenderer);
     spr.texturePath = "res/Texture/player.png";
     spr.width = 64;
     spr.height = 64;
-    player.addComponent(new PlayerController());
+    player.addComponent(PlayerController);
     this.root.addChild(player);
 
     // Enemy
     const enemy = new Node("Enemy");
     enemy.transform.setPosition(600, 250);
-    const espr = enemy.addComponent(new SpriteRenderer());
+    const espr = enemy.addComponent(SpriteRenderer);
     espr.texturePath = "res/Texture/bullet.png";
     espr.width = 64;
     espr.height = 64;
-    enemy.addComponent(new EnemyAI());
+    enemy.addComponent(EnemyAI);
     this.root.addChild(enemy);
 
     // HUD label
     const hud = new Node("HUD");
     hud.transform.setPosition(20, 20);
-    const label = hud.addComponent(new LabelRenderer());
+    const label = hud.addComponent(LabelRenderer);
     label.setFont("res/Font/LilitaOne-Regular.ttf", 20);
     label.setText("SDL3 + QuickJS + TS (Hot Reload Enabled)");
     this.root.addChild(hud);
