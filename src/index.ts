@@ -93,7 +93,7 @@ class GameScene extends Scene {
     hud.transform.setPosition(20, 20);
     const label = hud.addComponent(new LabelRenderer());
     label.setFont("res/Font/LilitaOne-Regular.ttf", 20);
-    label.setText("SDL3 + QuickJS + TypeScript Engine");
+    label.setText("SDL3 + QuickJS + TS (Hot Reload Enabled)");
     this.root.addChild(hud);
 
     console.log("GameScene loaded — Player + Enemy + ECS ready");
