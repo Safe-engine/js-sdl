@@ -1,7 +1,7 @@
 ### Install on macOS (Homebrew)
 
 ```bash
-brew install sdl3 sdl3_image
+brew install sdl3 sdl3_image sdl3_ttf
 ```
 
 ### Install on Windows (vcpkg)

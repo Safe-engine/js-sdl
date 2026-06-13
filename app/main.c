@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include <SDL3/SDL.h>
+#include <SDL3_ttf/SDL_ttf.h>
 
 #include <quickjs.h>
 
@@ -13,6 +14,11 @@ static JSContext *ctx;
 int main()
 {
     SDL_Init(SDL_INIT_VIDEO);
+
+    if (!TTF_Init()) {
+        fprintf(stderr, "TTF_Init Error: %s\n", SDL_GetError());
+        return 1;
+    }
 
     rt = JS_NewRuntime();
     ctx = JS_NewContext(rt);
@@ -113,6 +119,7 @@ int main()
         SDL_Delay(1);
     }
 
+    TTF_Quit();
     SDL_Quit();
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
