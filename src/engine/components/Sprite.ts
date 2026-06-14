@@ -2,7 +2,7 @@ import { Component } from "../core/Component";
 import { Transform } from "../core/Transform";
 import { loadTexture, drawTextureRotated } from "sdl3";
 
-export class SpriteRenderer extends Component {
+export class Sprite extends Component {
   texturePath = "";
   textureId = -1;
   width = 64;

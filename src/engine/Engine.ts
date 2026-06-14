@@ -1,4 +1,14 @@
-import { createWindow, onInit, onUpdate, onRender, clear, present } from "sdl3";
+import {
+  createWindow,
+  onInit,
+  onUpdate,
+  onRender,
+  onTouchStart,
+  onTouchMove,
+  onTouchEnd,
+  clear,
+  present,
+} from "sdl3";
 import { Scene } from "./core/Scene";
 
 class EngineImpl {
@@ -26,6 +36,18 @@ class EngineImpl {
         this._currentScene.render();
       }
       present();
+    });
+
+    onTouchStart((x: number, y: number) => {
+      this._currentScene?.onTouchStart(x, y);
+    });
+
+    onTouchMove((x: number, y: number) => {
+      this._currentScene?.onTouchMove(x, y);
+    });
+
+    onTouchEnd((x: number, y: number) => {
+      this._currentScene?.onTouchEnd(x, y);
     });
   }
 

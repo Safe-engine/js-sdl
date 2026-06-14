@@ -19,6 +19,15 @@ export class Scene {
   /** Override: called after all rendering. */
   onRender(): void {}
 
+  /** Override: called when a pointer is pressed. */
+  onTouchStart(_x: number, _y: number): void {}
+
+  /** Override: called while a pressed pointer moves. */
+  onTouchMove(_x: number, _y: number): void {}
+
+  /** Override: called when a pointer is released. */
+  onTouchEnd(_x: number, _y: number): void {}
+
   /** Engine-internal: update all logic. */
   tick(dt: number): void {
     if (!this._started) {

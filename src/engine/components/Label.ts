@@ -2,7 +2,7 @@ import { Component } from "../core/Component";
 import { Transform } from "../core/Transform";
 import { loadFont, drawLabelTTF } from "sdl3";
 
-export class LabelRenderer extends Component {
+export class Label extends Component {
   text = "";
   fontPath = "";
   fontSize = 24;

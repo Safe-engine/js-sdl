@@ -1,35 +1,11 @@
-/**
- * Main entry — Cocos Creator-like Scene + Component + ECS demo.
- *
- * Scene graph:
- *   Scene
- *     ├── Node "Player"
- *     │     ├── Transform     (300, 300)
- *     │     ├── SpriteRenderer (player.png)
- *     │     └── PlayerController (custom movement script)
- *     │
- *     ├── Node "Enemy"
- *     │     ├── Transform     (600, 200)
- *     │     ├── SpriteRenderer (bullet.png, tinted red)
- *     │     └── EnemyAI (script)
- *     │
- *     ├── Node "HUD"
- *     │     └── LabelRenderer (FPS counter)
- *     │
- *     └── ECS World
- *           ├── VelocityComponent
- *           ├── HealthComponent
- *           ├── MovementSystem
- *           └── DamageSystem
- */
-
 import {
   Engine,
   Scene,
   Node,
   Component,
-  SpriteRenderer,
-  LabelRenderer,
+  Sprite,
+  Label,
+  Button,
 } from "./engine";
 
 /* ── Custom Components ─────────────────────────────── */
@@ -50,7 +26,7 @@ class EnemyAI extends Component {
   lifetime = 0;
 
   onStart(): void {
-    const sr = this.node!.getComponent(SpriteRenderer)!;
+    const sr = this.node!.getComponent(Sprite)!;
     sr.width = 48;
     sr.height = 48;
   }
@@ -67,11 +43,12 @@ class EnemyAI extends Component {
 /* ── Scene ─────────────────────────────────────────── */
 
 class GameScene extends Scene {
+
   onLoad(): void {
     // Player
     const player = new Node("Player");
     player.transform.setPosition(300, 350);
-    const spr = player.addComponent(SpriteRenderer);
+    const spr = player.addComponent(Sprite);
     spr.texturePath = "res/Texture/player.png";
     spr.width = 64;
     spr.height = 64;
@@ -81,7 +58,7 @@ class GameScene extends Scene {
     // Enemy
     const enemy = new Node("Enemy");
     enemy.transform.setPosition(600, 250);
-    const espr = enemy.addComponent(SpriteRenderer);
+    const espr = enemy.addComponent(Sprite);
     espr.texturePath = "res/Texture/bullet.png";
     espr.width = 64;
     espr.height = 64;
@@ -91,7 +68,7 @@ class GameScene extends Scene {
     // HUD label
     const hud = new Node("HUD");
     hud.transform.setPosition(20, 20);
-    const label = hud.addComponent(LabelRenderer);
+    const label = hud.addComponent(Label);
     label.setFont("res/Font/LilitaOne-Regular.ttf", 20);
     label.setText("SDL3 + QuickJS + TS (Hot Reload Enabled)");
     this.root.addChild(hud);
@@ -104,7 +81,49 @@ class GameScene extends Scene {
   }
 }
 
+class HomeScene extends Scene {
+  private playButton: Button | null = null;
+
+  constructor() {
+    super("Home");
+  }
+
+  onLoad(): void {
+    const button = new Node("PlayButton");
+    button.transform.setPosition(400, 300);
+
+    const sprite = button.addComponent(Sprite);
+    sprite.texturePath = "res/Texture/button.png";
+    sprite.width = 220;
+    sprite.height = 68;
+
+    this.playButton = button.addComponent(Button);
+    this.playButton.onClick = () => {
+      Engine.scene = new GameScene();
+    };
+
+    const labelNode = new Node("PlayLabel");
+    labelNode.transform.setPosition(-34, -18);
+
+    const label = labelNode.addComponent(Label);
+    label.setFont("res/Font/LilitaOne-Regular.ttf", 30);
+    label.setText("PLAY");
+
+    button.addChild(labelNode);
+    this.root.addChild(button);
+    console.log("HomeScene loaded");
+  }
+
+  onTouchStart(x: number, y: number): void {
+    this.playButton?.handleTouchStart(x, y);
+  }
+
+  onTouchEnd(x: number, y: number): void {
+    this.playButton?.handleTouchEnd(x, y);
+  }
+}
+
 /* ── Bootstrap ─────────────────────────────────────── */
 
 Engine.start("Gemma4 Engine — SDL3 + QuickJS + TS", 800, 600);
-Engine.scene = new GameScene();
+Engine.scene = new HomeScene();

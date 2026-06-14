@@ -5,5 +5,6 @@ export { Component } from "./core/Component";
 export { Transform } from "./core/Transform";
 
 // Components
-export { SpriteRenderer } from "./components/SpriteRenderer";
-export { LabelRenderer } from "./components/LabelRenderer";
+export { Sprite } from "./components/Sprite";
+export { Label } from "./components/Label";
+export { Button } from "./components/Button";
