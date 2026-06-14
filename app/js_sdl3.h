@@ -4,6 +4,8 @@
 #include <SDL3/SDL.h>
 
 int  js_init_sdl3(JSContext *ctx);
+void js_sdl3_shutdown(JSContext *ctx);
+void js_execute_pending_job(JSRuntime *rt);
 
 /* helpers for main.c game loop */
 void js_call_onInit(JSContext *ctx);

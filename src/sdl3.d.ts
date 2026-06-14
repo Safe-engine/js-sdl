@@ -16,6 +16,18 @@ declare module "sdl3" {
   /** Load a TrueType font.  Returns a font id (or -1 on failure). */
   export function loadFont(path: string, ptsize: number): number;
 
+  /** Rasterize or acquire a cached text texture. */
+  export function loadTextTexture(fontId: number, text: string): number;
+
+  /** Release one acquired texture/text-texture reference. */
+  export function releaseTexture(id: number): void;
+
+  /** Release one acquired font reference. */
+  export function releaseFont(id: number): void;
+
+  export function getTextureWidth(id: number): number;
+  export function getTextureHeight(id: number): number;
+
   /** Clear the screen with the default background colour. */
   export function clear(): void;
 
@@ -30,17 +42,15 @@ declare module "sdl3" {
     flipX: boolean, flipY: boolean
   ): void;
 
-  /** Draw text using a previously-loaded font. */
-  export function drawLabelTTF(
-    fontId: number,
-    text: string,
-    x: number,
-    y: number,
-    anchorX: number,
-    anchorY: number,
-    scaleX: number,
-    scaleY: number,
-    angle: number,
+  /** Draw a source region from a texture with rotation, scale, and flip. */
+  export function drawTextureRegionRotated(
+    id: number,
+    sourceX: number, sourceY: number,
+    sourceWidth: number, sourceHeight: number,
+    x: number, y: number,
+    w: number, h: number,
+    angle: number, centerX: number, centerY: number,
+    flipX: boolean, flipY: boolean,
   ): void;
 
   /** Present (swap) the renderer's back-buffer to the screen. */

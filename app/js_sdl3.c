@@ -2,6 +2,7 @@
 #include <SDL3_image/SDL_image.h>
 #include <SDL3_ttf/SDL_ttf.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 /* --- global state --- */
@@ -11,12 +12,32 @@ static int           g_win_w    = 1280;
 static int           g_win_h    = 720;
 
 #define MAX_TEXTURES 256
-static SDL_Texture *g_textures[MAX_TEXTURES];
-static int          g_textureCount = 0;
+typedef enum TextureKind {
+    TEXTURE_FILE,
+    TEXTURE_TEXT
+} TextureKind;
+
+typedef struct TextureAsset {
+    SDL_Texture *texture;
+    char *key;
+    int refs;
+    int width;
+    int height;
+    TextureKind kind;
+    int font_id;
+} TextureAsset;
+
+static TextureAsset g_textures[MAX_TEXTURES];
 
 #define MAX_FONTS 64
-static TTF_Font *g_fonts[MAX_FONTS];
-static int       g_fontCount = 0;
+typedef struct FontAsset {
+    TTF_Font *font;
+    char *path;
+    int ptsize;
+    int refs;
+} FontAsset;
+
+static FontAsset g_fonts[MAX_FONTS];
 
 /* --- JS callbacks --- */
 static JSValue g_onInit   = JS_UNDEFINED;
@@ -28,6 +49,63 @@ static JSValue g_touchMove  = JS_UNDEFINED;
 static JSValue g_touchEnd   = JS_UNDEFINED;
 
 /* ---- helpers ---- */
+
+static char *copy_string(const char *value)
+{
+    size_t length = strlen(value) + 1;
+    char *copy = malloc(length);
+    if (copy) memcpy(copy, value, length);
+    return copy;
+}
+
+static int find_free_texture_slot(void)
+{
+    for (int i = 0; i < MAX_TEXTURES; i++) {
+        if (!g_textures[i].texture) return i;
+    }
+    return -1;
+}
+
+static int find_free_font_slot(void)
+{
+    for (int i = 0; i < MAX_FONTS; i++) {
+        if (!g_fonts[i].font) return i;
+    }
+    return -1;
+}
+
+static int valid_texture_id(int id)
+{
+    return id >= 0 && id < MAX_TEXTURES && g_textures[id].texture;
+}
+
+static int valid_font_id(int id)
+{
+    return id >= 0 && id < MAX_FONTS && g_fonts[id].font;
+}
+
+static void release_font_id(int id);
+
+static void release_texture_id(int id)
+{
+    if (!valid_texture_id(id)) return;
+    TextureAsset *asset = &g_textures[id];
+    if (--asset->refs > 0) return;
+    SDL_DestroyTexture(asset->texture);
+    free(asset->key);
+    if (asset->kind == TEXTURE_TEXT) release_font_id(asset->font_id);
+    memset(asset, 0, sizeof(*asset));
+}
+
+static void release_font_id(int id)
+{
+    if (!valid_font_id(id)) return;
+    FontAsset *asset = &g_fonts[id];
+    if (--asset->refs > 0) return;
+    TTF_CloseFont(asset->font);
+    free(asset->path);
+    memset(asset, 0, sizeof(*asset));
+}
 
 static void js_print_exception(JSContext *ctx)
 {
@@ -93,13 +171,47 @@ static JSValue js_loadTexture(
     JSValueConst *argv)
 {
     const char *path = JS_ToCString(ctx, argv[0]);
+    if (!path) return JS_EXCEPTION;
+
+    for (int i = 0; i < MAX_TEXTURES; i++) {
+        TextureAsset *asset = &g_textures[i];
+        if (asset->texture && asset->kind == TEXTURE_FILE &&
+            strcmp(asset->key, path) == 0) {
+            asset->refs++;
+            JS_FreeCString(ctx, path);
+            return JS_NewInt32(ctx, i);
+        }
+    }
+
+    int id = find_free_texture_slot();
+    if (id < 0) {
+        JS_FreeCString(ctx, path);
+        return JS_NewInt32(ctx, -1);
+    }
+
     SDL_Texture *tex = IMG_LoadTexture(g_renderer, path);
+    if (!tex) {
+        JS_FreeCString(ctx, path);
+        return JS_NewInt32(ctx, -1);
+    }
+    char *key = copy_string(path);
+    if (!key) {
+        SDL_DestroyTexture(tex);
+        JS_FreeCString(ctx, path);
+        return JS_NewInt32(ctx, -1);
+    }
+
+    TextureAsset *asset = &g_textures[id];
+    asset->texture = tex;
+    asset->key = key;
+    asset->refs = 1;
+    asset->kind = TEXTURE_FILE;
+    float width = 0;
+    float height = 0;
+    SDL_GetTextureSize(tex, &width, &height);
+    asset->width = (int)width;
+    asset->height = (int)height;
     JS_FreeCString(ctx, path);
-
-    if (!tex) return JS_NewInt32(ctx, -1);
-
-    int id = g_textureCount++;
-    g_textures[id] = tex;
     return JS_NewInt32(ctx, id);
 }
 
@@ -111,17 +223,160 @@ static JSValue js_loadFont(
     JSValueConst *argv)
 {
     const char *path = JS_ToCString(ctx, argv[0]);
+    if (!path) return JS_EXCEPTION;
     int ptsize = 24;
     JS_ToInt32(ctx, &ptsize, argv[1]);
 
+    for (int i = 0; i < MAX_FONTS; i++) {
+        FontAsset *asset = &g_fonts[i];
+        if (asset->font && asset->ptsize == ptsize &&
+            strcmp(asset->path, path) == 0) {
+            asset->refs++;
+            JS_FreeCString(ctx, path);
+            return JS_NewInt32(ctx, i);
+        }
+    }
+
+    int id = find_free_font_slot();
+    if (id < 0) {
+        JS_FreeCString(ctx, path);
+        return JS_NewInt32(ctx, -1);
+    }
+
     TTF_Font *font = TTF_OpenFont(path, (float)ptsize);
+    if (!font) {
+        JS_FreeCString(ctx, path);
+        return JS_NewInt32(ctx, -1);
+    }
+    char *stored_path = copy_string(path);
+    if (!stored_path) {
+        TTF_CloseFont(font);
+        JS_FreeCString(ctx, path);
+        return JS_NewInt32(ctx, -1);
+    }
+
+    FontAsset *asset = &g_fonts[id];
+    asset->font = font;
+    asset->path = stored_path;
+    asset->ptsize = ptsize;
+    asset->refs = 1;
     JS_FreeCString(ctx, path);
-
-    if (!font) return JS_NewInt32(ctx, -1);
-
-    int id = g_fontCount++;
-    g_fonts[id] = font;
     return JS_NewInt32(ctx, id);
+}
+
+/* --- Binding: loadTextTexture(fontId, text) -> texture id --- */
+static JSValue js_loadTextTexture(
+    JSContext *ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst *argv)
+{
+    int font_id;
+    JS_ToInt32(ctx, &font_id, argv[0]);
+    if (!valid_font_id(font_id)) return JS_NewInt32(ctx, -1);
+
+    const char *text = JS_ToCString(ctx, argv[1]);
+    if (!text) return JS_EXCEPTION;
+
+    size_t key_length = strlen(text) + 32;
+    char *key = malloc(key_length);
+    if (!key) {
+        JS_FreeCString(ctx, text);
+        return JS_NewInt32(ctx, -1);
+    }
+    snprintf(key, key_length, "%d:%s", font_id, text);
+
+    for (int i = 0; i < MAX_TEXTURES; i++) {
+        TextureAsset *asset = &g_textures[i];
+        if (asset->texture && asset->kind == TEXTURE_TEXT &&
+            strcmp(asset->key, key) == 0) {
+            asset->refs++;
+            free(key);
+            JS_FreeCString(ctx, text);
+            return JS_NewInt32(ctx, i);
+        }
+    }
+
+    int id = find_free_texture_slot();
+    if (id < 0) {
+        free(key);
+        JS_FreeCString(ctx, text);
+        return JS_NewInt32(ctx, -1);
+    }
+
+    SDL_Color color = { 220, 220, 220, 255 };
+    SDL_Surface *surface = TTF_RenderText_Blended(
+        g_fonts[font_id].font, text, strlen(text), color);
+    JS_FreeCString(ctx, text);
+    if (!surface) {
+        free(key);
+        return JS_NewInt32(ctx, -1);
+    }
+
+    SDL_Texture *texture = SDL_CreateTextureFromSurface(g_renderer, surface);
+    if (!texture) {
+        SDL_DestroySurface(surface);
+        free(key);
+        return JS_NewInt32(ctx, -1);
+    }
+
+    TextureAsset *asset = &g_textures[id];
+    asset->texture = texture;
+    asset->key = key;
+    asset->refs = 1;
+    asset->width = surface->w;
+    asset->height = surface->h;
+    asset->kind = TEXTURE_TEXT;
+    asset->font_id = font_id;
+    g_fonts[font_id].refs++;
+    SDL_DestroySurface(surface);
+    return JS_NewInt32(ctx, id);
+}
+
+static JSValue js_releaseTexture(
+    JSContext *ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst *argv)
+{
+    int id;
+    JS_ToInt32(ctx, &id, argv[0]);
+    release_texture_id(id);
+    return JS_UNDEFINED;
+}
+
+static JSValue js_releaseFont(
+    JSContext *ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst *argv)
+{
+    int id;
+    JS_ToInt32(ctx, &id, argv[0]);
+    release_font_id(id);
+    return JS_UNDEFINED;
+}
+
+static JSValue js_getTextureWidth(
+    JSContext *ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst *argv)
+{
+    int id;
+    JS_ToInt32(ctx, &id, argv[0]);
+    return JS_NewInt32(ctx, valid_texture_id(id) ? g_textures[id].width : 0);
+}
+
+static JSValue js_getTextureHeight(
+    JSContext *ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst *argv)
+{
+    int id;
+    JS_ToInt32(ctx, &id, argv[0]);
+    return JS_NewInt32(ctx, valid_texture_id(id) ? g_textures[id].height : 0);
 }
 
 /* --- Binding: clear() --- */
@@ -149,8 +404,9 @@ static JSValue js_drawTexture(
     JS_ToFloat64(ctx, &dx, argv[1]);
     JS_ToFloat64(ctx, &dy, argv[2]);
 
+    if (!valid_texture_id(id)) return JS_UNDEFINED;
     SDL_FRect dst = { (float)dx, (float)dy, 64, 64 };
-    SDL_RenderTexture(g_renderer, g_textures[id], NULL, &dst);
+    SDL_RenderTexture(g_renderer, g_textures[id].texture, NULL, &dst);
     return JS_UNDEFINED;
 }
 
@@ -174,61 +430,50 @@ static JSValue js_drawTextureRotated(
     JS_ToInt32(ctx, &flipX, argv[8]);
     JS_ToInt32(ctx, &flipY, argv[9]);
 
+    if (!valid_texture_id(id)) return JS_UNDEFINED;
     SDL_FRect dst = { (float)dx, (float)dy, (float)dw, (float)dh };
     SDL_FPoint center = { (float)centerX, (float)centerY };
     SDL_FlipMode flip = SDL_FLIP_NONE;
     if (flipX) flip |= SDL_FLIP_HORIZONTAL;
     if (flipY) flip |= SDL_FLIP_VERTICAL;
 
-    SDL_RenderTextureRotated(g_renderer, g_textures[id], NULL, &dst, (double)angle, &center, flip);
+    SDL_RenderTextureRotated(g_renderer, g_textures[id].texture, NULL, &dst, (double)angle, &center, flip);
     return JS_UNDEFINED;
 }
 
-/* --- Binding: drawLabelTTF(id, text, x, y, anchorX, anchorY, scaleX, scaleY, angle) --- */
-static JSValue js_drawLabelTTF(
+/* --- Binding: drawTextureRegionRotated(id, sx, sy, sw, sh, x, y, w, h, angle, centerX, centerY, flipX, flipY) --- */
+static JSValue js_drawTextureRegionRotated(
     JSContext *ctx,
     JSValueConst this_val,
     int argc,
     JSValueConst *argv)
 {
-    int fid;
-    JS_ToInt32(ctx, &fid, argv[0]);
+    int id, flipX, flipY;
+    double sx, sy, sw, sh, dx, dy, dw, dh, angle, centerX, centerY;
+    JS_ToInt32(ctx, &id, argv[0]);
+    JS_ToFloat64(ctx, &sx, argv[1]);
+    JS_ToFloat64(ctx, &sy, argv[2]);
+    JS_ToFloat64(ctx, &sw, argv[3]);
+    JS_ToFloat64(ctx, &sh, argv[4]);
+    JS_ToFloat64(ctx, &dx, argv[5]);
+    JS_ToFloat64(ctx, &dy, argv[6]);
+    JS_ToFloat64(ctx, &dw, argv[7]);
+    JS_ToFloat64(ctx, &dh, argv[8]);
+    JS_ToFloat64(ctx, &angle, argv[9]);
+    JS_ToFloat64(ctx, &centerX, argv[10]);
+    JS_ToFloat64(ctx, &centerY, argv[11]);
+    JS_ToInt32(ctx, &flipX, argv[12]);
+    JS_ToInt32(ctx, &flipY, argv[13]);
 
-    const char *text = JS_ToCString(ctx, argv[1]);
-
-    double dx, dy, anchorX, anchorY, scaleX, scaleY, angle;
-    JS_ToFloat64(ctx, &dx, argv[2]);
-    JS_ToFloat64(ctx, &dy, argv[3]);
-    JS_ToFloat64(ctx, &anchorX, argv[4]);
-    JS_ToFloat64(ctx, &anchorY, argv[5]);
-    JS_ToFloat64(ctx, &scaleX, argv[6]);
-    JS_ToFloat64(ctx, &scaleY, argv[7]);
-    JS_ToFloat64(ctx, &angle, argv[8]);
-
-    /* white text */
-    SDL_Color color = { 220, 220, 220, 255 };
-
-    size_t tlen = strlen(text);
-    SDL_Surface *surf = TTF_RenderText_Blended(g_fonts[fid], text, tlen, color);
-    if (!surf) { JS_FreeCString(ctx, text); return JS_UNDEFINED; }
-
-    SDL_Texture *tex = SDL_CreateTextureFromSurface(g_renderer, surf);
-    const float width = (float)surf->w * (float)scaleX;
-    const float height = (float)surf->h * (float)scaleY;
-    const float centerX = (float)anchorX * width;
-    const float centerY = (float)anchorY * height;
-    SDL_FRect dst = {
-        (float)dx - centerX,
-        (float)dy - centerY,
-        width,
-        height
-    };
+    if (!valid_texture_id(id)) return JS_UNDEFINED;
+    SDL_FRect src = { (float)sx, (float)sy, (float)sw, (float)sh };
+    SDL_FRect dst = { (float)dx, (float)dy, (float)dw, (float)dh };
     SDL_FPoint center = { centerX, centerY };
-    SDL_RenderTextureRotated(g_renderer, tex, NULL, &dst, angle, &center, SDL_FLIP_NONE);
-
-    SDL_DestroyTexture(tex);
-    SDL_DestroySurface(surf);
-    JS_FreeCString(ctx, text);
+    SDL_FlipMode flip = SDL_FLIP_NONE;
+    if (flipX) flip |= SDL_FLIP_HORIZONTAL;
+    if (flipY) flip |= SDL_FLIP_VERTICAL;
+    SDL_RenderTextureRotated(
+        g_renderer, g_textures[id].texture, &src, &dst, angle, &center, flip);
     return JS_UNDEFINED;
 }
 
@@ -327,10 +572,15 @@ static const JSCFunctionListEntry funcs[] =
     JS_CFUNC_DEF("createWindow",            3, js_createWindow),
     JS_CFUNC_DEF("loadTexture",             1, js_loadTexture),
     JS_CFUNC_DEF("loadFont",                2, js_loadFont),
+    JS_CFUNC_DEF("loadTextTexture",         2, js_loadTextTexture),
+    JS_CFUNC_DEF("releaseTexture",          1, js_releaseTexture),
+    JS_CFUNC_DEF("releaseFont",             1, js_releaseFont),
+    JS_CFUNC_DEF("getTextureWidth",         1, js_getTextureWidth),
+    JS_CFUNC_DEF("getTextureHeight",        1, js_getTextureHeight),
     JS_CFUNC_DEF("clear",                   0, js_clear),
     JS_CFUNC_DEF("drawTexture",             3, js_drawTexture),
     JS_CFUNC_DEF("drawTextureRotated",     10, js_drawTextureRotated),
-    JS_CFUNC_DEF("drawLabelTTF",            9, js_drawLabelTTF),
+    JS_CFUNC_DEF("drawTextureRegionRotated", 14, js_drawTextureRegionRotated),
     JS_CFUNC_DEF("present",                 0, js_present),
     JS_CFUNC_DEF("onInit",                  1, js_onInit),
     JS_CFUNC_DEF("onUpdate",                1, js_onUpdate),
@@ -390,6 +640,49 @@ int js_init_sdl3(JSContext *ctx)
     js_init_module_sdl3(ctx, "sdl3");
     js_init_console(ctx);
     return 0;
+}
+
+void js_sdl3_shutdown(JSContext *ctx)
+{
+    JS_FreeValue(ctx, g_onInit);
+    JS_FreeValue(ctx, g_onUpdate);
+    JS_FreeValue(ctx, g_onRender);
+    JS_FreeValue(ctx, g_touchStart);
+    JS_FreeValue(ctx, g_touchMove);
+    JS_FreeValue(ctx, g_touchEnd);
+    g_onInit = g_onUpdate = g_onRender = JS_UNDEFINED;
+    g_touchStart = g_touchMove = g_touchEnd = JS_UNDEFINED;
+
+    for (int i = 0; i < MAX_TEXTURES; i++) {
+        if (g_textures[i].texture) {
+            SDL_DestroyTexture(g_textures[i].texture);
+            free(g_textures[i].key);
+            memset(&g_textures[i], 0, sizeof(g_textures[i]));
+        }
+    }
+    for (int i = 0; i < MAX_FONTS; i++) {
+        if (g_fonts[i].font) {
+            TTF_CloseFont(g_fonts[i].font);
+            free(g_fonts[i].path);
+            memset(&g_fonts[i], 0, sizeof(g_fonts[i]));
+        }
+    }
+
+    if (g_renderer) {
+        SDL_DestroyRenderer(g_renderer);
+        g_renderer = NULL;
+    }
+    if (g_window) {
+        SDL_DestroyWindow(g_window);
+        g_window = NULL;
+    }
+}
+
+void js_execute_pending_job(JSRuntime *rt)
+{
+    JSContext *job_ctx = NULL;
+    int status = JS_ExecutePendingJob(rt, &job_ctx);
+    if (status < 0 && job_ctx) js_print_exception(job_ctx);
 }
 
 /* --- public API for main.c --- */

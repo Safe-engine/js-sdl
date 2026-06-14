@@ -113,15 +113,17 @@ int main()
         }
 
         /* tick */
+        js_execute_pending_job(rt);
         js_call_onUpdate_dt(ctx, dt);
         js_call_onRender(ctx);
 
         SDL_Delay(1);
     }
 
-    TTF_Quit();
-    SDL_Quit();
+    js_sdl3_shutdown(ctx);
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
+    TTF_Quit();
+    SDL_Quit();
     return 0;
 }

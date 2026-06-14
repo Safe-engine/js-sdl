@@ -1,44 +1,98 @@
 import { Component } from "../core/Component";
 import { Transform } from "../core/Transform";
-import { loadFont, drawLabelTTF } from "sdl3";
+import { drawTextureRotated } from "sdl3";
+import {
+  AssetManager,
+  FontAsset,
+  TextureAsset,
+} from "../AssetManager";
 
 export class Label extends Component {
   text = "";
   fontPath = "";
   fontSize = 24;
   fontId = -1;
+  private font: FontAsset | null = null;
+  private textTexture: TextureAsset | null = null;
+  private loadedFontKey = "";
+  private loadedText = "";
 
   onStart(): void {
-    if (this.fontPath) {
-      this.fontId = loadFont(this.fontPath, this.fontSize);
-    }
+    this.ensureAssets();
   }
 
   setText(text: string): this {
+    if (this.text === text) return this;
     this.text = text;
+    this.releaseText();
     return this;
   }
 
   setFont(path: string, size: number): this {
+    if (this.fontPath === path && this.fontSize === size) return this;
+    this.releaseAssets();
     this.fontPath = path;
     this.fontSize = size;
     return this;
   }
 
   onRender(): void {
-    if (this.fontId < 0 || !this.text) return;
+    this.ensureAssets();
+    if (!this.textTexture) return;
     const t = this.node?.getComponent(Transform);
     if (!t) return;
-    drawLabelTTF(
-      this.fontId,
-      this.text,
-      t.worldX,
-      t.worldY,
-      t.anchorX,
-      t.anchorY,
-      t.worldScaleX,
-      t.worldScaleY,
+
+    const width = this.textTexture.width * t.worldScaleX;
+    const height = this.textTexture.height * t.worldScaleY;
+    drawTextureRotated(
+      this.textTexture.id,
+      t.worldX - t.anchorX * width,
+      t.worldY - t.anchorY * height,
+      width,
+      height,
       t.worldRotation,
+      t.anchorX * width,
+      t.anchorY * height,
+      false,
+      false,
     );
+  }
+
+  onDestroy(): void {
+    this.releaseAssets();
+  }
+
+  private ensureAssets(): void {
+    if (!this.fontPath || !this.text) {
+      this.releaseText();
+      return;
+    }
+
+    const fontKey = `${this.fontPath}\0${this.fontSize}`;
+    if (!this.font || this.loadedFontKey !== fontKey) {
+      this.releaseAssets();
+      this.font = AssetManager.acquireFont(this.fontPath, this.fontSize);
+      this.fontId = this.font.id;
+      this.loadedFontKey = fontKey;
+    }
+    if (!this.textTexture || this.loadedText !== this.text) {
+      this.releaseText();
+      this.textTexture = AssetManager.acquireText(this.font, this.text);
+      this.loadedText = this.text;
+    }
+  }
+
+  private releaseText(): void {
+    this.textTexture?.release();
+    this.textTexture = null;
+    this.loadedText = "";
+  }
+
+  private releaseAssets(): void {
+    this.releaseText();
+    this.font?.release();
+    this.font = null;
+    this.fontId = -1;
+    this.loadedFontKey = "";
   }
 }

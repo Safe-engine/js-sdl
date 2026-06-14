@@ -14,6 +14,7 @@ import { Scene } from "./core/Scene";
 class EngineImpl {
   private _currentScene: Scene | null = null;
   private _initialized = false;
+  private _ready = false;
 
   /** Create window and register main loop. */
   start(title: string, width: number, height: number): void {
@@ -22,6 +23,8 @@ class EngineImpl {
 
     onInit(() => {
       createWindow(title, width, height);
+      this._ready = true;
+      this._currentScene?.onLoad();
     });
 
     onUpdate((dt: number) => {
@@ -58,8 +61,9 @@ class EngineImpl {
 
   set scene(s: Scene | null) {
     if (this._currentScene === s) return;
+    this._currentScene?.root.destroy();
     this._currentScene = s;
-    if (s) {
+    if (s && this._ready) {
       s.onLoad();
     }
   }
