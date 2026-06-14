@@ -29,6 +29,16 @@ export class Label extends Component {
     if (this.fontId < 0 || !this.text) return;
     const t = this.node?.getComponent(Transform);
     if (!t) return;
-    drawLabelTTF(this.fontId, this.text, t.worldX, t.worldY);
+    drawLabelTTF(
+      this.fontId,
+      this.text,
+      t.worldX,
+      t.worldY,
+      t.anchorX,
+      t.anchorY,
+      t.worldScaleX,
+      t.worldScaleY,
+      t.worldRotation,
+    );
   }
 }

@@ -103,7 +103,7 @@ class HomeScene extends Scene {
     };
 
     const labelNode = new Node("PlayLabel");
-    labelNode.transform.setPosition(-34, -18);
+    // labelNode.transform.setPosition(-34, -18);
 
     const label = labelNode.addComponent(Label);
     label.setFont("res/Font/LilitaOne-Regular.ttf", 30);

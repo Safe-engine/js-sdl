@@ -23,8 +23,8 @@ export class Sprite extends Component {
     const t = this.node?.getComponent(Transform);
     if (!t) return;
 
-    const w = this.width * t.scaleX;
-    const h = this.height * t.scaleY;
+    const w = this.width * t.worldScaleX;
+    const h = this.height * t.worldScaleY;
     const dx = t.worldX - t.anchorX * w;
     const dy = t.worldY - t.anchorY * h;
 
@@ -32,7 +32,9 @@ export class Sprite extends Component {
       this.textureId,
       dx, dy,
       w, h,
-      t.rotation,
+      t.worldRotation,
+      t.anchorX * w,
+      t.anchorY * h,
       this.flipX, this.flipY
     );
   }

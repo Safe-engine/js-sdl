@@ -11,17 +11,42 @@ export class Transform extends Component {
   anchorY = 0.5;
 
   get worldX(): number {
-    if (!this.node?.parent) return this.x;
     const pt = this._getParentTransform();
     if (!pt) return this.x;
-    return pt.worldX + this.x * pt.scaleX;
+
+    const radians = pt.worldRotation * Math.PI / 180;
+    const cos = Math.cos(radians);
+    const sin = Math.sin(radians);
+    const x = this.x * pt.worldScaleX;
+    const y = this.y * pt.worldScaleY;
+    return pt.worldX + x * cos - y * sin;
   }
 
   get worldY(): number {
-    if (!this.node?.parent) return this.y;
     const pt = this._getParentTransform();
     if (!pt) return this.y;
-    return pt.worldY + this.y * pt.scaleY;
+
+    const radians = pt.worldRotation * Math.PI / 180;
+    const cos = Math.cos(radians);
+    const sin = Math.sin(radians);
+    const x = this.x * pt.worldScaleX;
+    const y = this.y * pt.worldScaleY;
+    return pt.worldY + x * sin + y * cos;
+  }
+
+  get worldRotation(): number {
+    const pt = this._getParentTransform();
+    return (pt?.worldRotation ?? 0) + this.rotation;
+  }
+
+  get worldScaleX(): number {
+    const pt = this._getParentTransform();
+    return (pt?.worldScaleX ?? 1) * this.scaleX;
+  }
+
+  get worldScaleY(): number {
+    const pt = this._getParentTransform();
+    return (pt?.worldScaleY ?? 1) * this.scaleY;
   }
 
   private _getParentTransform(): Transform | null {

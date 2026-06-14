@@ -154,7 +154,7 @@ static JSValue js_drawTexture(
     return JS_UNDEFINED;
 }
 
-/* --- Binding: drawTextureRotated(id, x, y, w, h, angle, flipX, flipY) --- */
+/* --- Binding: drawTextureRotated(id, x, y, w, h, angle, centerX, centerY, flipX, flipY) --- */
 static JSValue js_drawTextureRotated(
     JSContext *ctx,
     JSValueConst this_val,
@@ -162,26 +162,29 @@ static JSValue js_drawTextureRotated(
     JSValueConst *argv)
 {
     int id, flipX, flipY;
-    double dx, dy, dw, dh, angle;
+    double dx, dy, dw, dh, angle, centerX, centerY;
     JS_ToInt32(ctx, &id,    argv[0]);
     JS_ToFloat64(ctx, &dx,  argv[1]);
     JS_ToFloat64(ctx, &dy,  argv[2]);
     JS_ToFloat64(ctx, &dw,  argv[3]);
     JS_ToFloat64(ctx, &dh,  argv[4]);
     JS_ToFloat64(ctx, &angle, argv[5]);
-    JS_ToInt32(ctx, &flipX, argv[6]);
-    JS_ToInt32(ctx, &flipY, argv[7]);
+    JS_ToFloat64(ctx, &centerX, argv[6]);
+    JS_ToFloat64(ctx, &centerY, argv[7]);
+    JS_ToInt32(ctx, &flipX, argv[8]);
+    JS_ToInt32(ctx, &flipY, argv[9]);
 
     SDL_FRect dst = { (float)dx, (float)dy, (float)dw, (float)dh };
+    SDL_FPoint center = { (float)centerX, (float)centerY };
     SDL_FlipMode flip = SDL_FLIP_NONE;
     if (flipX) flip |= SDL_FLIP_HORIZONTAL;
     if (flipY) flip |= SDL_FLIP_VERTICAL;
 
-    SDL_RenderTextureRotated(g_renderer, g_textures[id], NULL, &dst, (double)angle, NULL, flip);
+    SDL_RenderTextureRotated(g_renderer, g_textures[id], NULL, &dst, (double)angle, &center, flip);
     return JS_UNDEFINED;
 }
 
-/* --- Binding: drawLabelTTF(id, text, x, y) --- */
+/* --- Binding: drawLabelTTF(id, text, x, y, anchorX, anchorY, scaleX, scaleY, angle) --- */
 static JSValue js_drawLabelTTF(
     JSContext *ctx,
     JSValueConst this_val,
@@ -193,9 +196,14 @@ static JSValue js_drawLabelTTF(
 
     const char *text = JS_ToCString(ctx, argv[1]);
 
-    double dx, dy;
+    double dx, dy, anchorX, anchorY, scaleX, scaleY, angle;
     JS_ToFloat64(ctx, &dx, argv[2]);
     JS_ToFloat64(ctx, &dy, argv[3]);
+    JS_ToFloat64(ctx, &anchorX, argv[4]);
+    JS_ToFloat64(ctx, &anchorY, argv[5]);
+    JS_ToFloat64(ctx, &scaleX, argv[6]);
+    JS_ToFloat64(ctx, &scaleY, argv[7]);
+    JS_ToFloat64(ctx, &angle, argv[8]);
 
     /* white text */
     SDL_Color color = { 220, 220, 220, 255 };
@@ -205,8 +213,18 @@ static JSValue js_drawLabelTTF(
     if (!surf) { JS_FreeCString(ctx, text); return JS_UNDEFINED; }
 
     SDL_Texture *tex = SDL_CreateTextureFromSurface(g_renderer, surf);
-    SDL_FRect dst = { (float)dx, (float)dy, (float)surf->w, (float)surf->h };
-    SDL_RenderTexture(g_renderer, tex, NULL, &dst);
+    const float width = (float)surf->w * (float)scaleX;
+    const float height = (float)surf->h * (float)scaleY;
+    const float centerX = (float)anchorX * width;
+    const float centerY = (float)anchorY * height;
+    SDL_FRect dst = {
+        (float)dx - centerX,
+        (float)dy - centerY,
+        width,
+        height
+    };
+    SDL_FPoint center = { centerX, centerY };
+    SDL_RenderTextureRotated(g_renderer, tex, NULL, &dst, angle, &center, SDL_FLIP_NONE);
 
     SDL_DestroyTexture(tex);
     SDL_DestroySurface(surf);
@@ -311,8 +329,8 @@ static const JSCFunctionListEntry funcs[] =
     JS_CFUNC_DEF("loadFont",                2, js_loadFont),
     JS_CFUNC_DEF("clear",                   0, js_clear),
     JS_CFUNC_DEF("drawTexture",             3, js_drawTexture),
-    JS_CFUNC_DEF("drawTextureRotated",      8, js_drawTextureRotated),
-    JS_CFUNC_DEF("drawLabelTTF",            4, js_drawLabelTTF),
+    JS_CFUNC_DEF("drawTextureRotated",     10, js_drawTextureRotated),
+    JS_CFUNC_DEF("drawLabelTTF",            9, js_drawLabelTTF),
     JS_CFUNC_DEF("present",                 0, js_present),
     JS_CFUNC_DEF("onInit",                  1, js_onInit),
     JS_CFUNC_DEF("onUpdate",                1, js_onUpdate),

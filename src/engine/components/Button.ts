@@ -22,16 +22,21 @@ export class Button extends Component {
     if (!sprite) return false;
 
     const transform = this.node!.transform;
-    const width = sprite.width * transform.scaleX;
-    const height = sprite.height * transform.scaleY;
-    const left = transform.worldX - transform.anchorX * width;
-    const top = transform.worldY - transform.anchorY * height;
+    const radians = -transform.worldRotation * Math.PI / 180;
+    const cos = Math.cos(radians);
+    const sin = Math.sin(radians);
+    const dx = x - transform.worldX;
+    const dy = y - transform.worldY;
+    const localX = (dx * cos - dy * sin) / transform.worldScaleX;
+    const localY = (dx * sin + dy * cos) / transform.worldScaleY;
+    const left = -transform.anchorX * sprite.width;
+    const top = -transform.anchorY * sprite.height;
 
     return (
-      x >= left &&
-      x <= left + width &&
-      y >= top &&
-      y <= top + height
+      localX >= left &&
+      localX <= left + sprite.width &&
+      localY >= top &&
+      localY <= top + sprite.height
     );
   }
 }

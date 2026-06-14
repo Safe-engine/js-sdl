@@ -26,7 +26,8 @@ declare module "sdl3" {
   export function drawTextureRotated(
     id: number, x: number, y: number,
     w: number, h: number,
-    angle: number, flipX: boolean, flipY: boolean
+    angle: number, centerX: number, centerY: number,
+    flipX: boolean, flipY: boolean
   ): void;
 
   /** Draw text using a previously-loaded font. */
@@ -35,6 +36,11 @@ declare module "sdl3" {
     text: string,
     x: number,
     y: number,
+    anchorX: number,
+    anchorY: number,
+    scaleX: number,
+    scaleY: number,
+    angle: number,
   ): void;
 
   /** Present (swap) the renderer's back-buffer to the screen. */
