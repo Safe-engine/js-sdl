@@ -157,13 +157,25 @@ group.preload(({ progress }) => {
 });
 ```
 
-### Mobile lifecycle
+### Scene lifecycle
 
-Override lifecycle hooks on a scene. `onSaveProgress()` is called automatically
-before the app enters the background and again if the OS terminates it.
+When a scene becomes active, the engine calls `onLoad()` followed by `onEnter()`.
+Replacing it calls `onExit()`, `onUnload()`, and then destroys its node tree.
+`onPause()` and `onResume()` follow app inactivity without unloading the scene.
+
+`onSaveProgress()` is called automatically before the app enters the background
+and again if the OS terminates it.
 
 ```ts
 class GameScene extends Scene {
+  onEnter(): void {
+    audio.playMusic();
+  }
+
+  onExit(): void {
+    audio.stopMusic();
+  }
+
   onPause(): void {
     audio.pause();
   }
@@ -178,6 +190,10 @@ class GameScene extends Scene {
 
   onLowMemory(): void {
     this.releaseOptionalCaches();
+  }
+
+  onUnload(): void {
+    this.releaseSceneResources();
   }
 
   onOrientationChange(

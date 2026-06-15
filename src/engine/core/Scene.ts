@@ -20,6 +20,15 @@ export class Scene {
   /** Override: called once when scene starts. */
   onLoad(): void {}
 
+  /** Override: called after the scene becomes active. */
+  onEnter(): void {}
+
+  /** Override: called before the scene stops being active. */
+  onExit(): void {}
+
+  /** Override: release scene resources before destruction. */
+  onUnload(): void {}
+
   /** Override: called every frame before ECS. */
   onUpdate(_dt: number): void {}
 

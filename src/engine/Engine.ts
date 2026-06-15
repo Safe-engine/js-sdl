@@ -42,7 +42,10 @@ class EngineImpl {
     onInit(() => {
       createWindow(title, width, height);
       this._ready = true;
-      this._currentScene?.onLoad();
+      const scene = this._currentScene;
+      if (scene) {
+        this._activateScene(scene);
+      }
     });
 
     onUpdate((dt: number) => {
@@ -114,17 +117,34 @@ class EngineImpl {
     });
   }
 
-  /** Set active scene (auto-calls onLoad). */
+  /** Set active scene and destroy the scene it replaces. */
   get scene(): Scene | null {
     return this._currentScene;
   }
 
   set scene(s: Scene | null) {
     if (this._currentScene === s) return;
-    this._currentScene?.root.destroy();
+
+    const previous = this._currentScene;
     this._currentScene = s;
+
+    if (previous) {
+      if (this._ready) {
+        previous.onExit();
+      }
+      previous.onUnload();
+      previous.root.destroy();
+    }
+
     if (s && this._ready) {
-      s.onLoad();
+      this._activateScene(s);
+    }
+  }
+
+  private _activateScene(scene: Scene): void {
+    scene.onLoad();
+    if (this._currentScene === scene) {
+      scene.onEnter();
     }
   }
 }
