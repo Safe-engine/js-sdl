@@ -82,8 +82,6 @@ class GameScene extends Scene {
 }
 
 class HomeScene extends Scene {
-  private playButton: Button | null = null;
-
   constructor() {
     super("Home");
   }
@@ -97,8 +95,8 @@ class HomeScene extends Scene {
     sprite.width = 220;
     sprite.height = 68;
 
-    this.playButton = button.addComponent(Button);
-    this.playButton.onClick = () => {
+    const playButton = button.addComponent(Button);
+    playButton.onClick = () => {
       Engine.scene = new GameScene();
     };
 
@@ -114,13 +112,6 @@ class HomeScene extends Scene {
     console.log("HomeScene loaded");
   }
 
-  onTouchStart(x: number, y: number): void {
-    this.playButton?.handleTouchStart(x, y);
-  }
-
-  onTouchEnd(x: number, y: number): void {
-    this.playButton?.handleTouchEnd(x, y);
-  }
 }
 
 /* ── Bootstrap ─────────────────────────────────────── */

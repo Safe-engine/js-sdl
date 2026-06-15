@@ -1,4 +1,5 @@
 import { Node } from "./Node";
+import { InputSystem } from "../Input";
 
 export type Orientation =
   | "unknown"
@@ -10,11 +11,13 @@ export type Orientation =
 export class Scene {
   readonly name: string;
   readonly root: Node;
+  readonly input: InputSystem;
   private _started = false;
 
   constructor(name: string = "Scene") {
     this.name = name;
     this.root = new Node("root");
+    this.input = new InputSystem(this.root);
   }
 
   /** Override: called once when scene starts. */
@@ -86,5 +89,20 @@ export class Scene {
   render(): void {
     this.root._renderTree();
     this.onRender();
+  }
+
+  /** Engine-internal: dispatch a pointer press to components, then the scene. */
+  _dispatchTouchStart(x: number, y: number): void {
+    if (!this.input.dispatchStart(x, y)) this.onTouchStart(x, y);
+  }
+
+  /** Engine-internal: dispatch pointer movement to captured components. */
+  _dispatchTouchMove(x: number, y: number): void {
+    if (!this.input.dispatchMove(x, y)) this.onTouchMove(x, y);
+  }
+
+  /** Engine-internal: dispatch a pointer release to captured components. */
+  _dispatchTouchEnd(x: number, y: number): void {
+    if (!this.input.dispatchEnd(x, y)) this.onTouchEnd(x, y);
   }
 }

@@ -1,15 +1,41 @@
 import { Component } from "../core/Component";
+import { InputEvent } from "../Input";
 import { Sprite } from "./Sprite";
 
 export class Button extends Component {
   onClick: (() => void) | null = null;
+  inputEnabled = true;
+  consumeInput = true;
 
   private pressed = false;
 
+  onPointerStart(event: InputEvent): void {
+    this.pressed = true;
+    if (this.consumeInput) event.stopPropagation();
+  }
+
+  onPointerMove(event: InputEvent): void {
+    if (this.consumeInput) event.stopPropagation();
+  }
+
+  onPointerEnd(event: InputEvent): void {
+    if (this.pressed && this.containsPoint(event.x, event.y)) {
+      this.onClick?.();
+    }
+    this.pressed = false;
+    if (this.consumeInput) event.stopPropagation();
+  }
+
+  hitTest(x: number, y: number): boolean {
+    return this.containsPoint(x, y);
+  }
+
+  /** @deprecated Input is dispatched automatically by the active scene. */
   handleTouchStart(x: number, y: number): void {
     this.pressed = this.containsPoint(x, y);
   }
 
+  /** @deprecated Input is dispatched automatically by the active scene. */
   handleTouchEnd(x: number, y: number): void {
     if (this.pressed && this.containsPoint(x, y)) {
       this.onClick?.();

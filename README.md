@@ -232,3 +232,21 @@ const insideGame = Engine.viewport.containsScreenPoint(clientX, clientY);
 
 Scene touch callbacks already receive logical game coordinates. Use
 `Engine.worldToScreen()` for overlays that live outside the SDL/WebGL renderer.
+
+### Input dispatch
+
+Interactive components receive pointer input automatically. `Button` performs
+sprite hit testing, captures a press until release, and invokes `onClick`
+without scene-level touch forwarding.
+
+```ts
+const button = node.addComponent(Button);
+button.onClick = () => startGame();
+button.inputPriority = 10;
+```
+
+Hit components are ordered by descending `inputPriority`. Equal priorities use
+reverse render order, so the visually topmost component receives input first.
+Calling `event.stopPropagation()` prevents lower-priority hit components and
+the scene touch callback from receiving that event. Buttons do this by default;
+set `button.consumeInput = false` to allow propagation.

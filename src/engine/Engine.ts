@@ -67,15 +67,15 @@ class EngineImpl {
     });
 
     onTouchStart((x: number, y: number) => {
-      this._currentScene?.onTouchStart(x, y);
+      this._currentScene?._dispatchTouchStart(x, y);
     });
 
     onTouchMove((x: number, y: number) => {
-      this._currentScene?.onTouchMove(x, y);
+      this._currentScene?._dispatchTouchMove(x, y);
     });
 
     onTouchEnd((x: number, y: number) => {
-      this._currentScene?.onTouchEnd(x, y);
+      this._currentScene?._dispatchTouchEnd(x, y);
     });
 
     onPause(() => {
@@ -149,6 +149,7 @@ class EngineImpl {
     this._currentScene = s;
 
     if (previous) {
+      previous.input.reset();
       if (this._ready) {
         previous.onExit();
       }

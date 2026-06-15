@@ -5,6 +5,8 @@ export { Node } from "./core/Node";
 export { Component } from "./core/Component";
 export { Transform } from "./core/Transform";
 export { Viewport } from "./Viewport";
+export { InputEvent, InputSystem } from "./Input";
+export type { InputEventType } from "./Input";
 export type {
   Insets,
   Point,

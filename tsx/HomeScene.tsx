@@ -12,8 +12,6 @@ import {
 import { jsx, mount } from "./jsx-runtime";
 
 export class HomeScene extends Scene {
-  private playButton: Button | null = null;
-
   constructor() {
     super("Home");
   }
@@ -23,9 +21,6 @@ export class HomeScene extends Scene {
       <Node name="PlayButton" transform={{ x: 360, y: 640 }}>
         <Sprite spriteFrame={sf_button} width={220} height={68} />
         <Button
-          ref={(button) => {
-            this.playButton = button as Button;
-          }}
           onClick={this.onClick}
         />
         <Node name="PlayLabel">
@@ -47,11 +42,4 @@ export class HomeScene extends Scene {
     console.log("clicked button");
   };
 
-  onTouchStart(x: number, y: number): void {
-    this.playButton?.handleTouchStart(x, y);
-  }
-
-  onTouchEnd(x: number, y: number): void {
-    this.playButton?.handleTouchEnd(x, y);
-  }
 }
