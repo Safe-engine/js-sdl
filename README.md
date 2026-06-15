@@ -208,3 +208,27 @@ class GameScene extends Scene {
 
 Scenes can also implement `onBackground()`, `onForeground()`, and
 `onInterruption(active)` for finer control over mobile transitions.
+
+### Resolution and safe areas
+
+`Engine.start()` dimensions are the logical design resolution. Rendering keeps
+that coordinate system at every window or device size, scales uniformly, and
+letterboxes any remaining space. Browser rendering uses the device pixel ratio
+for a sharp drawing buffer without changing game coordinates.
+
+```ts
+const { logicalWidth, logicalHeight, safeArea, safeInsets } = Engine.viewport;
+
+// Place interactive UI inside the notch/system-bar-safe logical rectangle.
+hud.transform.setPosition(
+  safeArea.x + 24,
+  safeArea.y + 24,
+);
+
+// Convert raw window/client coordinates when integrating a platform API.
+const world = Engine.screenToWorld(clientX, clientY);
+const insideGame = Engine.viewport.containsScreenPoint(clientX, clientY);
+```
+
+Scene touch callbacks already receive logical game coordinates. Use
+`Engine.worldToScreen()` for overlays that live outside the SDL/WebGL renderer.

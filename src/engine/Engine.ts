@@ -15,9 +15,11 @@ import {
   onOrientationChange,
   onTerminate,
   clear,
+  getViewportMetrics,
   present,
 } from "sdl3";
 import { Orientation, Scene } from "./core/Scene";
+import { Point, Viewport } from "./Viewport";
 
 const ORIENTATIONS: Orientation[] = [
   "unknown",
@@ -28,6 +30,7 @@ const ORIENTATIONS: Orientation[] = [
 ];
 
 class EngineImpl {
+  readonly viewport = new Viewport();
   private _currentScene: Scene | null = null;
   private _initialized = false;
   private _ready = false;
@@ -41,6 +44,7 @@ class EngineImpl {
 
     onInit(() => {
       createWindow(title, width, height);
+      this.refreshViewport();
       this._ready = true;
       const scene = this._currentScene;
       if (scene) {
@@ -108,6 +112,7 @@ class EngineImpl {
     });
 
     onOrientationChange((value: number, width: number, height: number) => {
+      this.refreshViewport();
       const orientation = ORIENTATIONS[value] ?? "unknown";
       this._currentScene?.onOrientationChange(orientation, width, height);
     });
@@ -115,6 +120,21 @@ class EngineImpl {
     onTerminate(() => {
       this._currentScene?.onSaveProgress();
     });
+  }
+
+  /** Refresh screen, letterbox, and safe-area measurements from the platform. */
+  refreshViewport(): void {
+    this.viewport.update(getViewportMetrics());
+  }
+
+  /** Convert window/client coordinates into logical game coordinates. */
+  screenToWorld(x: number, y: number): Point {
+    return this.viewport.screenToWorld(x, y);
+  }
+
+  /** Convert logical game coordinates into window/client coordinates. */
+  worldToScreen(x: number, y: number): Point {
+    return this.viewport.worldToScreen(x, y);
   }
 
   /** Set active scene and destroy the scene it replaces. */

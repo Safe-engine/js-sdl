@@ -4,6 +4,13 @@ export type { Orientation } from "./core/Scene";
 export { Node } from "./core/Node";
 export { Component } from "./core/Component";
 export { Transform } from "./core/Transform";
+export { Viewport } from "./Viewport";
+export type {
+  Insets,
+  Point,
+  Rect,
+  ViewportMetrics,
+} from "./Viewport";
 export {
   AssetGroup,
   AssetManager,

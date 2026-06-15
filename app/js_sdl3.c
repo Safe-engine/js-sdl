@@ -219,6 +219,63 @@ static JSValue js_createWindow(
     return JS_UNDEFINED;
 }
 
+/* --- Binding: getViewportMetrics() --- */
+static JSValue js_getViewportMetrics(
+    JSContext *ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst *argv)
+{
+    (void)this_val;
+    (void)argc;
+    (void)argv;
+
+    int screen_w = g_win_w;
+    int screen_h = g_win_h;
+    SDL_Rect safe = { 0, 0, screen_w, screen_h };
+    SDL_GetWindowSize(g_window, &screen_w, &screen_h);
+    float scale_x = (float)screen_w / (float)g_win_w;
+    float scale_y = (float)screen_h / (float)g_win_h;
+    float scale = SDL_min(scale_x, scale_y);
+    SDL_FRect viewport = {
+        ((float)screen_w - (float)g_win_w * scale) * 0.5f,
+        ((float)screen_h - (float)g_win_h * scale) * 0.5f,
+        (float)g_win_w * scale,
+        (float)g_win_h * scale,
+    };
+    if (!SDL_GetWindowSafeArea(g_window, &safe)) {
+        safe = (SDL_Rect){ 0, 0, screen_w, screen_h };
+    }
+
+    float safe_x = 0.0f;
+    float safe_y = 0.0f;
+    float safe_right = (float)g_win_w;
+    float safe_bottom = (float)g_win_h;
+    SDL_RenderCoordinatesFromWindow(
+        g_renderer, (float)safe.x, (float)safe.y, &safe_x, &safe_y);
+    SDL_RenderCoordinatesFromWindow(
+        g_renderer,
+        (float)(safe.x + safe.w),
+        (float)(safe.y + safe.h),
+        &safe_right,
+        &safe_bottom);
+    safe_x = SDL_clamp(safe_x, 0.0f, (float)g_win_w);
+    safe_y = SDL_clamp(safe_y, 0.0f, (float)g_win_h);
+    safe_right = SDL_clamp(safe_right, 0.0f, (float)g_win_w);
+    safe_bottom = SDL_clamp(safe_bottom, 0.0f, (float)g_win_h);
+
+    double values[] = {
+        g_win_w, g_win_h, screen_w, screen_h,
+        viewport.x, viewport.y, viewport.w, viewport.h,
+        safe_x, safe_y, safe_right - safe_x, safe_bottom - safe_y,
+    };
+    JSValue result = JS_NewArray(ctx);
+    for (uint32_t i = 0; i < 12; i++) {
+        JS_SetPropertyUint32(ctx, result, i, JS_NewFloat64(ctx, values[i]));
+    }
+    return result;
+}
+
 /* --- Binding: loadTexture(path) → id --- */
 static JSValue js_loadTexture(
     JSContext *ctx,
@@ -670,6 +727,7 @@ DEFINE_CALLBACK_BINDING(js_onTerminate, g_onTerminate)
 static const JSCFunctionListEntry funcs[] =
 {
     JS_CFUNC_DEF("createWindow",            3, js_createWindow),
+    JS_CFUNC_DEF("getViewportMetrics",      0, js_getViewportMetrics),
     JS_CFUNC_DEF("loadTexture",             1, js_loadTexture),
     JS_CFUNC_DEF("loadFont",                2, js_loadFont),
     JS_CFUNC_DEF("loadTextTexture",         2, js_loadTextTexture),

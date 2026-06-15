@@ -10,6 +10,16 @@ declare module "sdl3" {
   /** Create a window and its renderer. */
   export function createWindow(title: string, w: number, h: number): void;
 
+  /**
+   * Return logical size, screen size, presentation rectangle, and logical
+   * safe area as a flat numeric tuple.
+   */
+  export function getViewportMetrics(): [
+    number, number, number, number,
+    number, number, number, number,
+    number, number, number, number,
+  ];
+
   /** Load a texture from disk.  Returns a texture id (or -1 on failure). */
   export function loadTexture(path: string): number;
 

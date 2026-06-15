@@ -39,6 +39,7 @@ let nextFontId = 0;
 let running = false;
 let lastFrameTime = 0;
 let pointerDown = false;
+let resizeObserver: ResizeObserver | null = null;
 
 const textures = new Map<number, TextureAsset>();
 const textureIds = new Map<string, number>();
@@ -160,6 +161,74 @@ function pointerPosition(event: PointerEvent): [number, number] {
   ];
 }
 
+function safeAreaInsets(): [number, number, number, number] {
+  const style = getComputedStyle(document.documentElement);
+  const value = (name: string) =>
+    Number.parseFloat(style.getPropertyValue(name)) || 0;
+  return [
+    value("--safe-area-inset-top"),
+    value("--safe-area-inset-right"),
+    value("--safe-area-inset-bottom"),
+    value("--safe-area-inset-left"),
+  ];
+}
+
+function resizeDrawingBuffer(): void {
+  if (!canvas || !gl) return;
+  const rect = canvas.getBoundingClientRect();
+  const ratio = window.devicePixelRatio || 1;
+  const width = Math.max(1, Math.round(rect.width * ratio));
+  const height = Math.max(1, Math.round(rect.height * ratio));
+  if (canvas.width === width && canvas.height === height) return;
+  canvas.width = width;
+  canvas.height = height;
+  gl.viewport(0, 0, width, height);
+}
+
+export function getViewportMetrics(): [
+  number, number, number, number,
+  number, number, number, number,
+  number, number, number, number,
+] {
+  if (!canvas) {
+    return [
+      logicalWidth, logicalHeight, logicalWidth, logicalHeight,
+      0, 0, logicalWidth, logicalHeight,
+      0, 0, logicalWidth, logicalHeight,
+    ];
+  }
+
+  const rect = canvas.getBoundingClientRect();
+  const [safeTop, safeRight, safeBottom, safeLeft] = safeAreaInsets();
+  const safeScreenLeft = Math.max(rect.left, safeLeft);
+  const safeScreenTop = Math.max(rect.top, safeTop);
+  const safeScreenRight = Math.min(rect.right, window.innerWidth - safeRight);
+  const safeScreenBottom = Math.min(
+    rect.bottom,
+    window.innerHeight - safeBottom,
+  );
+  const scale = rect.width / logicalWidth;
+  const safeX = Math.max(0, (safeScreenLeft - rect.left) / scale);
+  const safeY = Math.max(0, (safeScreenTop - rect.top) / scale);
+  const safeWidth = Math.max(0, (safeScreenRight - safeScreenLeft) / scale);
+  const safeHeight = Math.max(0, (safeScreenBottom - safeScreenTop) / scale);
+
+  return [
+    logicalWidth,
+    logicalHeight,
+    window.innerWidth,
+    window.innerHeight,
+    rect.left,
+    rect.top,
+    rect.width,
+    rect.height,
+    safeX,
+    safeY,
+    safeWidth,
+    safeHeight,
+  ];
+}
+
 function orientationValue(): number {
   const type = screen.orientation?.type;
   if (type === "landscape-primary") return 1;
@@ -175,6 +244,7 @@ function emitOrientation(): void {
 
 function frame(time: number): void {
   if (!running) return;
+  resizeDrawingBuffer();
   const dt = lastFrameTime === 0 ? 0 : Math.min((time - lastFrameTime) / 1000, 0.1);
   lastFrameTime = time;
   updateCallback?.(dt);
@@ -222,6 +292,12 @@ export function createWindow(title: string, width: number, height: number): void
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
   gl.viewport(0, 0, width, height);
+  resizeObserver?.disconnect();
+  resizeObserver = new ResizeObserver(() => {
+    resizeDrawingBuffer();
+    emitOrientation();
+  });
+  resizeObserver.observe(canvas);
 
   canvas.addEventListener("pointerdown", (event) => {
     pointerDown = true;
