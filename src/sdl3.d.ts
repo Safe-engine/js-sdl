@@ -49,7 +49,8 @@ declare module "sdl3" {
     id: number, x: number, y: number,
     w: number, h: number,
     angle: number, centerX: number, centerY: number,
-    flipX: boolean, flipY: boolean
+    flipX: boolean, flipY: boolean,
+    red?: number, green?: number, blue?: number, alpha?: number,
   ): void;
 
   /** Draw a source region from a texture with rotation, scale, and flip. */
@@ -61,6 +62,7 @@ declare module "sdl3" {
     w: number, h: number,
     angle: number, centerX: number, centerY: number,
     flipX: boolean, flipY: boolean,
+    red?: number, green?: number, blue?: number, alpha?: number,
   ): void;
 
   /** Present (swap) the renderer's back-buffer to the screen. */

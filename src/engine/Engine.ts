@@ -20,6 +20,7 @@ import {
 } from "sdl3";
 import { Orientation, Scene } from "./core/Scene";
 import { Point, Viewport } from "./Viewport";
+import { Tween } from "./animation/Tween";
 
 const ORIENTATIONS: Orientation[] = [
   "unknown",
@@ -54,6 +55,7 @@ class EngineImpl {
 
     onUpdate((dt: number) => {
       if (!this._paused && !this._backgrounded && this._currentScene) {
+        Tween.update(dt);
         this._currentScene.tick(dt);
       }
     });
@@ -149,6 +151,7 @@ class EngineImpl {
     this._currentScene = s;
 
     if (previous) {
+      Tween.stopAll();
       previous.input.reset();
       if (this._ready) {
         previous.onExit();

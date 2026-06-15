@@ -250,3 +250,41 @@ reverse render order, so the visually topmost component receives input first.
 Calling `event.stopPropagation()` prevents lower-priority hit components and
 the scene touch callback from receiving that event. Buttons do this by default;
 set `button.consumeInput = false` to allow propagation.
+
+### Tweening
+
+Tweens use seconds and advance with engine time, so they pause automatically
+when the app is paused or backgrounded. Numeric properties and nested colors
+can be animated directly.
+
+```ts
+import { Easing, Tween } from "./engine";
+
+Tween.to(
+  player.transform,
+  { x: 600, y: 240, rotation: 360, scaleX: 1.5, scaleY: 1.5 },
+  0.8,
+  {
+    ease: Easing.cubicOut,
+    delay: 0.1,
+    onComplete: () => console.log("move complete"),
+  },
+);
+
+Tween.sequence()
+  .to(sprite, {
+    opacity: 0.25,
+    color: { r: 255, g: 96, b: 64 },
+  }, 0.2, { ease: Easing.quadOut })
+  .delay(0.15)
+  .call(() => console.log("flash"))
+  .to(sprite, {
+    opacity: 1,
+    color: { r: 255, g: 255, b: 255 },
+  }, 0.3)
+  .start();
+```
+
+Available callbacks are `onStart`, `onUpdate`, `onComplete`, and `onStop`.
+Calling `stop()` on a tween or sequence cancels it. Scene changes cancel all
+active tweens.

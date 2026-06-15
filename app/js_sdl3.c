@@ -546,6 +546,7 @@ static JSValue js_drawTextureRotated(
 {
     int id, flipX, flipY;
     double dx, dy, dw, dh, angle, centerX, centerY;
+    double red = 255, green = 255, blue = 255, alpha = 255;
     JS_ToInt32(ctx, &id,    argv[0]);
     JS_ToFloat64(ctx, &dx,  argv[1]);
     JS_ToFloat64(ctx, &dy,  argv[2]);
@@ -556,15 +557,26 @@ static JSValue js_drawTextureRotated(
     JS_ToFloat64(ctx, &centerY, argv[7]);
     JS_ToInt32(ctx, &flipX, argv[8]);
     JS_ToInt32(ctx, &flipY, argv[9]);
+    if (argc > 10) JS_ToFloat64(ctx, &red, argv[10]);
+    if (argc > 11) JS_ToFloat64(ctx, &green, argv[11]);
+    if (argc > 12) JS_ToFloat64(ctx, &blue, argv[12]);
+    if (argc > 13) JS_ToFloat64(ctx, &alpha, argv[13]);
 
     if (!valid_texture_id(id)) return JS_UNDEFINED;
+    SDL_Texture *texture = g_textures[id].texture;
+    SDL_SetTextureColorMod(
+        texture,
+        (Uint8)SDL_clamp(red, 0, 255),
+        (Uint8)SDL_clamp(green, 0, 255),
+        (Uint8)SDL_clamp(blue, 0, 255));
+    SDL_SetTextureAlphaMod(texture, (Uint8)SDL_clamp(alpha, 0, 255));
     SDL_FRect dst = { (float)dx, (float)dy, (float)dw, (float)dh };
     SDL_FPoint center = { (float)centerX, (float)centerY };
     SDL_FlipMode flip = SDL_FLIP_NONE;
     if (flipX) flip |= SDL_FLIP_HORIZONTAL;
     if (flipY) flip |= SDL_FLIP_VERTICAL;
 
-    SDL_RenderTextureRotated(g_renderer, g_textures[id].texture, NULL, &dst, (double)angle, &center, flip);
+    SDL_RenderTextureRotated(g_renderer, texture, NULL, &dst, (double)angle, &center, flip);
     return JS_UNDEFINED;
 }
 
@@ -577,6 +589,7 @@ static JSValue js_drawTextureRegionRotated(
 {
     int id, flipX, flipY;
     double sx, sy, sw, sh, dx, dy, dw, dh, angle, centerX, centerY;
+    double red = 255, green = 255, blue = 255, alpha = 255;
     JS_ToInt32(ctx, &id, argv[0]);
     JS_ToFloat64(ctx, &sx, argv[1]);
     JS_ToFloat64(ctx, &sy, argv[2]);
@@ -591,8 +604,19 @@ static JSValue js_drawTextureRegionRotated(
     JS_ToFloat64(ctx, &centerY, argv[11]);
     JS_ToInt32(ctx, &flipX, argv[12]);
     JS_ToInt32(ctx, &flipY, argv[13]);
+    if (argc > 14) JS_ToFloat64(ctx, &red, argv[14]);
+    if (argc > 15) JS_ToFloat64(ctx, &green, argv[15]);
+    if (argc > 16) JS_ToFloat64(ctx, &blue, argv[16]);
+    if (argc > 17) JS_ToFloat64(ctx, &alpha, argv[17]);
 
     if (!valid_texture_id(id)) return JS_UNDEFINED;
+    SDL_Texture *texture = g_textures[id].texture;
+    SDL_SetTextureColorMod(
+        texture,
+        (Uint8)SDL_clamp(red, 0, 255),
+        (Uint8)SDL_clamp(green, 0, 255),
+        (Uint8)SDL_clamp(blue, 0, 255));
+    SDL_SetTextureAlphaMod(texture, (Uint8)SDL_clamp(alpha, 0, 255));
     SDL_FRect src = { (float)sx, (float)sy, (float)sw, (float)sh };
     SDL_FRect dst = { (float)dx, (float)dy, (float)dw, (float)dh };
     SDL_FPoint center = { centerX, centerY };
@@ -600,7 +624,7 @@ static JSValue js_drawTextureRegionRotated(
     if (flipX) flip |= SDL_FLIP_HORIZONTAL;
     if (flipY) flip |= SDL_FLIP_VERTICAL;
     SDL_RenderTextureRotated(
-        g_renderer, g_textures[id].texture, &src, &dst, angle, &center, flip);
+        g_renderer, texture, &src, &dst, angle, &center, flip);
     return JS_UNDEFINED;
 }
 
@@ -737,8 +761,8 @@ static const JSCFunctionListEntry funcs[] =
     JS_CFUNC_DEF("getTextureHeight",        1, js_getTextureHeight),
     JS_CFUNC_DEF("clear",                   0, js_clear),
     JS_CFUNC_DEF("drawTexture",             3, js_drawTexture),
-    JS_CFUNC_DEF("drawTextureRotated",     10, js_drawTextureRotated),
-    JS_CFUNC_DEF("drawTextureRegionRotated", 14, js_drawTextureRegionRotated),
+    JS_CFUNC_DEF("drawTextureRotated",     14, js_drawTextureRotated),
+    JS_CFUNC_DEF("drawTextureRegionRotated", 18, js_drawTextureRegionRotated),
     JS_CFUNC_DEF("present",                 0, js_present),
     JS_CFUNC_DEF("onInit",                  1, js_onInit),
     JS_CFUNC_DEF("onUpdate",                1, js_onUpdate),

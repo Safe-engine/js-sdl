@@ -10,6 +10,7 @@ import {
   TextureAtlas,
   TextureRegion,
 } from "../AssetManager";
+import type { Color } from "../animation/Tween";
 
 export class Sprite extends Component {
   texturePath = "";
@@ -19,6 +20,8 @@ export class Sprite extends Component {
   flipX = false;
   flipY = false;
   visible = true;
+  opacity = 1;
+  color: Color = { r: 255, g: 255, b: 255, a: 255 };
   atlas: TextureAtlas | null = null;
   frameName = "";
   private texture: TextureAsset | null = null;
@@ -68,6 +71,8 @@ export class Sprite extends Component {
         t.anchorX * w,
         t.anchorY * h,
         this.flipX, this.flipY,
+        this.color.r, this.color.g, this.color.b,
+        this.opacity * (this.color.a ?? 255),
       );
       return;
     }
@@ -79,7 +84,12 @@ export class Sprite extends Component {
       t.worldRotation,
       t.anchorX * w,
       t.anchorY * h,
-      this.flipX, this.flipY
+      this.flipX,
+      this.flipY,
+      this.color.r,
+      this.color.g,
+      this.color.b,
+      this.opacity * (this.color.a ?? 255),
     );
   }
 

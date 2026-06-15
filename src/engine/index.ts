@@ -4,6 +4,18 @@ export type { Orientation } from "./core/Scene";
 export { Node } from "./core/Node";
 export { Component } from "./core/Component";
 export { Transform } from "./core/Transform";
+export {
+  Easing,
+  Tween,
+  TweenHandle,
+  TweenSequence,
+} from "./animation/Tween";
+export type {
+  Color,
+  EasingFunction,
+  TweenOptions,
+  TweenValues,
+} from "./animation/Tween";
 export { Viewport } from "./Viewport";
 export { InputEvent, InputSystem } from "./Input";
 export type { InputEventType } from "./Input";

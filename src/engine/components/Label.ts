@@ -6,12 +6,15 @@ import {
   FontAsset,
   TextureAsset,
 } from "../AssetManager";
+import type { Color } from "../animation/Tween";
 
 export class Label extends Component {
   text = "";
   fontPath = "";
   fontSize = 24;
   fontId = -1;
+  opacity = 1;
+  color: Color = { r: 255, g: 255, b: 255, a: 255 };
   private font: FontAsset | null = null;
   private textTexture: TextureAsset | null = null;
   private loadedFontKey = "";
@@ -55,6 +58,10 @@ export class Label extends Component {
       t.anchorY * height,
       false,
       false,
+      this.color.r,
+      this.color.g,
+      this.color.b,
+      this.opacity * (this.color.a ?? 255),
     );
   }
 

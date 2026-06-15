@@ -32,6 +32,7 @@ let positionLocation = -1;
 let uvLocation = -1;
 let resolutionLocation: WebGLUniformLocation | null = null;
 let samplerLocation: WebGLUniformLocation | null = null;
+let colorLocation: WebGLUniformLocation | null = null;
 let logicalWidth = 1;
 let logicalHeight = 1;
 let nextTextureId = 0;
@@ -92,10 +93,12 @@ function createProgram(): WebGLProgram {
   const fragmentShader = compileShader(context.FRAGMENT_SHADER, `
     precision mediump float;
     uniform sampler2D u_texture;
+    uniform vec4 u_color;
     varying vec2 v_uv;
 
     void main() {
-      gl_FragColor = texture2D(u_texture, v_uv);
+      vec4 color = vec4(u_color.rgb * u_color.a, u_color.a);
+      gl_FragColor = texture2D(u_texture, v_uv) * color;
     }
   `);
   const result = context.createProgram();
@@ -289,6 +292,7 @@ export function createWindow(title: string, width: number, height: number): void
   uvLocation = gl.getAttribLocation(program, "a_uv");
   resolutionLocation = gl.getUniformLocation(program, "u_resolution");
   samplerLocation = gl.getUniformLocation(program, "u_texture");
+  colorLocation = gl.getUniformLocation(program, "u_color");
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
   gl.viewport(0, 0, width, height);
@@ -449,6 +453,10 @@ function draw(
   centerY: number,
   flipX: boolean,
   flipY: boolean,
+  red = 255,
+  green = 255,
+  blue = 255,
+  alpha = 255,
 ): void {
   const asset = textures.get(id);
   if (!asset?.texture || !program || !positionBuffer || !uvBuffer) return;
@@ -487,6 +495,13 @@ function draw(
   context.useProgram(program);
   context.uniform2f(resolutionLocation, logicalWidth, logicalHeight);
   context.uniform1i(samplerLocation, 0);
+  context.uniform4f(
+    colorLocation,
+    Math.max(0, Math.min(255, red)) / 255,
+    Math.max(0, Math.min(255, green)) / 255,
+    Math.max(0, Math.min(255, blue)) / 255,
+    Math.max(0, Math.min(255, alpha)) / 255,
+  );
   context.activeTexture(context.TEXTURE0);
   context.bindTexture(context.TEXTURE_2D, asset.texture);
   context.bindBuffer(context.ARRAY_BUFFER, positionBuffer);
@@ -517,12 +532,17 @@ export function drawTextureRotated(
   centerY: number,
   flipX: boolean,
   flipY: boolean,
+  red = 255,
+  green = 255,
+  blue = 255,
+  alpha = 255,
 ): void {
   const asset = textures.get(id);
   if (!asset) return;
   draw(
     id, 0, 0, asset.width, asset.height,
     x, y, width, height, angle, centerX, centerY, flipX, flipY,
+    red, green, blue, alpha,
   );
 }
 
@@ -541,10 +561,15 @@ export function drawTextureRegionRotated(
   centerY: number,
   flipX: boolean,
   flipY: boolean,
+  red = 255,
+  green = 255,
+  blue = 255,
+  alpha = 255,
 ): void {
   draw(
     id, sourceX, sourceY, sourceWidth, sourceHeight,
     x, y, width, height, angle, centerX, centerY, flipX, flipY,
+    red, green, blue, alpha,
   );
 }
 
