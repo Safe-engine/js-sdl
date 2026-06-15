@@ -49,6 +49,12 @@ export {
 export type { PlayOptions, SoundOptions } from "./Audio";
 export { Localization } from "./Localization";
 export type { TranslationTable } from "./Localization";
+export { PersistenceJSON } from "./PersistenceJSON";
+export type {
+  LocalStorage,
+  PersistenceJSONOptions,
+  PersistenceMigration,
+} from "./PersistenceJSON";
 
 // Components
 export { Sprite } from "./components/Sprite";

@@ -233,6 +233,44 @@ class GameScene extends Scene {
 Scenes can also implement `onBackground()`, `onForeground()`, and
 `onInterruption(active)` for finer control over mobile transitions.
 
+### Player persistence
+
+`PersistenceJSON` stores settings and level progress as a versioned JSON save.
+It uses the browser's `localStorage` by default and accepts any object with the
+same `getItem`, `setItem`, and `removeItem` interface.
+
+```ts
+import { PersistenceJSON } from "./engine";
+
+interface PlayerSave {
+  settings: { musicVolume: number; soundVolume: number };
+  progress: { unlockedLevel: number; highScores: Record<string, number> };
+}
+
+const playerSave = new PersistenceJSON<PlayerSave>("player", {
+  version: 2,
+  defaults: () => ({
+    settings: { musicVolume: 1, soundVolume: 1 },
+    progress: { unlockedLevel: 1, highScores: {} },
+  }),
+  migrations: {
+    // Each migration upgrades version N to N + 1.
+    1: (old: any) => ({
+      ...old,
+      progress: { ...old.progress, highScores: {} },
+    }),
+  },
+});
+
+const player = playerSave.load();
+player.progress.unlockedLevel = 2;
+playerSave.save(player);
+```
+
+Loading an older save runs every migration in order and immediately rewrites
+the upgraded file. Invalid JSON, saves from newer app versions, and missing
+migrations throw rather than silently replacing player progress.
+
 ### Resolution and safe areas
 
 `Engine.start()` dimensions are the logical design resolution. Rendering keeps
