@@ -23,6 +23,16 @@ interface FontAsset {
   refs: number;
 }
 
+interface AudioAsset {
+  url: string;
+  refs: number;
+}
+
+interface AudioVoice {
+  element: HTMLAudioElement;
+  ended: boolean;
+}
+
 let canvas: HTMLCanvasElement | null = null;
 let gl: WebGLRenderingContext | null = null;
 let program: WebGLProgram | null = null;
@@ -37,6 +47,8 @@ let logicalWidth = 1;
 let logicalHeight = 1;
 let nextTextureId = 0;
 let nextFontId = 0;
+let nextAudioId = 0;
+let nextAudioVoiceId = 0;
 let running = false;
 let lastFrameTime = 0;
 let pointerDown = false;
@@ -46,6 +58,9 @@ const textures = new Map<number, TextureAsset>();
 const textureIds = new Map<string, number>();
 const fonts = new Map<number, FontAsset>();
 const fontIds = new Map<string, number>();
+const audioAssets = new Map<number, AudioAsset>();
+const audioIds = new Map<string, number>();
+const audioVoices = new Map<number, AudioVoice>();
 
 let initCallback: VoidCallback | null = null;
 let updateCallback: UpdateCallback | null = null;
@@ -125,6 +140,91 @@ function assetUrl(path: string): string {
     ? normalized.slice("res/".length)
     : normalized;
   return `${import.meta.env.BASE_URL}${publicPath}`;
+}
+
+export function loadAudio(path: string): number {
+  const existingId = audioIds.get(path);
+  if (existingId !== undefined) {
+    audioAssets.get(existingId)!.refs++;
+    return existingId;
+  }
+
+  const id = nextAudioId++;
+  audioAssets.set(id, { url: assetUrl(path), refs: 1 });
+  audioIds.set(path, id);
+  return id;
+}
+
+export function releaseAudio(id: number): void {
+  const asset = audioAssets.get(id);
+  if (!asset || --asset.refs > 0) return;
+  audioAssets.delete(id);
+  for (const [path, assetId] of audioIds) {
+    if (assetId === id) {
+      audioIds.delete(path);
+      break;
+    }
+  }
+}
+
+export function playAudio(
+  audioId: number,
+  loop: boolean,
+  volume: number,
+): number {
+  const asset = audioAssets.get(audioId);
+  if (!asset) return -1;
+
+  const voiceId = nextAudioVoiceId++;
+  const element = new Audio(asset.url);
+  const voice: AudioVoice = { element, ended: false };
+  element.loop = loop;
+  element.volume = Math.max(0, Math.min(1, volume));
+  element.preload = "auto";
+  element.addEventListener("ended", () => {
+    voice.ended = true;
+  }, { once: true });
+  audioVoices.set(voiceId, voice);
+  void element.play().catch(() => {
+    voice.ended = true;
+  });
+  return voiceId;
+}
+
+export function stopAudio(voiceId: number): void {
+  const voice = audioVoices.get(voiceId);
+  if (!voice) return;
+  voice.element.pause();
+  voice.element.removeAttribute("src");
+  voice.element.load();
+  voice.ended = true;
+  audioVoices.delete(voiceId);
+}
+
+export function pauseAudio(voiceId: number): void {
+  audioVoices.get(voiceId)?.element.pause();
+}
+
+export function resumeAudio(voiceId: number): void {
+  const voice = audioVoices.get(voiceId);
+  if (!voice || voice.ended) return;
+  void voice.element.play().catch(() => {});
+}
+
+export function setAudioVolume(voiceId: number, volume: number): void {
+  const voice = audioVoices.get(voiceId);
+  if (voice) voice.element.volume = Math.max(0, Math.min(1, volume));
+}
+
+export function isAudioPlaying(voiceId: number): boolean {
+  const voice = audioVoices.get(voiceId);
+  return !!voice && !voice.ended;
+}
+
+export function updateAudio(): void {
+  for (const [id, voice] of audioVoices) {
+    if (voice.ended) audioVoices.delete(id);
+  }
 }
 
 function uploadSource(

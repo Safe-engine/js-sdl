@@ -38,6 +38,15 @@ export type {
   PreloadRequest,
   TextureRegion,
 } from "./AssetManager";
+export {
+  Audio,
+  AudioClip,
+  AudioGroup,
+  AudioHandle,
+  AudioManager,
+  Sound,
+} from "./Audio";
+export type { PlayOptions, SoundOptions } from "./Audio";
 
 // Components
 export { Sprite } from "./components/Sprite";

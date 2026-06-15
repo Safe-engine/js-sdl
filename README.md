@@ -157,6 +157,46 @@ group.preload(({ progress }) => {
 });
 ```
 
+### Audio
+
+The global `Audio` manager provides music and sound-effect groups, mute and
+volume controls, looping, fades, and pooled sound voices. Use WAV files for
+assets that must work on native and web builds; browsers may support additional
+formats, but native playback currently uses SDL's WAV loader.
+
+```ts
+import { Audio } from "./engine";
+
+// Reuses up to six simultaneous voices instead of allocating unbounded sounds.
+const laser = Audio.createSound("res/Audio/laser.wav", {
+  group: "sfx",
+  maxVoices: 6,
+  volume: 0.8,
+});
+
+laser.play();
+laser.play({ volume: 0.5 });
+
+// Music loops by default. Fade times are measured in seconds.
+Audio.playMusic("res/Audio/theme.wav", { fadeIn: 1.5 });
+Audio.stopMusic(0.75);
+
+Audio.group("master").volume = 0.9;
+Audio.group("music").volume = 0.6;
+Audio.group("sfx").muted = true;
+Audio.group("music").fadeTo(0.25, 1);
+
+const voice = Audio.play("res/Audio/impact.wav");
+voice?.fadeOut(0.3);
+
+laser.release();
+```
+
+`Audio.pause()` and `Audio.resume()` control all playback without changing
+individual pause state. The engine also suspends audio automatically while the
+application is paused, backgrounded, or interrupted, and resumes only after
+all active lifecycle conditions have cleared.
+
 ### Scene lifecycle
 
 When a scene becomes active, the engine calls `onLoad()` followed by `onEnter()`.
@@ -168,22 +208,6 @@ and again if the OS terminates it.
 
 ```ts
 class GameScene extends Scene {
-  onEnter(): void {
-    audio.playMusic();
-  }
-
-  onExit(): void {
-    audio.stopMusic();
-  }
-
-  onPause(): void {
-    audio.pause();
-  }
-
-  onResume(): void {
-    audio.resume();
-  }
-
   onSaveProgress(): void {
     saveGame(this.progress);
   }

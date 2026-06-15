@@ -21,6 +21,7 @@ import {
 import { Orientation, Scene } from "./core/Scene";
 import { Point, Viewport } from "./Viewport";
 import { Tween } from "./animation/Tween";
+import { Audio } from "./Audio";
 
 const ORIENTATIONS: Orientation[] = [
   "unknown",
@@ -37,6 +38,7 @@ class EngineImpl {
   private _ready = false;
   private _paused = false;
   private _backgrounded = false;
+  private _interrupted = false;
 
   /** Create window and register main loop. */
   start(title: string, width: number, height: number): void {
@@ -54,6 +56,7 @@ class EngineImpl {
     });
 
     onUpdate((dt: number) => {
+      Audio._update(dt);
       if (!this._paused && !this._backgrounded && this._currentScene) {
         Tween.update(dt);
         this._currentScene.tick(dt);
@@ -83,6 +86,7 @@ class EngineImpl {
     onPause(() => {
       if (this._paused) return;
       this._paused = true;
+      this._syncAudioLifecycle();
       this._currentScene?.onSaveProgress();
       this._currentScene?.onPause();
     });
@@ -90,22 +94,27 @@ class EngineImpl {
     onResume(() => {
       if (!this._paused) return;
       this._paused = false;
+      this._syncAudioLifecycle();
       this._currentScene?.onResume();
     });
 
     onBackground(() => {
       if (this._backgrounded) return;
       this._backgrounded = true;
+      this._syncAudioLifecycle();
       this._currentScene?.onBackground();
     });
 
     onForeground(() => {
       if (!this._backgrounded) return;
       this._backgrounded = false;
+      this._syncAudioLifecycle();
       this._currentScene?.onForeground();
     });
 
     onInterruption((active: boolean) => {
+      this._interrupted = active;
+      this._syncAudioLifecycle();
       this._currentScene?.onInterruption(active);
     });
 
@@ -120,6 +129,7 @@ class EngineImpl {
     });
 
     onTerminate(() => {
+      Audio.stopAll();
       this._currentScene?.onSaveProgress();
     });
   }
@@ -170,6 +180,12 @@ class EngineImpl {
     if (this._currentScene === scene) {
       scene.onEnter();
     }
+  }
+
+  private _syncAudioLifecycle(): void {
+    Audio._setLifecyclePaused(
+      this._paused || this._backgrounded || this._interrupted,
+    );
   }
 }
 

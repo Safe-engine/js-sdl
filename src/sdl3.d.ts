@@ -38,6 +38,28 @@ declare module "sdl3" {
   export function getTextureWidth(id: number): number;
   export function getTextureHeight(id: number): number;
 
+  /** Load an audio asset. Returns an audio id (or -1 on failure). */
+  export function loadAudio(path: string): number;
+
+  /** Release one acquired audio asset reference. */
+  export function releaseAudio(id: number): void;
+
+  /** Start an audio voice. Returns a voice id (or -1 on failure). */
+  export function playAudio(
+    audioId: number,
+    loop: boolean,
+    volume: number,
+  ): number;
+
+  export function stopAudio(voiceId: number): void;
+  export function pauseAudio(voiceId: number): void;
+  export function resumeAudio(voiceId: number): void;
+  export function setAudioVolume(voiceId: number, volume: number): void;
+  export function isAudioPlaying(voiceId: number): boolean;
+
+  /** Perform platform audio maintenance, including native loop refills. */
+  export function updateAudio(): void;
+
   /** Clear the screen with the default background colour. */
   export function clear(): void;
 

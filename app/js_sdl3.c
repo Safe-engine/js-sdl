@@ -39,6 +39,31 @@ typedef struct FontAsset {
 
 static FontAsset g_fonts[MAX_FONTS];
 
+#define MAX_AUDIO_ASSETS 128
+typedef struct AudioAsset {
+    Uint8 *data;
+    Uint32 length;
+    SDL_AudioSpec spec;
+    char *path;
+    int refs;
+} AudioAsset;
+
+static AudioAsset g_audio_assets[MAX_AUDIO_ASSETS];
+
+#define MAX_AUDIO_VOICES 32
+typedef struct AudioVoice {
+    SDL_AudioStream *stream;
+    int audio_id;
+    bool loop;
+    bool paused;
+    Uint64 started_at;
+    Uint64 paused_at;
+    Uint64 paused_duration;
+    Uint64 duration;
+} AudioVoice;
+
+static AudioVoice g_audio_voices[MAX_AUDIO_VOICES];
+
 /* --- JS callbacks --- */
 static JSValue g_onInit   = JS_UNDEFINED;
 static JSValue g_onUpdate = JS_UNDEFINED;
@@ -109,7 +134,34 @@ static int valid_font_id(int id)
     return id >= 0 && id < MAX_FONTS && g_fonts[id].font;
 }
 
+static int valid_audio_id(int id)
+{
+    return id >= 0 && id < MAX_AUDIO_ASSETS && g_audio_assets[id].data;
+}
+
+static int valid_audio_voice_id(int id)
+{
+    return id >= 0 && id < MAX_AUDIO_VOICES && g_audio_voices[id].stream;
+}
+
+static int find_free_audio_slot(void)
+{
+    for (int i = 0; i < MAX_AUDIO_ASSETS; i++) {
+        if (!g_audio_assets[i].data) return i;
+    }
+    return -1;
+}
+
+static int find_free_audio_voice_slot(void)
+{
+    for (int i = 0; i < MAX_AUDIO_VOICES; i++) {
+        if (!g_audio_voices[i].stream) return i;
+    }
+    return -1;
+}
+
 static void release_font_id(int id);
+static void release_audio_id(int id);
 
 static void release_texture_id(int id)
 {
@@ -130,6 +182,26 @@ static void release_font_id(int id)
     TTF_CloseFont(asset->font);
     free(asset->path);
     memset(asset, 0, sizeof(*asset));
+}
+
+static void release_audio_id(int id)
+{
+    if (!valid_audio_id(id)) return;
+    AudioAsset *asset = &g_audio_assets[id];
+    if (--asset->refs > 0) return;
+    SDL_free(asset->data);
+    free(asset->path);
+    memset(asset, 0, sizeof(*asset));
+}
+
+static void destroy_audio_voice(int id)
+{
+    if (!valid_audio_voice_id(id)) return;
+    AudioVoice *voice = &g_audio_voices[id];
+    int audio_id = voice->audio_id;
+    SDL_DestroyAudioStream(voice->stream);
+    memset(voice, 0, sizeof(*voice));
+    release_audio_id(audio_id);
 }
 
 static void js_print_exception(JSContext *ctx)
@@ -506,6 +578,257 @@ static JSValue js_getTextureHeight(
     return JS_NewInt32(ctx, valid_texture_id(id) ? g_textures[id].height : 0);
 }
 
+static JSValue js_loadAudio(
+    JSContext *ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst *argv)
+{
+    (void)this_val;
+    (void)argc;
+    const char *path = JS_ToCString(ctx, argv[0]);
+    if (!path) return JS_EXCEPTION;
+
+    for (int i = 0; i < MAX_AUDIO_ASSETS; i++) {
+        AudioAsset *asset = &g_audio_assets[i];
+        if (asset->data && strcmp(asset->path, path) == 0) {
+            asset->refs++;
+            JS_FreeCString(ctx, path);
+            return JS_NewInt32(ctx, i);
+        }
+    }
+
+    int id = find_free_audio_slot();
+    if (id < 0) {
+        JS_FreeCString(ctx, path);
+        return JS_NewInt32(ctx, -1);
+    }
+
+    char *resolved_path = resolve_resource_path(path);
+    SDL_AudioSpec spec;
+    Uint8 *data = NULL;
+    Uint32 length = 0;
+    bool loaded = resolved_path &&
+        SDL_LoadWAV(resolved_path, &spec, &data, &length);
+    if (!loaded && resolved_path && strcmp(resolved_path, path) != 0) {
+        loaded = SDL_LoadWAV(path, &spec, &data, &length);
+    }
+    free(resolved_path);
+    if (!loaded) {
+        SDL_LogError(
+            SDL_LOG_CATEGORY_AUDIO,
+            "Cannot load audio '%s': %s",
+            path,
+            SDL_GetError());
+        JS_FreeCString(ctx, path);
+        return JS_NewInt32(ctx, -1);
+    }
+
+    char *stored_path = copy_string(path);
+    JS_FreeCString(ctx, path);
+    if (!stored_path) {
+        SDL_free(data);
+        return JS_NewInt32(ctx, -1);
+    }
+
+    AudioAsset *asset = &g_audio_assets[id];
+    asset->data = data;
+    asset->length = length;
+    asset->spec = spec;
+    asset->path = stored_path;
+    asset->refs = 1;
+    return JS_NewInt32(ctx, id);
+}
+
+static JSValue js_releaseAudio(
+    JSContext *ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst *argv)
+{
+    (void)this_val;
+    (void)argc;
+    int id;
+    JS_ToInt32(ctx, &id, argv[0]);
+    release_audio_id(id);
+    return JS_UNDEFINED;
+}
+
+static JSValue js_playAudio(
+    JSContext *ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst *argv)
+{
+    (void)this_val;
+    int audio_id;
+    int loop = 0;
+    double volume = 1.0;
+    JS_ToInt32(ctx, &audio_id, argv[0]);
+    JS_ToInt32(ctx, &loop, argv[1]);
+    if (argc > 2) JS_ToFloat64(ctx, &volume, argv[2]);
+    if (!valid_audio_id(audio_id)) return JS_NewInt32(ctx, -1);
+
+    int voice_id = find_free_audio_voice_slot();
+    if (voice_id < 0) return JS_NewInt32(ctx, -1);
+
+    AudioAsset *asset = &g_audio_assets[audio_id];
+    SDL_AudioStream *stream = SDL_OpenAudioDeviceStream(
+        SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK,
+        &asset->spec,
+        NULL,
+        NULL);
+    if (!stream ||
+        !SDL_SetAudioStreamGain(stream, (float)SDL_clamp(volume, 0.0, 1.0)) ||
+        !SDL_PutAudioStreamData(stream, asset->data, (int)asset->length) ||
+        (loop && !SDL_PutAudioStreamData(
+            stream, asset->data, (int)asset->length)) ||
+        !SDL_ResumeAudioStreamDevice(stream)) {
+        if (stream) SDL_DestroyAudioStream(stream);
+        return JS_NewInt32(ctx, -1);
+    }
+
+    int bytes_per_frame =
+        SDL_AUDIO_BYTESIZE(asset->spec.format) * asset->spec.channels;
+    Uint64 frames = bytes_per_frame > 0
+        ? asset->length / (Uint32)bytes_per_frame
+        : 0;
+    AudioVoice *voice = &g_audio_voices[voice_id];
+    voice->stream = stream;
+    voice->audio_id = audio_id;
+    voice->loop = loop != 0;
+    voice->started_at = SDL_GetTicks();
+    voice->duration = asset->spec.freq > 0
+        ? (frames * 1000) / (Uint64)asset->spec.freq
+        : 0;
+    asset->refs++;
+    return JS_NewInt32(ctx, voice_id);
+}
+
+static JSValue js_stopAudio(
+    JSContext *ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst *argv)
+{
+    (void)this_val;
+    (void)argc;
+    int id;
+    JS_ToInt32(ctx, &id, argv[0]);
+    destroy_audio_voice(id);
+    return JS_UNDEFINED;
+}
+
+static JSValue js_pauseAudio(
+    JSContext *ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst *argv)
+{
+    (void)this_val;
+    (void)argc;
+    int id;
+    JS_ToInt32(ctx, &id, argv[0]);
+    if (valid_audio_voice_id(id) && !g_audio_voices[id].paused) {
+        SDL_PauseAudioStreamDevice(g_audio_voices[id].stream);
+        g_audio_voices[id].paused = true;
+        g_audio_voices[id].paused_at = SDL_GetTicks();
+    }
+    return JS_UNDEFINED;
+}
+
+static JSValue js_resumeAudio(
+    JSContext *ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst *argv)
+{
+    (void)this_val;
+    (void)argc;
+    int id;
+    JS_ToInt32(ctx, &id, argv[0]);
+    if (valid_audio_voice_id(id) && g_audio_voices[id].paused) {
+        AudioVoice *voice = &g_audio_voices[id];
+        voice->paused_duration += SDL_GetTicks() - voice->paused_at;
+        voice->paused = false;
+        SDL_ResumeAudioStreamDevice(voice->stream);
+    }
+    return JS_UNDEFINED;
+}
+
+static JSValue js_setAudioVolume(
+    JSContext *ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst *argv)
+{
+    (void)this_val;
+    (void)argc;
+    int id;
+    double volume;
+    JS_ToInt32(ctx, &id, argv[0]);
+    JS_ToFloat64(ctx, &volume, argv[1]);
+    if (valid_audio_voice_id(id)) {
+        SDL_SetAudioStreamGain(
+            g_audio_voices[id].stream,
+            (float)SDL_clamp(volume, 0.0, 1.0));
+    }
+    return JS_UNDEFINED;
+}
+
+static bool audio_voice_finished(int id)
+{
+    AudioVoice *voice = &g_audio_voices[id];
+    if (!voice->stream || voice->loop || voice->paused) return false;
+    return SDL_GetTicks() >=
+        voice->started_at + voice->paused_duration + voice->duration;
+}
+
+static JSValue js_isAudioPlaying(
+    JSContext *ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst *argv)
+{
+    (void)this_val;
+    (void)argc;
+    int id;
+    JS_ToInt32(ctx, &id, argv[0]);
+    if (!valid_audio_voice_id(id)) return JS_NewBool(ctx, false);
+    if (audio_voice_finished(id)) {
+        destroy_audio_voice(id);
+        return JS_NewBool(ctx, false);
+    }
+    return JS_NewBool(ctx, true);
+}
+
+static JSValue js_updateAudio(
+    JSContext *ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst *argv)
+{
+    (void)ctx;
+    (void)this_val;
+    (void)argc;
+    (void)argv;
+    for (int i = 0; i < MAX_AUDIO_VOICES; i++) {
+        AudioVoice *voice = &g_audio_voices[i];
+        if (!voice->stream || voice->paused) continue;
+        if (voice->loop) {
+            AudioAsset *asset = &g_audio_assets[voice->audio_id];
+            int queued = SDL_GetAudioStreamQueued(voice->stream);
+            if (queued >= 0 && queued <= (int)asset->length) {
+                SDL_PutAudioStreamData(
+                    voice->stream, asset->data, (int)asset->length);
+            }
+        } else if (audio_voice_finished(i)) {
+            destroy_audio_voice(i);
+        }
+    }
+    return JS_UNDEFINED;
+}
+
 /* --- Binding: clear() --- */
 static JSValue js_clear(
     JSContext *ctx,
@@ -759,6 +1082,15 @@ static const JSCFunctionListEntry funcs[] =
     JS_CFUNC_DEF("releaseFont",             1, js_releaseFont),
     JS_CFUNC_DEF("getTextureWidth",         1, js_getTextureWidth),
     JS_CFUNC_DEF("getTextureHeight",        1, js_getTextureHeight),
+    JS_CFUNC_DEF("loadAudio",               1, js_loadAudio),
+    JS_CFUNC_DEF("releaseAudio",            1, js_releaseAudio),
+    JS_CFUNC_DEF("playAudio",               3, js_playAudio),
+    JS_CFUNC_DEF("stopAudio",               1, js_stopAudio),
+    JS_CFUNC_DEF("pauseAudio",              1, js_pauseAudio),
+    JS_CFUNC_DEF("resumeAudio",             1, js_resumeAudio),
+    JS_CFUNC_DEF("setAudioVolume",          2, js_setAudioVolume),
+    JS_CFUNC_DEF("isAudioPlaying",          1, js_isAudioPlaying),
+    JS_CFUNC_DEF("updateAudio",              0, js_updateAudio),
     JS_CFUNC_DEF("clear",                   0, js_clear),
     JS_CFUNC_DEF("drawTexture",             3, js_drawTexture),
     JS_CFUNC_DEF("drawTextureRotated",     14, js_drawTextureRotated),
@@ -867,6 +1199,19 @@ void js_sdl3_shutdown(JSContext *ctx)
             TTF_CloseFont(g_fonts[i].font);
             free(g_fonts[i].path);
             memset(&g_fonts[i], 0, sizeof(g_fonts[i]));
+        }
+    }
+    for (int i = 0; i < MAX_AUDIO_VOICES; i++) {
+        if (g_audio_voices[i].stream) {
+            SDL_DestroyAudioStream(g_audio_voices[i].stream);
+            memset(&g_audio_voices[i], 0, sizeof(g_audio_voices[i]));
+        }
+    }
+    for (int i = 0; i < MAX_AUDIO_ASSETS; i++) {
+        if (g_audio_assets[i].data) {
+            SDL_free(g_audio_assets[i].data);
+            free(g_audio_assets[i].path);
+            memset(&g_audio_assets[i], 0, sizeof(g_audio_assets[i]));
         }
     }
 
