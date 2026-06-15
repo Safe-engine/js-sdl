@@ -10,6 +10,40 @@
 
 static JSRuntime *rt;
 static JSContext *ctx;
+static bool app_active = true;
+static bool reset_frame_clock = false;
+
+static bool SDLCALL handle_app_event(void *userdata, SDL_Event *event)
+{
+    JSContext *event_ctx = userdata;
+
+    switch (event->type) {
+        case SDL_EVENT_TERMINATING:
+            js_call_terminate(event_ctx);
+            break;
+        case SDL_EVENT_LOW_MEMORY:
+            js_call_low_memory(event_ctx);
+            break;
+        case SDL_EVENT_WILL_ENTER_BACKGROUND:
+            app_active = false;
+            js_call_interruption(event_ctx, 1);
+            js_call_pause(event_ctx);
+            break;
+        case SDL_EVENT_DID_ENTER_BACKGROUND:
+            js_call_background(event_ctx);
+            break;
+        case SDL_EVENT_WILL_ENTER_FOREGROUND:
+            js_call_foreground(event_ctx);
+            break;
+        case SDL_EVENT_DID_ENTER_FOREGROUND:
+            app_active = true;
+            reset_frame_clock = true;
+            js_call_resume(event_ctx);
+            js_call_interruption(event_ctx, 0);
+            break;
+    }
+    return true;
+}
 
 int main()
 {
@@ -23,6 +57,7 @@ int main()
     rt = JS_NewRuntime();
     ctx = JS_NewContext(rt);
     js_init_sdl3(ctx);
+    SDL_AddEventWatch(handle_app_event, ctx);
 
     /* eval bundled dist/index.js */
     FILE *fp = fopen("dist/index.js", "rb");
@@ -67,10 +102,6 @@ int main()
     int running = 1;
 
     while (running) {
-        Uint64 now  = SDL_GetTicks();
-        float  dt   = (float)(now - prev) / 1000.0f;
-        prev = now;
-
         /* events */
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
@@ -109,17 +140,39 @@ int main()
                         event.tfinger.x * js_get_win_w(),
                         event.tfinger.y * js_get_win_h());
                     break;
+
+                case SDL_EVENT_DISPLAY_ORIENTATION: {
+                    int width;
+                    int height;
+                    js_get_window_size(&width, &height);
+                    js_call_orientation_change(
+                        ctx,
+                        (SDL_DisplayOrientation)event.display.data1,
+                        width,
+                        height);
+                    break;
+                }
             }
         }
 
+        Uint64 now = SDL_GetTicks();
+        float dt = reset_frame_clock
+            ? 0.0f
+            : (float)(now - prev) / 1000.0f;
+        prev = now;
+        reset_frame_clock = false;
+
         /* tick */
         js_execute_pending_job(rt);
-        js_call_onUpdate_dt(ctx, dt);
-        js_call_onRender(ctx);
+        if (app_active) {
+            js_call_onUpdate_dt(ctx, dt);
+            js_call_onRender(ctx);
+        }
 
         SDL_Delay(1);
     }
 
+    SDL_RemoveEventWatch(handle_app_event, ctx);
     js_sdl3_shutdown(ctx);
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);

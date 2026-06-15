@@ -48,6 +48,15 @@ static JSValue g_touchStart = JS_UNDEFINED;
 static JSValue g_touchMove  = JS_UNDEFINED;
 static JSValue g_touchEnd   = JS_UNDEFINED;
 
+static JSValue g_onPause             = JS_UNDEFINED;
+static JSValue g_onResume            = JS_UNDEFINED;
+static JSValue g_onBackground        = JS_UNDEFINED;
+static JSValue g_onForeground        = JS_UNDEFINED;
+static JSValue g_onInterruption      = JS_UNDEFINED;
+static JSValue g_onLowMemory         = JS_UNDEFINED;
+static JSValue g_onOrientationChange = JS_UNDEFINED;
+static JSValue g_onTerminate         = JS_UNDEFINED;
+
 /* ---- helpers ---- */
 
 static char *copy_string(const char *value)
@@ -142,6 +151,32 @@ static void js_call_touch(JSContext *ctx, JSValue func, float x, float y)
     if (JS_IsException(ret)) js_print_exception(ctx);
     JS_FreeValue(ctx, argv[0]);
     JS_FreeValue(ctx, argv[1]);
+    JS_FreeValue(ctx, ret);
+}
+
+static void js_call_bool(JSContext *ctx, JSValue func, int value)
+{
+    if (JS_IsUndefined(func)) return;
+    JSValue arg = JS_NewBool(ctx, value);
+    JSValue ret = JS_Call(ctx, func, JS_UNDEFINED, 1, &arg);
+    if (JS_IsException(ret)) js_print_exception(ctx);
+    JS_FreeValue(ctx, arg);
+    JS_FreeValue(ctx, ret);
+}
+
+static void js_call_orientation(
+    JSContext *ctx, JSValue func, SDL_DisplayOrientation orientation,
+    int width, int height)
+{
+    if (JS_IsUndefined(func)) return;
+    JSValue argv[3] = {
+        JS_NewInt32(ctx, (int)orientation),
+        JS_NewInt32(ctx, width),
+        JS_NewInt32(ctx, height),
+    };
+    JSValue ret = JS_Call(ctx, func, JS_UNDEFINED, 3, argv);
+    if (JS_IsException(ret)) js_print_exception(ctx);
+    for (int i = 0; i < 3; i++) JS_FreeValue(ctx, argv[i]);
     JS_FreeValue(ctx, ret);
 }
 
@@ -566,6 +601,36 @@ static JSValue js_onTouchEnd(
     return JS_UNDEFINED;
 }
 
+static JSValue js_set_callback(
+    JSContext *ctx, JSValueConst callback, JSValue *slot)
+{
+    if (!JS_IsFunction(ctx, callback)) return JS_EXCEPTION;
+    JS_FreeValue(ctx, *slot);
+    *slot = JS_DupValue(ctx, callback);
+    return JS_UNDEFINED;
+}
+
+#define DEFINE_CALLBACK_BINDING(name, slot) \
+    static JSValue name( \
+        JSContext *ctx, JSValueConst this_val, int argc, \
+        JSValueConst *argv) \
+    { \
+        (void)this_val; \
+        (void)argc; \
+        return js_set_callback(ctx, argv[0], &slot); \
+    }
+
+DEFINE_CALLBACK_BINDING(js_onPause, g_onPause)
+DEFINE_CALLBACK_BINDING(js_onResume, g_onResume)
+DEFINE_CALLBACK_BINDING(js_onBackground, g_onBackground)
+DEFINE_CALLBACK_BINDING(js_onForeground, g_onForeground)
+DEFINE_CALLBACK_BINDING(js_onInterruption, g_onInterruption)
+DEFINE_CALLBACK_BINDING(js_onLowMemory, g_onLowMemory)
+DEFINE_CALLBACK_BINDING(js_onOrientationChange, g_onOrientationChange)
+DEFINE_CALLBACK_BINDING(js_onTerminate, g_onTerminate)
+
+#undef DEFINE_CALLBACK_BINDING
+
 /* --- module export table --- */
 static const JSCFunctionListEntry funcs[] =
 {
@@ -588,6 +653,14 @@ static const JSCFunctionListEntry funcs[] =
     JS_CFUNC_DEF("onTouchStart",            1, js_onTouchStart),
     JS_CFUNC_DEF("onTouchMove",             1, js_onTouchMove),
     JS_CFUNC_DEF("onTouchEnd",              1, js_onTouchEnd),
+    JS_CFUNC_DEF("onPause",                 1, js_onPause),
+    JS_CFUNC_DEF("onResume",                1, js_onResume),
+    JS_CFUNC_DEF("onBackground",            1, js_onBackground),
+    JS_CFUNC_DEF("onForeground",            1, js_onForeground),
+    JS_CFUNC_DEF("onInterruption",          1, js_onInterruption),
+    JS_CFUNC_DEF("onLowMemory",             1, js_onLowMemory),
+    JS_CFUNC_DEF("onOrientationChange",      1, js_onOrientationChange),
+    JS_CFUNC_DEF("onTerminate",              1, js_onTerminate),
 };
 
 static int js_sdl3_init(JSContext *ctx, JSModuleDef *m)
@@ -650,8 +723,20 @@ void js_sdl3_shutdown(JSContext *ctx)
     JS_FreeValue(ctx, g_touchStart);
     JS_FreeValue(ctx, g_touchMove);
     JS_FreeValue(ctx, g_touchEnd);
+    JS_FreeValue(ctx, g_onPause);
+    JS_FreeValue(ctx, g_onResume);
+    JS_FreeValue(ctx, g_onBackground);
+    JS_FreeValue(ctx, g_onForeground);
+    JS_FreeValue(ctx, g_onInterruption);
+    JS_FreeValue(ctx, g_onLowMemory);
+    JS_FreeValue(ctx, g_onOrientationChange);
+    JS_FreeValue(ctx, g_onTerminate);
     g_onInit = g_onUpdate = g_onRender = JS_UNDEFINED;
     g_touchStart = g_touchMove = g_touchEnd = JS_UNDEFINED;
+    g_onPause = g_onResume = JS_UNDEFINED;
+    g_onBackground = g_onForeground = JS_UNDEFINED;
+    g_onInterruption = g_onLowMemory = JS_UNDEFINED;
+    g_onOrientationChange = g_onTerminate = JS_UNDEFINED;
 
     for (int i = 0; i < MAX_TEXTURES; i++) {
         if (g_textures[i].texture) {
@@ -705,6 +790,26 @@ void js_call_touchMove(JSContext *ctx, float x, float y)
     { js_call_touch(ctx, g_touchMove, x, y); }
 void js_call_touchEnd(JSContext *ctx, float x, float y)
     { js_call_touch(ctx, g_touchEnd, x, y); }
+void js_call_pause(JSContext *ctx) { js_call_void(ctx, g_onPause); }
+void js_call_resume(JSContext *ctx) { js_call_void(ctx, g_onResume); }
+void js_call_background(JSContext *ctx) { js_call_void(ctx, g_onBackground); }
+void js_call_foreground(JSContext *ctx) { js_call_void(ctx, g_onForeground); }
+void js_call_interruption(JSContext *ctx, int active)
+    { js_call_bool(ctx, g_onInterruption, active); }
+void js_call_low_memory(JSContext *ctx) { js_call_void(ctx, g_onLowMemory); }
+void js_call_orientation_change(
+    JSContext *ctx, SDL_DisplayOrientation orientation, int width, int height)
+    { js_call_orientation(
+        ctx, g_onOrientationChange, orientation, width, height); }
+void js_call_terminate(JSContext *ctx) { js_call_void(ctx, g_onTerminate); }
+
+void js_get_window_size(int *width, int *height)
+{
+    if (!g_window || !SDL_GetWindowSize(g_window, width, height)) {
+        *width = g_win_w;
+        *height = g_win_h;
+    }
+}
 
 int js_get_win_w(void) { return g_win_w; }
 int js_get_win_h(void) { return g_win_h; }

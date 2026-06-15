@@ -73,4 +73,15 @@ declare module "sdl3" {
 
   /** Register the touch/mouse-up callback. */
   export function onTouchEnd(cb: (x: number, y: number) => void): void;
+
+  export function onPause(cb: () => void): void;
+  export function onResume(cb: () => void): void;
+  export function onBackground(cb: () => void): void;
+  export function onForeground(cb: () => void): void;
+  export function onInterruption(cb: (active: boolean) => void): void;
+  export function onLowMemory(cb: () => void): void;
+  export function onOrientationChange(
+    cb: (orientation: number, width: number, height: number) => void,
+  ): void;
+  export function onTerminate(cb: () => void): void;
 }

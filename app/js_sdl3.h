@@ -15,5 +15,15 @@ void js_call_onRender(JSContext *ctx);
 void js_call_touchStart(JSContext *ctx, float x, float y);
 void js_call_touchMove(JSContext *ctx, float x, float y);
 void js_call_touchEnd(JSContext *ctx, float x, float y);
+void js_call_pause(JSContext *ctx);
+void js_call_resume(JSContext *ctx);
+void js_call_background(JSContext *ctx);
+void js_call_foreground(JSContext *ctx);
+void js_call_interruption(JSContext *ctx, int active);
+void js_call_low_memory(JSContext *ctx);
+void js_call_orientation_change(
+    JSContext *ctx, SDL_DisplayOrientation orientation, int width, int height);
+void js_call_terminate(JSContext *ctx);
+void js_get_window_size(int *width, int *height);
 int  js_get_win_w(void);
 int  js_get_win_h(void);

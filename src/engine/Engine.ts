@@ -6,15 +6,33 @@ import {
   onTouchStart,
   onTouchMove,
   onTouchEnd,
+  onPause,
+  onResume,
+  onBackground,
+  onForeground,
+  onInterruption,
+  onLowMemory,
+  onOrientationChange,
+  onTerminate,
   clear,
   present,
 } from "sdl3";
-import { Scene } from "./core/Scene";
+import { Orientation, Scene } from "./core/Scene";
+
+const ORIENTATIONS: Orientation[] = [
+  "unknown",
+  "landscape",
+  "landscape-flipped",
+  "portrait",
+  "portrait-flipped",
+];
 
 class EngineImpl {
   private _currentScene: Scene | null = null;
   private _initialized = false;
   private _ready = false;
+  private _paused = false;
+  private _backgrounded = false;
 
   /** Create window and register main loop. */
   start(title: string, width: number, height: number): void {
@@ -28,7 +46,7 @@ class EngineImpl {
     });
 
     onUpdate((dt: number) => {
-      if (this._currentScene) {
+      if (!this._paused && !this._backgrounded && this._currentScene) {
         this._currentScene.tick(dt);
       }
     });
@@ -51,6 +69,48 @@ class EngineImpl {
 
     onTouchEnd((x: number, y: number) => {
       this._currentScene?.onTouchEnd(x, y);
+    });
+
+    onPause(() => {
+      if (this._paused) return;
+      this._paused = true;
+      this._currentScene?.onSaveProgress();
+      this._currentScene?.onPause();
+    });
+
+    onResume(() => {
+      if (!this._paused) return;
+      this._paused = false;
+      this._currentScene?.onResume();
+    });
+
+    onBackground(() => {
+      if (this._backgrounded) return;
+      this._backgrounded = true;
+      this._currentScene?.onBackground();
+    });
+
+    onForeground(() => {
+      if (!this._backgrounded) return;
+      this._backgrounded = false;
+      this._currentScene?.onForeground();
+    });
+
+    onInterruption((active: boolean) => {
+      this._currentScene?.onInterruption(active);
+    });
+
+    onLowMemory(() => {
+      this._currentScene?.onLowMemory();
+    });
+
+    onOrientationChange((value: number, width: number, height: number) => {
+      const orientation = ORIENTATIONS[value] ?? "unknown";
+      this._currentScene?.onOrientationChange(orientation, width, height);
+    });
+
+    onTerminate(() => {
+      this._currentScene?.onSaveProgress();
     });
   }
 

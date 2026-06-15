@@ -51,3 +51,39 @@ group.preload(({ progress }) => {
   sheet.release();
 });
 ```
+
+### Mobile lifecycle
+
+Override lifecycle hooks on a scene. `onSaveProgress()` is called automatically
+before the app enters the background and again if the OS terminates it.
+
+```ts
+class GameScene extends Scene {
+  onPause(): void {
+    audio.pause();
+  }
+
+  onResume(): void {
+    audio.resume();
+  }
+
+  onSaveProgress(): void {
+    saveGame(this.progress);
+  }
+
+  onLowMemory(): void {
+    this.releaseOptionalCaches();
+  }
+
+  onOrientationChange(
+    orientation: Orientation,
+    width: number,
+    height: number,
+  ): void {
+    this.layout(orientation, width, height);
+  }
+}
+```
+
+Scenes can also implement `onBackground()`, `onForeground()`, and
+`onInterruption(active)` for finer control over mobile transitions.

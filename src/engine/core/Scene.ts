@@ -1,5 +1,12 @@
 import { Node } from "./Node";
 
+export type Orientation =
+  | "unknown"
+  | "landscape"
+  | "landscape-flipped"
+  | "portrait"
+  | "portrait-flipped";
+
 export class Scene {
   readonly name: string;
   readonly root: Node;
@@ -27,6 +34,34 @@ export class Scene {
 
   /** Override: called when a pointer is released. */
   onTouchEnd(_x: number, _y: number): void {}
+
+  /** Override: called when the app becomes inactive. */
+  onPause(): void {}
+
+  /** Override: called when the app becomes interactive again. */
+  onResume(): void {}
+
+  /** Override: called after the app enters the background. */
+  onBackground(): void {}
+
+  /** Override: called before the app returns to the foreground. */
+  onForeground(): void {}
+
+  /** Override: called when an OS interruption starts or ends. */
+  onInterruption(_active: boolean): void {}
+
+  /** Override: release optional caches when the OS reports memory pressure. */
+  onLowMemory(): void {}
+
+  /** Override: called after display orientation changes. */
+  onOrientationChange(
+    _orientation: Orientation,
+    _width: number,
+    _height: number,
+  ): void {}
+
+  /** Override: synchronously persist progress before background/termination. */
+  onSaveProgress(): void {}
 
   /** Engine-internal: update all logic. */
   tick(dt: number): void {

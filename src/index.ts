@@ -67,7 +67,7 @@ class GameScene extends Scene {
 
     // HUD label
     const hud = new Node("HUD");
-    hud.transform.setPosition(20, 20);
+    hud.transform.setPosition(120, 20);
     const label = hud.addComponent(Label);
     label.setFont("res/Font/LilitaOne-Regular.ttf", 20);
     label.setText("SDL3 + QuickJS + TS (Hot Reload Enabled)");
