@@ -1,182 +1,244 @@
+#define SDL_MAIN_USE_CALLBACKS 1
+
 #include <stdio.h>
 #include <stdlib.h>
 
 #include <SDL3/SDL.h>
+#include <SDL3/SDL_main.h>
 #include <SDL3_ttf/SDL_ttf.h>
 
 #include <quickjs.h>
 
 #include "js_sdl3.h"
 
-static JSRuntime *rt;
-static JSContext *ctx;
-static bool app_active = true;
-static bool reset_frame_clock = false;
+typedef struct AppState {
+    JSRuntime *runtime;
+    JSContext *context;
+    Uint64 previous_ticks;
+    bool active;
+    bool reset_frame_clock;
+} AppState;
 
-static bool SDLCALL handle_app_event(void *userdata, SDL_Event *event)
+static void print_js_exception(JSContext *ctx)
 {
-    JSContext *event_ctx = userdata;
+    JSValue exception = JS_GetException(ctx);
+    const char *message = JS_ToCString(ctx, exception);
+    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "JS exception: %s", message);
+    JS_FreeCString(ctx, message);
 
-    switch (event->type) {
-        case SDL_EVENT_TERMINATING:
-            js_call_terminate(event_ctx);
-            break;
-        case SDL_EVENT_LOW_MEMORY:
-            js_call_low_memory(event_ctx);
-            break;
-        case SDL_EVENT_WILL_ENTER_BACKGROUND:
-            app_active = false;
-            js_call_interruption(event_ctx, 1);
-            js_call_pause(event_ctx);
-            break;
-        case SDL_EVENT_DID_ENTER_BACKGROUND:
-            js_call_background(event_ctx);
-            break;
-        case SDL_EVENT_WILL_ENTER_FOREGROUND:
-            js_call_foreground(event_ctx);
-            break;
-        case SDL_EVENT_DID_ENTER_FOREGROUND:
-            app_active = true;
-            reset_frame_clock = true;
-            js_call_resume(event_ctx);
-            js_call_interruption(event_ctx, 0);
-            break;
+    JSValue stack = JS_GetPropertyStr(ctx, exception, "stack");
+    if (!JS_IsUndefined(stack)) {
+        const char *trace = JS_ToCString(ctx, stack);
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Stack trace:\n%s", trace);
+        JS_FreeCString(ctx, trace);
     }
+    JS_FreeValue(ctx, stack);
+    JS_FreeValue(ctx, exception);
+}
+
+static bool evaluate_bundle(JSContext *ctx)
+{
+    const char *base_path = SDL_GetBasePath();
+    char *bundle_path = NULL;
+    if (base_path) SDL_asprintf(&bundle_path, "%sdist/index.js", base_path);
+
+    size_t length = 0;
+    void *contents = SDL_LoadFile(
+        bundle_path ? bundle_path : "dist/index.js",
+        &length);
+    if (!contents && bundle_path) {
+        contents = SDL_LoadFile("dist/index.js", &length);
+    }
+    SDL_free(bundle_path);
+    if (!contents) {
+        SDL_LogError(
+            SDL_LOG_CATEGORY_APPLICATION,
+            "Cannot load dist/index.js: %s (run: bun run build)",
+            SDL_GetError());
+        return false;
+    }
+
+    JSValue result = JS_Eval(
+        ctx,
+        contents,
+        length,
+        "dist/index.js",
+        JS_EVAL_TYPE_MODULE);
+    SDL_free(contents);
+
+    if (JS_IsException(result)) {
+        print_js_exception(ctx);
+        JS_FreeValue(ctx, result);
+        return false;
+    }
+
+    JS_FreeValue(ctx, result);
     return true;
 }
 
-int main()
+SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 {
-    SDL_Init(SDL_INIT_VIDEO);
+    (void)argc;
+    (void)argv;
+
+    if (!SDL_Init(SDL_INIT_VIDEO)) {
+        SDL_LogError(
+            SDL_LOG_CATEGORY_APPLICATION,
+            "SDL_Init failed: %s",
+            SDL_GetError());
+        return SDL_APP_FAILURE;
+    }
 
     if (!TTF_Init()) {
-        fprintf(stderr, "TTF_Init Error: %s\n", SDL_GetError());
-        return 1;
+        SDL_LogError(
+            SDL_LOG_CATEGORY_APPLICATION,
+            "TTF_Init failed: %s",
+            SDL_GetError());
+        SDL_Quit();
+        return SDL_APP_FAILURE;
     }
 
-    rt = JS_NewRuntime();
-    ctx = JS_NewContext(rt);
-    js_init_sdl3(ctx);
-    SDL_AddEventWatch(handle_app_event, ctx);
-
-    /* eval bundled dist/index.js */
-    FILE *fp = fopen("dist/index.js", "rb");
-    if (!fp) {
-        fprintf(stderr, "cannot open dist/index.js (run: npm run build)\n");
-        return 1;
+    AppState *state = SDL_calloc(1, sizeof(*state));
+    if (!state) {
+        TTF_Quit();
+        SDL_Quit();
+        return SDL_APP_FAILURE;
     }
-    fseek(fp, 0, SEEK_END);
-    long len = ftell(fp);
-    rewind(fp);
-    char *code = malloc((size_t)len + 1);
-    fread(code, 1, (size_t)len, fp);
-    code[len] = 0;
-    fclose(fp);
 
-    JSValue result = JS_Eval(ctx, code, (size_t)len, "main.js", JS_EVAL_TYPE_MODULE);
-    free(code);
+    state->runtime = JS_NewRuntime();
+    state->context = state->runtime ? JS_NewContext(state->runtime) : NULL;
+    state->active = true;
+    state->previous_ticks = SDL_GetTicks();
 
-    if (JS_IsException(result)) {
-        JSValue exc = JS_GetException(ctx);
-        const char *str = JS_ToCString(ctx, exc);
-        fprintf(stderr, "JS exception: %s\n", str);
-        JS_FreeCString(ctx, str);
-
-        /* print stack trace if available */
-        JSValue stack = JS_GetPropertyStr(ctx, exc, "stack");
-        if (!JS_IsUndefined(stack)) {
-            const char *trace = JS_ToCString(ctx, stack);
-            fprintf(stderr, "Stack trace:\n%s\n", trace);
-            JS_FreeCString(ctx, trace);
+    if (!state->runtime || !state->context ||
+        js_init_sdl3(state->context) < 0 ||
+        !evaluate_bundle(state->context)) {
+        if (state->context) {
+            js_sdl3_shutdown(state->context);
+            JS_FreeContext(state->context);
         }
-        JS_FreeValue(ctx, stack);
-        JS_FreeValue(ctx, exc);
+        if (state->runtime) JS_FreeRuntime(state->runtime);
+        SDL_free(state);
+        TTF_Quit();
+        SDL_Quit();
+        return SDL_APP_FAILURE;
     }
-    JS_FreeValue(ctx, result);
 
-    /* call onInit once */
-    js_call_onInit(ctx);
+    js_call_onInit(state->context);
+    *appstate = state;
+    return SDL_APP_CONTINUE;
+}
 
-    /* C-driven game loop */
-    Uint64 prev = SDL_GetTicks();
-    int running = 1;
+SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
+{
+    AppState *state = appstate;
+    JSContext *ctx = state->context;
 
-    while (running) {
-        /* events */
-        SDL_Event event;
-        while (SDL_PollEvent(&event)) {
-            switch (event.type) {
-                case SDL_EVENT_QUIT:
-                    running = 0;
-                    break;
-
-                case SDL_EVENT_MOUSE_BUTTON_DOWN:
-                    js_call_touchStart(ctx, event.button.x, event.button.y);
-                    break;
-
-                case SDL_EVENT_MOUSE_MOTION:
-                    if (event.motion.state)
-                        js_call_touchMove(ctx, event.motion.x, event.motion.y);
-                    break;
-
-                case SDL_EVENT_MOUSE_BUTTON_UP:
-                    js_call_touchEnd(ctx, event.button.x, event.button.y);
-                    break;
-
-                case SDL_EVENT_FINGER_DOWN:
-                    js_call_touchStart(ctx,
-                        event.tfinger.x * js_get_win_w(),
-                        event.tfinger.y * js_get_win_h());
-                    break;
-
-                case SDL_EVENT_FINGER_MOTION:
-                    js_call_touchMove(ctx,
-                        event.tfinger.x * js_get_win_w(),
-                        event.tfinger.y * js_get_win_h());
-                    break;
-
-                case SDL_EVENT_FINGER_UP:
-                    js_call_touchEnd(ctx,
-                        event.tfinger.x * js_get_win_w(),
-                        event.tfinger.y * js_get_win_h());
-                    break;
-
-                case SDL_EVENT_DISPLAY_ORIENTATION: {
-                    int width;
-                    int height;
-                    js_get_window_size(&width, &height);
-                    js_call_orientation_change(
-                        ctx,
-                        (SDL_DisplayOrientation)event.display.data1,
-                        width,
-                        height);
-                    break;
-                }
+    switch (event->type) {
+        case SDL_EVENT_QUIT:
+            js_call_terminate(ctx);
+            return SDL_APP_SUCCESS;
+        case SDL_EVENT_TERMINATING:
+            js_call_terminate(ctx);
+            return SDL_APP_SUCCESS;
+        case SDL_EVENT_LOW_MEMORY:
+            js_call_low_memory(ctx);
+            break;
+        case SDL_EVENT_WILL_ENTER_BACKGROUND:
+            state->active = false;
+            js_call_interruption(ctx, 1);
+            js_call_pause(ctx);
+            break;
+        case SDL_EVENT_DID_ENTER_BACKGROUND:
+            js_call_background(ctx);
+            break;
+        case SDL_EVENT_WILL_ENTER_FOREGROUND:
+            js_call_foreground(ctx);
+            break;
+        case SDL_EVENT_DID_ENTER_FOREGROUND:
+            state->active = true;
+            state->reset_frame_clock = true;
+            js_call_resume(ctx);
+            js_call_interruption(ctx, 0);
+            break;
+        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+            js_call_touchStart(ctx, event->button.x, event->button.y);
+            break;
+        case SDL_EVENT_MOUSE_MOTION:
+            if (event->motion.state) {
+                js_call_touchMove(ctx, event->motion.x, event->motion.y);
             }
+            break;
+        case SDL_EVENT_MOUSE_BUTTON_UP:
+            js_call_touchEnd(ctx, event->button.x, event->button.y);
+            break;
+        case SDL_EVENT_FINGER_DOWN:
+            js_call_touchStart(
+                ctx,
+                event->tfinger.x * js_get_win_w(),
+                event->tfinger.y * js_get_win_h());
+            break;
+        case SDL_EVENT_FINGER_MOTION:
+            js_call_touchMove(
+                ctx,
+                event->tfinger.x * js_get_win_w(),
+                event->tfinger.y * js_get_win_h());
+            break;
+        case SDL_EVENT_FINGER_UP:
+            js_call_touchEnd(
+                ctx,
+                event->tfinger.x * js_get_win_w(),
+                event->tfinger.y * js_get_win_h());
+            break;
+        case SDL_EVENT_DISPLAY_ORIENTATION: {
+            int width;
+            int height;
+            js_get_window_size(&width, &height);
+            js_call_orientation_change(
+                ctx,
+                (SDL_DisplayOrientation)event->display.data1,
+                width,
+                height);
+            break;
         }
-
-        Uint64 now = SDL_GetTicks();
-        float dt = reset_frame_clock
-            ? 0.0f
-            : (float)(now - prev) / 1000.0f;
-        prev = now;
-        reset_frame_clock = false;
-
-        /* tick */
-        js_execute_pending_job(rt);
-        if (app_active) {
-            js_call_onUpdate_dt(ctx, dt);
-            js_call_onRender(ctx);
-        }
-
-        SDL_Delay(1);
     }
 
-    SDL_RemoveEventWatch(handle_app_event, ctx);
-    js_sdl3_shutdown(ctx);
-    JS_FreeContext(ctx);
-    JS_FreeRuntime(rt);
+    return SDL_APP_CONTINUE;
+}
+
+SDL_AppResult SDL_AppIterate(void *appstate)
+{
+    AppState *state = appstate;
+    Uint64 now = SDL_GetTicks();
+    float delta_time = state->reset_frame_clock
+        ? 0.0f
+        : (float)(now - state->previous_ticks) / 1000.0f;
+
+    state->previous_ticks = now;
+    state->reset_frame_clock = false;
+
+    js_execute_pending_job(state->runtime);
+    if (state->active) {
+        js_call_onUpdate_dt(state->context, delta_time);
+        js_call_onRender(state->context);
+    }
+
+    SDL_Delay(1);
+    return SDL_APP_CONTINUE;
+}
+
+void SDL_AppQuit(void *appstate, SDL_AppResult result)
+{
+    (void)result;
+
+    AppState *state = appstate;
+    if (state) {
+        js_sdl3_shutdown(state->context);
+        JS_FreeContext(state->context);
+        JS_FreeRuntime(state->runtime);
+        SDL_free(state);
+    }
+
     TTF_Quit();
     SDL_Quit();
-    return 0;
 }

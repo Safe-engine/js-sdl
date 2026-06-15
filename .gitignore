@@ -239,6 +239,16 @@ release_note_draft.txt
 
 .env
 
+# Mobile signing and generated projects
+android/keystore.properties
+android/*.keystore
+android/*.jks
+android/.gradle/
+android/app/build/
+ios/xcode/
+ios/build/
+third_party/
+
 # TypeScript / Vite build output
 dist/
 

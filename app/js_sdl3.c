@@ -67,6 +67,22 @@ static char *copy_string(const char *value)
     return copy;
 }
 
+static char *resolve_resource_path(const char *path)
+{
+    if (!path || !*path || path[0] == '/' || strstr(path, "://")) {
+        return copy_string(path);
+    }
+
+    const char *base_path = SDL_GetBasePath();
+    if (!base_path) return copy_string(path);
+
+    size_t length = strlen(base_path) + strlen(path) + 1;
+    char *resolved = malloc(length);
+    if (!resolved) return NULL;
+    snprintf(resolved, length, "%s%s", base_path, path);
+    return resolved;
+}
+
 static int find_free_texture_slot(void)
 {
     for (int i = 0; i < MAX_TEXTURES; i++) {
@@ -224,7 +240,14 @@ static JSValue js_loadTexture(
         return JS_NewInt32(ctx, -1);
     }
 
-    SDL_Texture *tex = IMG_LoadTexture(g_renderer, path);
+    char *resolved_path = resolve_resource_path(path);
+    SDL_Texture *tex = resolved_path
+        ? IMG_LoadTexture(g_renderer, resolved_path)
+        : NULL;
+    if (!tex && resolved_path && strcmp(resolved_path, path) != 0) {
+        tex = IMG_LoadTexture(g_renderer, path);
+    }
+    free(resolved_path);
     if (!tex) {
         JS_FreeCString(ctx, path);
         return JS_NewInt32(ctx, -1);
@@ -278,7 +301,14 @@ static JSValue js_loadFont(
         return JS_NewInt32(ctx, -1);
     }
 
-    TTF_Font *font = TTF_OpenFont(path, (float)ptsize);
+    char *resolved_path = resolve_resource_path(path);
+    TTF_Font *font = resolved_path
+        ? TTF_OpenFont(resolved_path, (float)ptsize)
+        : NULL;
+    if (!font && resolved_path && strcmp(resolved_path, path) != 0) {
+        font = TTF_OpenFont(path, (float)ptsize);
+    }
+    free(resolved_path);
     if (!font) {
         JS_FreeCString(ctx, path);
         return JS_NewInt32(ctx, -1);

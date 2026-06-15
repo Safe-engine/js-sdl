@@ -6,7 +6,13 @@
     "sync-res": "bun ./node_modules/safex-sync-res/src/index.ts",
     "predev": "bun run sync-res",
     "build": "vite build",
-    "dev": "vite build --watch"
+    "dev": "vite build --watch",
+    "mobile:deps": "./scripts/bootstrap-mobile-deps.sh",
+    "mobile:assets": "node ./scripts/generate-mobile-assets.mjs",
+    "android:apk": "./scripts/package-android.sh apk release",
+    "android:aab": "./scripts/package-android.sh aab release",
+    "ios:project": "./scripts/generate-ios-project.sh",
+    "ios:ipa": "./scripts/package-ios.sh"
   },
   "devDependencies": {
     "typescript": "^5.7.0",

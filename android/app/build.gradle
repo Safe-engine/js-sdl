@@ -1,0 +1,91 @@
+plugins {
+    id "com.android.application"
+}
+
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
+def generatedAssets = layout.buildDirectory.dir("generated/gameAssets")
+def syncGameAssets = tasks.register("syncGameAssets", Sync) {
+    from(rootProject.projectDir.parentFile) {
+        include "dist/**"
+        include "res/**"
+    }
+    into(generatedAssets)
+}
+
+android {
+    namespace "com.safeengine.jssdl"
+    compileSdk 37
+    ndkVersion "28.2.13676358"
+
+    defaultConfig {
+        applicationId "com.safeengine.jssdl"
+        minSdk 21
+        targetSdk 37
+        versionCode 1
+        versionName "1.0.0"
+
+        externalNativeBuild {
+            cmake {
+                arguments "-DJS_SDL_USE_VENDORED=ON"
+                abiFilters "arm64-v8a", "armeabi-v7a", "x86_64"
+            }
+        }
+    }
+
+    signingConfigs {
+        release {
+            if (keystorePropertiesFile.exists()) {
+                storeFile file(keystoreProperties["storeFile"])
+                storePassword keystoreProperties["storePassword"]
+                keyAlias keystoreProperties["keyAlias"]
+                keyPassword keystoreProperties["keyPassword"]
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
+            debuggable true
+        }
+        release {
+            minifyEnabled false
+            shrinkResources false
+            if (keystorePropertiesFile.exists()) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path file("../../CMakeLists.txt")
+            version "3.31.6"
+        }
+    }
+
+    sourceSets {
+        main {
+            assets.srcDir(generatedAssets)
+            java.srcDirs += [
+                "../../third_party/SDL/android-project/app/src/main/java"
+            ]
+        }
+    }
+
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
+}
+
+tasks.named("preBuild").configure {
+    dependsOn(syncGameAssets)
+}
