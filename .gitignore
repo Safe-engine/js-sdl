@@ -251,6 +251,7 @@ android/app/build/
 ios/xcode/
 ios/build/
 third_party/
+dist-web/
 
 # TypeScript / Vite build output
 dist/

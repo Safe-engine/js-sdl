@@ -15,6 +15,21 @@ vcpkg install sdl3 sdl3-image --triplet x64-windows
 - `cmake -S . -B build`
 - `cmake --build build --parallel && ./build/sdl3js`
 
+### Web
+
+The browser build reuses the same engine and game code, replacing the native
+`sdl3` module with the WebGL implementation in `web/sdl3.ts`.
+
+```bash
+bun run web:dev
+```
+
+Create a production build in `dist-web/` with:
+
+```bash
+bun run web:build
+```
+
 ### Mobile prerequisites
 
 Mobile builds compile SDL3, SDL3_image, SDL3_ttf, and QuickJS from source:
