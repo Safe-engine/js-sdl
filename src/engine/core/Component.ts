@@ -10,10 +10,15 @@ export class Component {
   onStart(): void {}
   onUpdate(_dt: number): void {}
   onRender(): void {}
+  onRenderEnd(): void {}
   onDestroy(): void {}
 
   hitTest(_x: number, _y: number): boolean {
     return false;
+  }
+
+  allowsDescendantInput(_x: number, _y: number): boolean {
+    return true;
   }
 
   onPointerStart(_event: InputEvent): void {}

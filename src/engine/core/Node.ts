@@ -71,6 +71,9 @@ export class Node {
     for (let i = 0; i < this.children.length; i++) {
       this.children[i]._renderTree();
     }
+    for (let i = this.components.length - 1; i >= 0; i--) {
+      this.components[i].onRenderEnd();
+    }
   }
 
   /** Internal: start all components (called once on first tick). */

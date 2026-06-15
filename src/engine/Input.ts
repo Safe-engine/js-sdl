@@ -98,13 +98,17 @@ export class InputSystem {
 
     const visit = (node: Node): void => {
       if (!node.active) return;
+      let allowChildren = true;
       for (const component of node.components) {
         if (component.inputEnabled && component.hitTest(x, y)) {
           candidates.push({ component, renderOrder });
         }
+        if (!component.allowsDescendantInput(x, y)) allowChildren = false;
         renderOrder++;
       }
-      for (const child of node.children) visit(child);
+      if (allowChildren) {
+        for (const child of node.children) visit(child);
+      }
     };
 
     visit(this.root);

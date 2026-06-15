@@ -275,6 +275,76 @@ Calling `event.stopPropagation()` prevents lower-priority hit components and
 the scene touch callback from receiving that event. Buttons do this by default;
 set `button.consumeInput = false` to allow propagation.
 
+### UI
+
+UI components use the existing node tree and logical coordinate system.
+`UIContainer` supports horizontal and vertical stack layout, padding, gaps,
+cross-axis alignment, flexible children, and anchor constraints. `Panel`,
+`UIImage`, `NineSlice`, `ProgressBar`, `Toggle`, and `ScrollView` provide the
+standard retained widgets.
+
+```ts
+import {
+  Label,
+  Localization,
+  Node,
+  Panel,
+  ProgressBar,
+  Toggle,
+  UIContainer,
+  UIElement,
+} from "./engine";
+
+Localization.add("en", { status: "Energy: {value}%" });
+Localization.add("vi", { status: "Năng lượng: {value}%" });
+Localization.use("en");
+
+const hud = new Node("hud");
+const panel = hud.addComponent(Panel);
+panel.setSize(520, 180);
+panel.direction = "vertical";
+panel.gap = 12;
+panel.padding = { top: 20, right: 20, bottom: 20, left: 20 };
+
+const titleNode = panel.node!.addChild(new Node("title"));
+titleNode.addComponent(UIElement).setSize(480, 48);
+const title = titleNode.addComponent(Label);
+title.setFont("res/Font/LilitaOne-Regular.ttf", 30);
+title.setLocalized("status", { value: 75 });
+title.wrapWidth = 480;
+title.align = "center";
+title.outlineWidth = 2;
+
+const progressNode = panel.node!.addChild(new Node("progress"));
+const progress = progressNode.addComponent(ProgressBar);
+progress.setSize(480, 24).setValue(0.75);
+
+const toggleNode = panel.node!.addChild(new Node("sound"));
+const toggle = toggleNode.addComponent(Toggle);
+toggle.setSize(72, 36);
+toggle.onChange = (enabled) => console.log("Sound", enabled);
+```
+
+Anchor values are normalized to the parent UI element. Equal minimum and
+maximum anchors pin an element to a point; different values stretch it between
+two points. Offsets then inset or move the anchored rectangle.
+
+```ts
+const child = new Node("full-size-child");
+panel.node!.addChild(child);
+const element = child.addComponent(UIElement);
+element.setAnchors(0, 0, 1, 1);
+element.offsetLeft = 16;
+element.offsetTop = 16;
+element.offsetRight = 16;
+element.offsetBottom = 16;
+```
+
+`ScrollView` clips its descendants and uses its first child as the movable
+content root. Set `contentWidth` and `contentHeight` to define scroll limits.
+Labels support explicit newlines, word wrapping, horizontal and vertical
+alignment, color, opacity, outlines, and localization keys.
+
 ### Tweening
 
 Tweens use seconds and advance with engine time, so they pause automatically

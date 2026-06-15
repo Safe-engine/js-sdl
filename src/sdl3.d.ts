@@ -87,6 +87,20 @@ declare module "sdl3" {
     red?: number, green?: number, blue?: number, alpha?: number,
   ): void;
 
+  /** Draw a filled rectangle in logical coordinates. */
+  export function drawRect(
+    x: number, y: number, width: number, height: number,
+    red: number, green: number, blue: number, alpha?: number,
+  ): void;
+
+  /** Intersect subsequent rendering with a logical rectangle. */
+  export function pushClipRect(
+    x: number, y: number, width: number, height: number,
+  ): void;
+
+  /** Restore the previous clipping rectangle. */
+  export function popClipRect(): void;
+
   /** Present (swap) the renderer's back-buffer to the screen. */
   export function present(): void;
 

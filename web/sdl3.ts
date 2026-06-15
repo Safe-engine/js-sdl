@@ -43,6 +43,8 @@ let uvLocation = -1;
 let resolutionLocation: WebGLUniformLocation | null = null;
 let samplerLocation: WebGLUniformLocation | null = null;
 let colorLocation: WebGLUniformLocation | null = null;
+let whiteTexture: WebGLTexture | null = null;
+const clipStack: Array<[number, number, number, number]> = [];
 let logicalWidth = 1;
 let logicalHeight = 1;
 let nextTextureId = 0;
@@ -393,6 +395,21 @@ export function createWindow(title: string, width: number, height: number): void
   resolutionLocation = gl.getUniformLocation(program, "u_resolution");
   samplerLocation = gl.getUniformLocation(program, "u_texture");
   colorLocation = gl.getUniformLocation(program, "u_color");
+  whiteTexture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, whiteTexture);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.texImage2D(
+    gl.TEXTURE_2D,
+    0,
+    gl.RGBA,
+    1,
+    1,
+    0,
+    gl.RGBA,
+    gl.UNSIGNED_BYTE,
+    new Uint8Array([255, 255, 255, 255]),
+  );
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
   gl.viewport(0, 0, width, height);
@@ -670,6 +687,73 @@ export function drawTextureRegionRotated(
     id, sourceX, sourceY, sourceWidth, sourceHeight,
     x, y, width, height, angle, centerX, centerY, flipX, flipY,
     red, green, blue, alpha,
+  );
+}
+
+export function drawRect(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  red: number,
+  green: number,
+  blue: number,
+  alpha = 255,
+): void {
+  if (!whiteTexture || !program || !positionBuffer || !uvBuffer) return;
+  const context = requireGl();
+  const id = -1;
+  textures.set(id, {
+    texture: whiteTexture,
+    width: 1,
+    height: 1,
+    refs: 1,
+    key: "__white",
+  });
+  draw(id, 0, 0, 1, 1, x, y, width, height, 0, 0, 0, false, false,
+    red, green, blue, alpha);
+  textures.delete(id);
+}
+
+export function pushClipRect(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+): void {
+  const previous = clipStack[clipStack.length - 1];
+  if (previous) {
+    const right = Math.min(x + width, previous[0] + previous[2]);
+    const bottom = Math.min(y + height, previous[1] + previous[3]);
+    x = Math.max(x, previous[0]);
+    y = Math.max(y, previous[1]);
+    width = Math.max(0, right - x);
+    height = Math.max(0, bottom - y);
+  }
+  clipStack.push([x, y, width, height]);
+  applyClipRect();
+}
+
+export function popClipRect(): void {
+  clipStack.pop();
+  applyClipRect();
+}
+
+function applyClipRect(): void {
+  if (!canvas || !gl) return;
+  const clip = clipStack[clipStack.length - 1];
+  if (!clip) {
+    gl.disable(gl.SCISSOR_TEST);
+    return;
+  }
+  const scaleX = canvas.width / logicalWidth;
+  const scaleY = canvas.height / logicalHeight;
+  gl.enable(gl.SCISSOR_TEST);
+  gl.scissor(
+    Math.round(clip[0] * scaleX),
+    Math.round(canvas.height - (clip[1] + clip[3]) * scaleY),
+    Math.max(0, Math.round(clip[2] * scaleX)),
+    Math.max(0, Math.round(clip[3] * scaleY)),
   );
 }
 

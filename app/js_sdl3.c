@@ -64,6 +64,10 @@ typedef struct AudioVoice {
 
 static AudioVoice g_audio_voices[MAX_AUDIO_VOICES];
 
+#define MAX_CLIP_DEPTH 32
+static SDL_Rect g_clip_stack[MAX_CLIP_DEPTH];
+static int g_clip_depth = 0;
+
 /* --- JS callbacks --- */
 static JSValue g_onInit   = JS_UNDEFINED;
 static JSValue g_onUpdate = JS_UNDEFINED;
@@ -951,6 +955,79 @@ static JSValue js_drawTextureRegionRotated(
     return JS_UNDEFINED;
 }
 
+static JSValue js_drawRect(
+    JSContext *ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst *argv)
+{
+    double x, y, width, height, red, green, blue, alpha = 255;
+    JS_ToFloat64(ctx, &x, argv[0]);
+    JS_ToFloat64(ctx, &y, argv[1]);
+    JS_ToFloat64(ctx, &width, argv[2]);
+    JS_ToFloat64(ctx, &height, argv[3]);
+    JS_ToFloat64(ctx, &red, argv[4]);
+    JS_ToFloat64(ctx, &green, argv[5]);
+    JS_ToFloat64(ctx, &blue, argv[6]);
+    if (argc > 7) JS_ToFloat64(ctx, &alpha, argv[7]);
+
+    SDL_SetRenderDrawBlendMode(g_renderer, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(
+        g_renderer,
+        (Uint8)SDL_clamp(red, 0, 255),
+        (Uint8)SDL_clamp(green, 0, 255),
+        (Uint8)SDL_clamp(blue, 0, 255),
+        (Uint8)SDL_clamp(alpha, 0, 255));
+    SDL_FRect rect = {
+        (float)x, (float)y, (float)width, (float)height
+    };
+    SDL_RenderFillRect(g_renderer, &rect);
+    return JS_UNDEFINED;
+}
+
+static JSValue js_pushClipRect(
+    JSContext *ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst *argv)
+{
+    double x, y, width, height;
+    JS_ToFloat64(ctx, &x, argv[0]);
+    JS_ToFloat64(ctx, &y, argv[1]);
+    JS_ToFloat64(ctx, &width, argv[2]);
+    JS_ToFloat64(ctx, &height, argv[3]);
+    if (g_clip_depth >= MAX_CLIP_DEPTH) return JS_UNDEFINED;
+
+    SDL_Rect clip = {
+        (int)x, (int)y, (int)SDL_max(0.0, width), (int)SDL_max(0.0, height)
+    };
+    if (g_clip_depth > 0) {
+        SDL_Rect intersection;
+        if (SDL_GetRectIntersection(
+                &g_clip_stack[g_clip_depth - 1], &clip, &intersection)) {
+            clip = intersection;
+        } else {
+            clip = (SDL_Rect){ 0, 0, 0, 0 };
+        }
+    }
+    g_clip_stack[g_clip_depth++] = clip;
+    SDL_SetRenderClipRect(g_renderer, &clip);
+    return JS_UNDEFINED;
+}
+
+static JSValue js_popClipRect(
+    JSContext *ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst *argv)
+{
+    if (g_clip_depth > 0) g_clip_depth--;
+    SDL_SetRenderClipRect(
+        g_renderer,
+        g_clip_depth > 0 ? &g_clip_stack[g_clip_depth - 1] : NULL);
+    return JS_UNDEFINED;
+}
+
 /* --- Binding: present() --- */
 static JSValue js_present(
     JSContext *ctx,
@@ -1095,6 +1172,9 @@ static const JSCFunctionListEntry funcs[] =
     JS_CFUNC_DEF("drawTexture",             3, js_drawTexture),
     JS_CFUNC_DEF("drawTextureRotated",     14, js_drawTextureRotated),
     JS_CFUNC_DEF("drawTextureRegionRotated", 18, js_drawTextureRegionRotated),
+    JS_CFUNC_DEF("drawRect",                8, js_drawRect),
+    JS_CFUNC_DEF("pushClipRect",            4, js_pushClipRect),
+    JS_CFUNC_DEF("popClipRect",             0, js_popClipRect),
     JS_CFUNC_DEF("present",                 0, js_present),
     JS_CFUNC_DEF("onInit",                  1, js_onInit),
     JS_CFUNC_DEF("onUpdate",                1, js_onUpdate),

@@ -47,8 +47,29 @@ export {
   Sound,
 } from "./Audio";
 export type { PlayOptions, SoundOptions } from "./Audio";
+export { Localization } from "./Localization";
+export type { TranslationTable } from "./Localization";
 
 // Components
 export { Sprite } from "./components/Sprite";
 export { Label } from "./components/Label";
+export type {
+  TextAlignment,
+  VerticalTextAlignment,
+} from "./components/Label";
 export { Button } from "./components/Button";
+export {
+  NineSlice,
+  Panel,
+  ProgressBar,
+  ScrollView,
+  Toggle,
+  UIContainer,
+  UIElement,
+  UIImage,
+} from "./components/UI";
+export type {
+  Insets as UIInsets,
+  LayoutAlignment,
+  LayoutDirection,
+} from "./components/UI";
