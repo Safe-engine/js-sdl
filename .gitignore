@@ -139,6 +139,9 @@ tests/*/proj.android-studio/app/proguard-project.txt
 # Android
 project.properties
 *.iml
+/android/build/
+/android/app/build/
+/android/app/.cxx/
 
 # Ignore template runtime
 /templates/lua-template-runtime/runtime

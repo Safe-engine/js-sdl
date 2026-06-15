@@ -32,7 +32,7 @@ android {
         externalNativeBuild {
             cmake {
                 arguments "-DJS_SDL_USE_VENDORED=ON"
-                abiFilters "arm64-v8a", "armeabi-v7a", "x86_64"
+                abiFilters "arm64-v8a", "x86_64"
             }
         }
     }
@@ -72,7 +72,7 @@ android {
 
     sourceSets {
         main {
-            assets.srcDir(generatedAssets)
+            assets.srcDir(generatedAssets.get().asFile)
             java.srcDirs += [
                 "../../third_party/SDL/android-project/app/src/main/java"
             ]

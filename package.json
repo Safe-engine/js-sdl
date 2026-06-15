@@ -9,6 +9,7 @@
     "dev": "vite build --watch",
     "mobile:deps": "./scripts/bootstrap-mobile-deps.sh",
     "mobile:assets": "node ./scripts/generate-mobile-assets.mjs",
+    "android:setup": "./scripts/setup-android.sh",
     "android:apk": "./scripts/package-android.sh apk release",
     "android:aab": "./scripts/package-android.sh aab release",
     "ios:project": "./scripts/generate-ios-project.sh",

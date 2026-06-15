@@ -30,6 +30,16 @@ requires Xcode and an Apple Developer account for device/release signing.
 
 ### Android APK and AAB
 
+On macOS, install all Android command-line dependencies and generate the
+Gradle wrapper with:
+
+```bash
+bun run android:setup
+```
+
+The setup command uses Homebrew to install JDK 17 and Android command-line
+tools, then installs the required SDK, build-tools, NDK, and CMake packages.
+
 Open `android/` in Android Studio, or build from the repository root:
 
 ```bash

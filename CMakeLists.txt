@@ -28,6 +28,9 @@ if(JS_SDL_USE_VENDORED)
     endif()
     set(SDLIMAGE_VENDORED ON CACHE BOOL "" FORCE)
     set(SDLIMAGE_DEPS_SHARED OFF CACHE BOOL "" FORCE)
+    # The app does not ship AVIF assets, and its bundled codecs currently fail
+    # with Android NDK 28 on 32-bit ARM and x86_64.
+    set(SDLIMAGE_AVIF OFF CACHE BOOL "" FORCE)
     set(SDLIMAGE_AVIF_SHARED OFF CACHE BOOL "" FORCE)
     set(SDLIMAGE_JPG_SHARED OFF CACHE BOOL "" FORCE)
     set(SDLIMAGE_JXL_SHARED OFF CACHE BOOL "" FORCE)
@@ -38,10 +41,6 @@ if(JS_SDL_USE_VENDORED)
     set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 
     if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
-        # Vendored libavif's merged static archive target does not build
-        # correctly with the Xcode generator. The app does not ship AVIF assets.
-        set(SDLIMAGE_AVIF OFF CACHE BOOL "" FORCE)
-
         # SDL_image enables libwebp's desktop webpmux tool, whose install rule
         # is invalid for iOS bundles. Keep the mux library, but skip the CLI.
         cmake_policy(SET CMP0126 NEW)
