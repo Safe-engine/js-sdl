@@ -209,6 +209,11 @@ static JSValue js_createWindow(
 
     g_window = SDL_CreateWindow(title, g_win_w, g_win_h, 0);
     g_renderer = SDL_CreateRenderer(g_window, NULL);
+    SDL_SetRenderLogicalPresentation(
+        g_renderer,
+        g_win_w,
+        g_win_h,
+        SDL_LOGICAL_PRESENTATION_LETTERBOX);
 
     JS_FreeCString(ctx, title);
     return JS_UNDEFINED;
@@ -843,3 +848,10 @@ void js_get_window_size(int *width, int *height)
 
 int js_get_win_w(void) { return g_win_w; }
 int js_get_win_h(void) { return g_win_h; }
+
+void js_convert_event_to_render_coordinates(SDL_Event *event)
+{
+    if (g_renderer) {
+        SDL_ConvertEventToRenderCoordinates(g_renderer, event);
+    }
+}

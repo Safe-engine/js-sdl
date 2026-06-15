@@ -125,5 +125,5 @@ class HomeScene extends Scene {
 
 /* ── Bootstrap ─────────────────────────────────────── */
 
-Engine.start("Gemma4 Engine — SDL3 + QuickJS + TS", 800, 600);
+Engine.start("Gemma4 Engine — SDL3 + QuickJS + TS", 720, 1280);
 Engine.scene = new HomeScene();

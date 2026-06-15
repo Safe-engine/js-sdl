@@ -65,6 +65,15 @@ bun run ios:project
 open ios/xcode/SDL3Game.xcodeproj
 ```
 
+Build, install, and launch the app in an available iPhone Simulator:
+
+```bash
+bun run ios:run
+```
+
+Set `IOS_SIMULATOR_UDID` to target a specific simulator, or set
+`IOS_CONFIGURATION=Release` to run a release build.
+
 Set your Apple team and export a release IPA:
 
 ```bash

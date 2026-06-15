@@ -27,3 +27,4 @@ void js_call_terminate(JSContext *ctx);
 void js_get_window_size(int *width, int *height);
 int  js_get_win_w(void);
 int  js_get_win_h(void);
+void js_convert_event_to_render_coordinates(SDL_Event *event);

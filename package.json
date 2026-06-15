@@ -12,6 +12,7 @@
     "android:apk": "./scripts/package-android.sh apk release",
     "android:aab": "./scripts/package-android.sh aab release",
     "ios:project": "./scripts/generate-ios-project.sh",
+    "ios:run": "./scripts/run-ios.sh",
     "ios:ipa": "./scripts/package-ios.sh"
   },
   "devDependencies": {

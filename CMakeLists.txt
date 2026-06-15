@@ -27,8 +27,26 @@ if(JS_SDL_USE_VENDORED)
         set(SDL_STATIC ON CACHE BOOL "" FORCE)
     endif()
     set(SDLIMAGE_VENDORED ON CACHE BOOL "" FORCE)
+    set(SDLIMAGE_DEPS_SHARED OFF CACHE BOOL "" FORCE)
+    set(SDLIMAGE_AVIF_SHARED OFF CACHE BOOL "" FORCE)
+    set(SDLIMAGE_JPG_SHARED OFF CACHE BOOL "" FORCE)
+    set(SDLIMAGE_JXL_SHARED OFF CACHE BOOL "" FORCE)
+    set(SDLIMAGE_PNG_SHARED OFF CACHE BOOL "" FORCE)
+    set(SDLIMAGE_TIF_SHARED OFF CACHE BOOL "" FORCE)
+    set(SDLIMAGE_WEBP_SHARED OFF CACHE BOOL "" FORCE)
     set(SDLTTF_VENDORED ON CACHE BOOL "" FORCE)
     set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+
+    if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+        # Vendored libavif's merged static archive target does not build
+        # correctly with the Xcode generator. The app does not ship AVIF assets.
+        set(SDLIMAGE_AVIF OFF CACHE BOOL "" FORCE)
+
+        # SDL_image enables libwebp's desktop webpmux tool, whose install rule
+        # is invalid for iOS bundles. Keep the mux library, but skip the CLI.
+        cmake_policy(SET CMP0126 NEW)
+        set(WEBP_BUILD_WEBPMUX OFF)
+    endif()
 
     add_subdirectory(third_party/SDL EXCLUDE_FROM_ALL)
     add_subdirectory(third_party/SDL_image EXCLUDE_FROM_ALL)

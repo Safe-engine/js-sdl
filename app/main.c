@@ -134,6 +134,8 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
     AppState *state = appstate;
     JSContext *ctx = state->context;
 
+    js_convert_event_to_render_coordinates(event);
+
     switch (event->type) {
         case SDL_EVENT_QUIT:
             js_call_terminate(ctx);
@@ -161,34 +163,31 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
             js_call_resume(ctx);
             js_call_interruption(ctx, 0);
             break;
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case SDL_EVENT_MOUSE_BUTTON_DOWN: {
+            if (event->button.which == SDL_TOUCH_MOUSEID) break;
             js_call_touchStart(ctx, event->button.x, event->button.y);
             break;
-        case SDL_EVENT_MOUSE_MOTION:
-            if (event->motion.state) {
+        }
+        case SDL_EVENT_MOUSE_MOTION: {
+            if (event->motion.which == SDL_TOUCH_MOUSEID) break;
+            if (event->motion.state != 0) {
                 js_call_touchMove(ctx, event->motion.x, event->motion.y);
             }
             break;
-        case SDL_EVENT_MOUSE_BUTTON_UP:
+        }
+        case SDL_EVENT_MOUSE_BUTTON_UP: {
+            if (event->button.which == SDL_TOUCH_MOUSEID) break;
             js_call_touchEnd(ctx, event->button.x, event->button.y);
             break;
+        }
         case SDL_EVENT_FINGER_DOWN:
-            js_call_touchStart(
-                ctx,
-                event->tfinger.x * js_get_win_w(),
-                event->tfinger.y * js_get_win_h());
+            js_call_touchStart(ctx, event->tfinger.x, event->tfinger.y);
             break;
         case SDL_EVENT_FINGER_MOTION:
-            js_call_touchMove(
-                ctx,
-                event->tfinger.x * js_get_win_w(),
-                event->tfinger.y * js_get_win_h());
+            js_call_touchMove(ctx, event->tfinger.x, event->tfinger.y);
             break;
         case SDL_EVENT_FINGER_UP:
-            js_call_touchEnd(
-                ctx,
-                event->tfinger.x * js_get_win_w(),
-                event->tfinger.y * js_get_win_h());
+            js_call_touchEnd(ctx, event->tfinger.x, event->tfinger.y);
             break;
         case SDL_EVENT_DISPLAY_ORIENTATION: {
             int width;
