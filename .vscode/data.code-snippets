@@ -1,0 +1,86 @@
+{
+  "Create class with start and render methods": {
+    "prefix": "classsr",
+    "body": [
+      "import { ComponentX, NodeRender, SpriteRender } from \"@safe-engine/webgl\"\n",
+      "export default class ${TM_FILENAME_BASE}  extends ComponentX {",
+      "  start() {",
+      "    // TODO: implement start logic",
+      "  }",
+      "",
+      "  render() {",
+      "    return <NodeRender ></NodeRender>;",
+      "  }",
+      "}"
+    ],
+    "description": "Create a class named after the file with start and render methods"
+  },
+  "localData": {
+    "prefix": "localData",
+    "body": [
+      "const ${1/([a-z]+)|([A-Z][^A-Z]*)/${1:/upcase}${2:+_}${2:/upcase}/g} = '${1/([a-z]+)|([A-Z][^A-Z]*)/${1:/upcase}${2:+_}${2:/upcase}/g}';",
+      "export function get${1/(.*)/${1:/capitalize}/}(): ${2/(Int)|(String)|(Bool)/${1:+Integer}${2:+string}${3:+boolean}/} {",
+      "  return get${2|Int,String,Float,Object,Bool|}ForKey(${1/([a-z]+)|([A-Z][^A-Z]*)/${1:/upcase}${2:+_}${2:/upcase}/g}, ${3});",
+      "}",
+      "export function set${1/(.*)/${1:/capitalize}/}(${1/(.*)/${1:/camelcase}/}: ${2/(Int)|(String)|(Bool)/${1:+Integer}${2:+string}${3:+boolean}/}) {",
+      "  set${2}ForKey(${1/([a-z]+)|([A-Z][^A-Z]*)/${1:/upcase}${2:+_}${2:/upcase}/g}, ${1/(.*)/${1:/camelcase}/});",
+      "}\n",
+    ],
+    "scope": "typescript",
+    "description": "Create local storage"
+  },
+  "localDataWithIndex": {
+    "prefix": "localDataWithIndex",
+    "body": [
+      "const ${1/([a-z]+)|([A-Z][^A-Z]*)/${1:/upcase}${2:+_}${2:/upcase}/g} = '${1/([a-z]+)|([A-Z][^A-Z]*)/${1:/upcase}${2:+_}${2:/upcase}/g}';",
+      "export function get${1/(.*)/${1:/capitalize}/}(index: Integer): ${2/(Int)|(String)/${1:+Integer}${2:+string}/} {",
+      "  return get${2|Int,String,Float,Object,Bool|}ForKey(`\\${${1/([a-z]+)|([A-Z][^A-Z]*)/${1:/upcase}${2:+_}${2:/upcase}/g}}_\\${index}`, ${3});",
+      "}",
+      "export function set${1/(.*)/${1:/capitalize}/}(index: Integer, ${1/(.*)/${1:/camelcase}/}: ${2/(Int)|(String)/${1:+Integer}${2:+string}/}) {",
+      "  set${2}ForKey(`\\${${1/([a-z]+)|([A-Z][^A-Z]*)/${1:/upcase}${2:+_}${2:/upcase}/g}}_\\${index}`, ${1/(.*)/${1:/camelcase}/});",
+      "}\n",
+    ],
+    "scope": "typescript",
+    "description": "Create local storage"
+  },
+  "start": {
+    "prefix": "start",
+    "body": [
+      "start() {",
+      "  ${1}",
+      "}"
+    ],
+    "scope": "typescriptreact",
+    "description": "Create start life cycle"
+  },
+  "destroy": {
+    "prefix": "destroy",
+    "body": [
+      "destroy() {",
+      "  ${1}",
+      "}"
+    ],
+    "scope": "typescriptreact",
+    "description": "Create destroy life cycle"
+  },
+  "update": {
+    "prefix": "update",
+    "body": [
+      "update(dt: Float) {",
+      "  ${1}",
+      "}"
+    ],
+    "scope": "typescriptreact",
+    "description": "Create update loop"
+  },
+  "schedule": {
+    "prefix": "schedule",
+    "body": [
+      "this.schedule((dt: Float) => {",
+      "  ${2}",
+      "}, ${1});"
+    ],
+    "scope": "typescriptreact",
+    "description": "Create schedule"
+  }
+}

@@ -1,7 +1,7 @@
-import { Constructor } from "entityx-ts";
 import { Component } from "./Component";
 import { Transform } from "./Transform";
 
+type Constructor<T = any> = new (...args: any[]) => T;
 export class Node {
   readonly name: string;
   parent: Node | null = null;

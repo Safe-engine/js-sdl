@@ -7,6 +7,7 @@
     "predev": "bun run sync-res",
     "build": "vite build",
     "dev": "vite build --watch",
+    "web:tsx": "vite --config tsx/vite.config.ts --host",
     "web:dev": "vite --config web/vite.config.ts --host",
     "web:build": "vite build --config web/vite.config.ts",
     "mobile:deps": "./scripts/bootstrap-mobile-deps.sh",
@@ -23,7 +24,6 @@
     "vite": "^6.3.0"
   },
   "dependencies": {
-    "entityx-ts": "^2.3.1",
     "safex-sync-res": "^1.4.2",
     "vite-plugin-safex-transform": "^1.0.4"
   }
