@@ -9,7 +9,6 @@ import {
   Scene,
   Sprite,
 } from "../src/engine";
-import { jsx, mount } from "./jsx-runtime";
 
 export class HomeScene extends Scene {
   constructor() {
@@ -33,7 +32,7 @@ export class HomeScene extends Scene {
       </Node>
     );
 
-    this.root.addChild(mount(content));
+    this.root.addChild(content);
 
     console.log("HomeScene loaded");
   }
