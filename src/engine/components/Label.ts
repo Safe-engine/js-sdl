@@ -16,6 +16,8 @@ interface LabelCompProps {
   font?: string
   string?: string
   size?: number
+  align?: TextAlignment
+  verticalAlign?: VerticalTextAlignment
   // outline?: [ColorSource, number]
   // shadow?: [ColorSource, number, Size]
   isAdaptWithSize?: boolean
@@ -47,6 +49,12 @@ export class Label extends Component<LabelCompProps> {
       this.setFont(this.props.font, this.props.size ?? this.fontSize);
     } else if (this.props.size !== undefined) {
       this.fontSize = this.props.size;
+    }
+    if (this.props.align) {
+      this.align = this.props.align;
+    }
+    if (this.props.verticalAlign) {
+      this.verticalAlign = this.props.verticalAlign;
     }
   }
 

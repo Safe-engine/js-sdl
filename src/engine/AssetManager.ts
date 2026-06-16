@@ -29,14 +29,27 @@ interface FontRecord {
 
 export class TextureAsset {
   private released = false;
+  private readonly fallbackWidth: number;
+  private readonly fallbackHeight: number;
 
   constructor(
     readonly key: string,
     readonly id: number,
-    readonly width: number,
-    readonly height: number,
+    width: number,
+    height: number,
     private readonly releaseAsset: (key: string) => void,
-  ) {}
+  ) {
+    this.fallbackWidth = width;
+    this.fallbackHeight = height;
+  }
+
+  get width(): number {
+    return getTextureWidth(this.id) || this.fallbackWidth;
+  }
+
+  get height(): number {
+    return getTextureHeight(this.id) || this.fallbackHeight;
+  }
 
   release(): void {
     if (this.released) return;

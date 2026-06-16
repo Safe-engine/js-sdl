@@ -32,6 +32,8 @@ export class HomeScene extends Scene {
         string="PLAY"
         font={lilita_one_regularFont}
         size={32}
+        align="center"
+        verticalAlign="middle"
       />
     </Sprite>
   }

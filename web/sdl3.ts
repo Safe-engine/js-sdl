@@ -14,6 +14,8 @@ interface TextureAsset {
   height: number;
   refs: number;
   key: string;
+  textFontId?: number;
+  text?: string;
 }
 
 interface FontAsset {
@@ -21,6 +23,7 @@ interface FontAsset {
   path: string;
   size: number;
   refs: number;
+  loaded: boolean;
 }
 
 interface AudioAsset {
@@ -480,14 +483,60 @@ export function loadFont(path: string, ptsize: number): number {
 
   const id = nextFontId++;
   const family = `sdl-font-${id}`;
-  const asset = { family, path, size: ptsize, refs: 1 };
+  const asset = { family, path, size: ptsize, refs: 1, loaded: false };
   fonts.set(id, asset);
   fontIds.set(key, id);
   const face = new FontFace(family, `url("${assetUrl(path)}")`);
   face.load()
-    .then((loaded) => document.fonts.add(loaded))
+    .then((loaded) => {
+      document.fonts.add(loaded);
+      asset.loaded = true;
+      rerenderTextTexturesForFont(id);
+    })
     .catch(() => console.error(`Failed to load font: ${path}`));
   return id;
+}
+
+function renderTextSurface(font: FontAsset, text: string): HTMLCanvasElement | null {
+  const surface = document.createElement("canvas");
+  const context = surface.getContext("2d");
+  if (!context) return null;
+
+  context.font = `${font.size}px "${font.family}", sans-serif`;
+  const metrics = context.measureText(text);
+  const ascent = metrics.fontBoundingBoxAscent ??
+    metrics.actualBoundingBoxAscent ??
+    font.size * 0.8;
+  const descent = metrics.fontBoundingBoxDescent ??
+    metrics.actualBoundingBoxDescent ??
+    font.size * 0.2;
+  const width = Math.max(1, Math.ceil(metrics.width));
+  const height = Math.max(1, Math.ceil(ascent + descent));
+
+  surface.width = width;
+  surface.height = height;
+  context.font = `${font.size}px "${font.family}", sans-serif`;
+  context.fillStyle = "rgb(220, 220, 220)";
+  context.textBaseline = "alphabetic";
+  context.fillText(text, 0, Math.ceil(ascent));
+  return surface;
+}
+
+function rerenderTextTexture(asset: TextureAsset): void {
+  const fontId = asset.textFontId;
+  const text = asset.text;
+  if (fontId === undefined || text === undefined) return;
+  const font = fonts.get(fontId);
+  if (!font) return;
+  const surface = renderTextSurface(font, text);
+  if (!surface) return;
+  uploadSource(asset, surface, surface.width, surface.height);
+}
+
+function rerenderTextTexturesForFont(fontId: number): void {
+  for (const asset of textures.values()) {
+    if (asset.textFontId === fontId) rerenderTextTexture(asset);
+  }
 }
 
 export function loadTextTexture(fontId: number, text: string): number {
@@ -501,28 +550,22 @@ export function loadTextTexture(fontId: number, text: string): number {
     return existingId;
   }
 
-  const surface = document.createElement("canvas");
-  const context = surface.getContext("2d");
-  if (!context) return -1;
-  context.font = `${font.size}px "${font.family}", sans-serif`;
-  const metrics = context.measureText(text);
-  const width = Math.max(1, Math.ceil(metrics.width));
-  const height = Math.max(
-    1,
-    Math.ceil(metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent),
-  );
-  surface.width = width;
-  surface.height = height;
-  context.font = `${font.size}px "${font.family}", sans-serif`;
-  context.fillStyle = "rgb(220, 220, 220)";
-  context.textBaseline = "top";
-  context.fillText(text, 0, 0);
+  const surface = renderTextSurface(font, text);
+  if (!surface) return -1;
 
   const id = nextTextureId++;
-  const asset: TextureAsset = { texture: null, width, height, refs: 1, key };
+  const asset: TextureAsset = {
+    texture: null,
+    width: surface.width,
+    height: surface.height,
+    refs: 1,
+    key,
+    textFontId: fontId,
+    text,
+  };
   textures.set(id, asset);
   textureIds.set(key, id);
-  uploadSource(asset, surface, width, height);
+  uploadSource(asset, surface, surface.width, surface.height);
   return id;
 }
 
