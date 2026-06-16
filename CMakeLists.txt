@@ -5,6 +5,8 @@ project(SDL3Game VERSION 1.0.0 LANGUAGES C)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
+include(CTest)
+
 option(JS_SDL_USE_VENDORED "Build mobile dependencies from third_party" OFF)
 
 if(ANDROID OR CMAKE_SYSTEM_NAME STREQUAL "iOS")
@@ -91,6 +93,23 @@ target_link_libraries(
         SDL3_ttf::SDL3_ttf
         ${QUICKJS_TARGET}
 )
+
+if(BUILD_TESTING)
+    add_executable(js_sdl3_native_tests
+        tests/native_binding_tests.c
+        app/js_sdl3.c
+    )
+    target_include_directories(js_sdl3_native_tests PRIVATE app)
+    target_link_libraries(
+        js_sdl3_native_tests
+        PRIVATE
+            SDL3::SDL3
+            SDL3_image::SDL3_image
+            SDL3_ttf::SDL3_ttf
+            ${QUICKJS_TARGET}
+    )
+    add_test(NAME js_sdl3_native_tests COMMAND js_sdl3_native_tests)
+endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     file(GLOB_RECURSE JS_BUNDLE_FILES CONFIGURE_DEPENDS
