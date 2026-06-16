@@ -5,9 +5,8 @@ import {
 import {
   Button,
   Label,
-  Node,
   Scene,
-  Sprite,
+  Sprite
 } from "../src/engine";
 
 export class HomeScene extends Scene {
@@ -16,24 +15,6 @@ export class HomeScene extends Scene {
   }
 
   onLoad(): void {
-    const content = (
-      <Node name="PlayButton" transform={{ x: 360, y: 640 }}>
-        <Sprite spriteFrame={sf_button} width={220} height={68} />
-        <Button
-          onClick={this.onClick}
-        />
-        <Node name="PlayLabel">
-          <Label
-            string="PLAY"
-            font={lilita_one_regularFont}
-            size={32}
-          />
-        </Node>
-      </Node>
-    );
-
-    this.root.addChild(content);
-
     console.log("HomeScene loaded");
   }
 
@@ -41,4 +22,14 @@ export class HomeScene extends Scene {
     console.log("clicked button");
   };
 
+  __view() {
+    <Sprite spriteFrame={sf_button} node={{ x: 360, y: 640, width: 220, height: 68 }}>
+      <Button onClick={this.onClick} />
+    </Sprite>;
+    <Label
+      string="PLAY"
+      font={lilita_one_regularFont}
+      size={32}
+    />
+  }
 }

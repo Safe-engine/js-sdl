@@ -4,11 +4,10 @@ import {
   popClipRect,
   pushClipRect,
 } from "sdl3";
-import { AssetManager, TextureAsset, TextureRegion } from "../AssetManager";
 import type { Color } from "../animation/Tween";
+import { AssetManager, TextureAsset, TextureRegion } from "../AssetManager";
 import { Component } from "../core/Component";
 import type { Node } from "../core/Node";
-import { Transform } from "../core/Transform";
 import type { InputEvent } from "../Input";
 
 export interface Insets {

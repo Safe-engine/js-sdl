@@ -1,30 +1,34 @@
-import { Component } from "../core/Component";
-import { Transform } from "../core/Transform";
 import { drawTextureRotated } from "sdl3";
+import type { Color } from "../animation/Tween";
 import {
   AssetManager,
   FontAsset,
   TextureAsset,
 } from "../AssetManager";
-import type { Color } from "../animation/Tween";
+import { Component } from "../core/Component";
+import { Node } from "../core/Node";
 import { Localization } from "../Localization";
 
 export type TextAlignment = "left" | "center" | "right";
 export type VerticalTextAlignment = "top" | "middle" | "bottom";
 
-export class Label extends Component {
+interface LabelCompProps {
+  font?: string
+  string?: string
+  size?: number
+  // outline?: [ColorSource, number]
+  // shadow?: [ColorSource, number, Size]
+  isAdaptWithSize?: boolean
+}
+export class Label extends Component<LabelCompProps> {
   text = "";
   localizationKey = "";
   localizationValues: Readonly<Record<string, string | number>> = {};
   fontPath = "";
   fontSize = 24;
   fontId = -1;
-  opacity = 1;
-  color: Color = { r: 255, g: 255, b: 255, a: 255 };
   outlineColor: Color = { r: 0, g: 0, b: 0, a: 255 };
   outlineWidth = 0;
-  wrapWidth = 0;
-  boxHeight = 0;
   lineHeight = 1.2;
   align: TextAlignment = "left";
   verticalAlign: VerticalTextAlignment = "top";
@@ -77,18 +81,18 @@ export class Label extends Component {
   onRender(): void {
     this.ensureAssets();
     if (this.lineTextures.length === 0) return;
-    const t = this.node?.getComponent(Transform);
+    const t = this.node;
     if (!t) return;
 
     const naturalWidth = this.lineTextures.reduce(
       (width, texture) => Math.max(width, texture.width), 0);
-    const layoutWidth = this.wrapWidth > 0 ? this.wrapWidth : naturalWidth;
+    const layoutWidth = this.node.width > 0 ? this.node.width : naturalWidth;
     const lineAdvance = this.fontSize * this.lineHeight;
     const textHeight = this.lineTextures.length === 1
       ? this.lineTextures[0].height
       : (this.lineTextures.length - 1) * lineAdvance +
         this.lineTextures[this.lineTextures.length - 1].height;
-    const layoutHeight = this.boxHeight > 0 ? this.boxHeight : textHeight;
+    const layoutHeight = this.node.height > 0 ? this.node.height : textHeight;
     let top = 0;
     if (this.verticalAlign === "middle") top = (layoutHeight - textHeight) * 0.5;
     if (this.verticalAlign === "bottom") top = layoutHeight - textHeight;
@@ -107,7 +111,7 @@ export class Label extends Component {
             this.outlineColor);
         }
       }
-      this.drawLine(texture, t, localX, localY, this.color);
+      this.drawLine(texture, t, localX, localY, this.node.color);
     }
   }
 
@@ -117,7 +121,7 @@ export class Label extends Component {
 
   private drawLine(
     texture: TextureAsset,
-    transform: Transform,
+    transform: Node,
     localX: number,
     localY: number,
     color: Color,
@@ -143,7 +147,7 @@ export class Label extends Component {
       color.r,
       color.g,
       color.b,
-      this.opacity * (color.a ?? 255),
+      this.node.opacity * (color.a ?? 255),
     );
   }
 
@@ -164,10 +168,10 @@ export class Label extends Component {
       this.loadedFontKey = fontKey;
     }
 
-    const signature = `${resolvedText}\0${this.wrapWidth}\0${this.fontSize}`;
+    const signature = `${resolvedText}\0${this.node.width}\0${this.fontSize}`;
     if (this.loadedSignature === signature && this.lineTextures.length > 0) return;
     this.releaseText();
-    this.lines = wrapText(resolvedText, this.wrapWidth, (value) => {
+    this.lines = wrapText(resolvedText, this.node.width, (value) => {
       const texture = AssetManager.acquireText(this.font!, value || " ");
       const width = texture.width;
       texture.release();

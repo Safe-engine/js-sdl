@@ -1,91 +1,358 @@
-import type { Plugin } from "vite";
-import MagicString from "magic-string";
-import ts from "typescript";
-
-type Attr = ts.JsxAttribute | ts.JsxSpreadAttribute;
-type SceneElement = ts.JsxElement | ts.JsxSelfClosingElement;
-
-const COMPONENT_TAGS = new Set([
-  "Bullet",
-  "Button",
-  "Label",
-  "NineSlice",
-  "Panel",
-  "Player",
-  "ProgressBar",
-  "ScrollView",
-  "Sprite",
-  "Toggle",
-  "UIContainer",
-  "UIElement",
-  "UIImage",
-]);
-
-export function sdlTsxTransform(): Plugin {
-  return {
-    name: "vite-plugin-sdl-tsx-transform",
-    enforce: "pre",
-    transform(code, id) {
-      if (!id.endsWith(".tsx")) return null;
-
-      const source = ts.createSourceFile(
-        id,
-        code,
-        ts.ScriptTarget.Latest,
-        true,
-        ts.ScriptKind.TSX,
-      );
-      const ms = new MagicString(code);
-      const transformedJsx = new Set<ts.Node>();
-      const classViews: ClassView[] = [];
-
-      const visit = (node: ts.Node) => {
-        if (ts.isImportDeclaration(node) && isJsxRuntimeImport(node)) {
-          ms.remove(node.getFullStart(), node.getEnd());
-          return;
-        }
-
-        if (ts.isCallExpression(node) && isMountCall(node)) {
-          const [arg] = node.arguments;
-          ms.remove(node.getStart(source), arg.getStart(source));
-          ms.remove(arg.getEnd(), node.getEnd());
-        }
-
-        if (isSceneElement(node) && !hasJsxAncestor(node)) {
-          ms.overwrite(node.getStart(source), node.getEnd(), printElement(node));
-          transformedJsx.add(node);
-          return;
-        }
-
-        if (ts.isClassDeclaration(node)) {
-          const classView = getClassView(node);
-          if (classView) classViews.push(classView);
-        }
-
-        ts.forEachChild(node, visit);
-      };
-
-      const hasJsxAncestor = (node: ts.Node): boolean => {
-        let parent = node.parent;
-        while (parent) {
-          if (transformedJsx.has(parent)) return true;
-          parent = parent.parent;
-        }
-        return false;
-      };
-
-      const printElement = (element: SceneElement): string => {
-        const printer = new ScenePrinter(source);
-        const root = printer.printElement(element);
-        return `(() => {\n${printer.helpers}${printer.body}  return ${root};\n})()`;
-      };
-
-      visit(source);
-      for (const classView of classViews) {
-        injectClassView(ms, classView, source);
+import { parse as ESParser } from '@typescript-eslint/typescript-estree';
+import ESTraverse from 'estraverse';
+import MagicString from 'magic-string';
+function parse(content) {
+  return ESParser(content, {
+    comment: false,
+    jsx: true,
+    loc: false,
+    range: true,
+  });
+}
+function camelCase(str) {
+  return str
+    .replace(/(?:^\w|[A-Z]|\b\w)/g, function (word, index) {
+      return index === 0 ? word.toLowerCase() : word.toUpperCase();
+    })
+    .replace(/\s+/g, '');
+}
+const nameCount = {};
+function getComponentName(name = '') {
+  if (!nameCount[name])
+    nameCount[name] = 0;
+  return `${camelCase(name)}Comp${++nameCount[name]}`;
+}
+function parseValue(value) {
+  if (!value)
+    return true;
+  const { type, expression } = value;
+  switch (type) {
+    case 'JSXExpressionContainer': {
+      return parseExpression(expression);
+    }
+    case 'BinaryExpression':
+    case 'MemberExpression':
+    case 'UnaryExpression':
+    case 'ArrayExpression':
+    case 'ConditionalExpression':
+    case 'CallExpression': {
+      return parseExpression(value);
+    }
+    case 'StringLiteral': {
+      return value.extra.raw;
+    }
+    case 'Literal':
+      return value.raw;
+    case 'BooleanLiteral':
+    case 'NumericLiteral': {
+      return value.value;
+    }
+    case 'Identifier': {
+      return value.name;
+    }
+    case 'ThisExpression': {
+      return 'this';
+    }
+    default:
+      console.log('parseValue not support', type, value);
+  }
+}
+function parseExpression(expression) {
+  const { type, extra, object, property, value, name, computed, raw } = expression;
+  switch (type) {
+    case 'Identifier':
+      return name;
+    case 'Literal':
+      return raw;
+    case 'BooleanLiteral':
+      return value;
+    case 'ThisExpression':
+      return 'this';
+    case 'StringLiteral':
+    case 'NumericLiteral':
+      return extra.raw;
+    case 'MemberExpression': {
+      const left = parseValue(object);
+      const right = parseValue(property);
+      if (computed)
+        return `${left}[${right}]`;
+      return `${left}.${right}`;
+    }
+    case 'CallExpression': {
+      const { callee, arguments: args } = expression;
+      return `${parseValue(callee)}(${args.map(parseValue).join(', ')})`;
+    }
+    case 'UnaryExpression': {
+      const { operator, argument: args } = expression;
+      return `${operator}${parseValue(args)}`;
+    }
+    case 'ConditionalExpression': {
+      const { test, consequent, alternate } = expression;
+      return `${parseValue(test)}?${parseValue(consequent)}:${parseValue(alternate)}`;
+    }
+    case 'ObjectExpression': {
+      const { properties } = expression;
+      const props = properties.map(({ key, value }) => `${parseValue(key)}: ${parseValue(value)}`);
+      return `{ ${props.join(',')} }`;
+    }
+    case 'ArrayExpression': {
+      const { elements } = expression;
+      const props = elements.map(parseValue);
+      return `[${props.join(',')}]`;
+    }
+    case 'BinaryExpression': {
+      const { operator, right, left } = expression;
+      // console.log('Expression', expression)
+      if ('BinaryExpression' === right.type && (right.operator === '+' || right.operator === '-')) {
+        return `${parseValue(left)} ${operator} (${parseValue(right)})`;
       }
-
-      if (!ms.hasChanged()) return null;
+      return `${parseValue(left)} ${operator} ${parseValue(right)}`;
+    }
+    case 'TemplateLiteral': {
+      const { quasis, expressions } = expression;
+      // console.log('parseExpression ', quasis, expressions)
+      // eslint-disable-next-line quotes
+      const ret = ["''"];
+      quasis.forEach((q, i) => {
+        if (q.value.raw)
+          ret.push(`"${q.value.raw}"`);
+        if (!q.tail) {
+          const expValue = parseValue(expressions[i]);
+          ret.push(expValue);
+        }
+      });
+      return ret.join(' + ');
+    }
+    default:
+      console.log('parseExpression not support', type);
+  }
+}
+function parseNodeAttribute(value, componentVar, prop) {
+  if (value.type === 'JSXExpressionContainer' && value.expression.type === 'ObjectExpression') {
+    const { properties } = value.expression;
+    return properties
+      .map((p) => {
+        return `\n    ${componentVar}.${prop}.${p.key.name} = ${parseExpression(p.value)}`;
+      })
+      .join('');
+  }
+  return `\n    ${componentVar}.${prop} = ${parseValue(value)}`;
+}
+function attributesToParams(attributes, listMethods = []) {
+  let props = '';
+  attributes.map(({ name, value }) => {
+    const attName = name.name;
+    if (attName === 'node' || attName.includes('$'))
+      return;
+    const val = parseValue(value);
+    // console.log('val', attName, val)
+    if (typeof val === 'string' && val.includes('this.') && !val.includes('bind(') && !val.includes('+')) {
+      const list = val.split('.');
+      if (list.length === 2 && listMethods.includes(list[1])) {
+        props += `${attName}: ${val}.bind(this),`;
+      }
+      else if (list.length > 2 && list[1] !== 'props' && list[2] !== 'node') {
+        props += `${attName}: ${val}.bind(this.${list[1]}),`;
+      }
+      else {
+        props += `${attName}: ${val},`;
+      }
+    }
+    else {
+      props += `${attName}: ${val},`;
+    }
+  });
+  return `{${props}}`;
+}
+export function sdlTsxTransform() {
+  return {
+    name: 'vite-plugin-sdl-tsx-transform',
+    enforce: 'pre',
+    async transform(code, id) {
+      if (id.includes('packages/') || id.includes('node_modules/'))
+        return;
+      if (!id.endsWith('.tsx') && !id.endsWith('.ts') && !id.endsWith('.jsx') && !id.endsWith('.js'))
+        return;
+      // console.log('transform', id)
+      const parsed = parse(code);
+      const ms = new MagicString(code);
+      // let sourceFramework = '';
+      let jsxBlock;
+      let currentClassName;
+      let isScene = false;
+      const listComponentX = [];
+      const listMethods = [];
+      ESTraverse.traverse(parsed, {
+        enter(node, parent) {
+          var _a;
+          // if (node.type === 'ImportDeclaration') {
+          //     if (sourceFramework)
+          //         return;
+          //     sourceFramework = (_a = node.source.value.match(/^@safe-engine\/(\w+)/)) === null || _a === void 0 ? void 0 : _a[1];
+          // }
+          // else
+          if ('ClassDeclaration' === node.type) {
+            const { superClass, id } = node;
+            currentClassName = id.name;
+            isScene = superClass && superClass.name === 'Scene';
+            const isComponentX = superClass && superClass.name && ['Component', 'SceneComponent'].includes(superClass.name);
+            if (isComponentX) {
+              listComponentX.push(currentClassName);
+            }
+          }
+          else if ('MethodDefinition' === node.type) {
+            listMethods.push(node.key.name);
+          }
+          else if ('JSXElement' === node.type) {
+            if (!jsxBlock) {
+              jsxBlock = node;
+              jsxBlock.parentRange = parent.range;
+            }
+            if (node.closingElement) {
+              const [rs, re] = node.closingElement.range;
+              ms.remove(rs, re);
+            }
+          }
+        },
+        fallback: 'iteration',
+      });
+      if (jsxBlock) {
+        const { openingElement, children } = jsxBlock;
+        const { attributes, name: rootTag, range } = openingElement;
+        const classVar = getComponentName(currentClassName);
+        function parseJSX(range, tagName, children, attributes = [], parentVar) {
+          let ret = '';
+          const [start, end] = range;
+          const componentName = tagName.name;
+          // console.log('parseJSX', componentName)
+          if (componentName === 'ExtraDataComp') {
+            // console.log(parentVar, attributes[1])
+            const key = attributes.find(({ name }) => name.name === 'key').value.value;
+            const value = attributes.find(({ name }) => name.name === 'value');
+            ret += `\n     ${parentVar}.node.setData('${key}', ${parseValue(value.value)})`;
+            ms.overwrite(start, end, ret);
+            return;
+          }
+          const compVar = getComponentName(componentName);
+          const params = attributesToParams(attributes, listMethods);
+          const createComponentString = `\n    const ${compVar} = instantiate(${componentName}, ${params})`;
+          if (!parentVar) {
+            ms.appendLeft(start, createComponentString);
+            ms.appendLeft(start, `\n   const ${classVar} = ${compVar}.addComponent(this)`);
+            if (listMethods.includes('onLoad')) {
+              ret += `\n${classVar}.onLoad();`;
+            }
+          }
+          else {
+            ret += createComponentString;
+          }
+          if (!isScene) {
+            ret += `\nthis.root.addChild(${compVar}.node)`;
+          } else if (parentVar) {
+            ret += `\n     ${parentVar}.node.resolveComponent(${compVar})`;
+          }
+          attributes.forEach(({ name, value }) => {
+            const attName = name.name;
+            const refString = parseValue(value);
+            const rightValue = `${compVar}`;
+            if (attName === '$ref') {
+              ret += `\n${refString} = ${rightValue};`;
+            }
+            else if (attName === '$refNode') {
+              ret += `\n${refString} = ${rightValue}.node;`;
+            }
+            else if (attName === '$push') {
+              ret += `\n${refString}.push(${rightValue});`;
+            }
+            else if (attName === '$pushNode') {
+              ret += `\n${refString}.push(${rightValue}.node);`;
+            }
+            else if (attName === 'node') {
+              ret += parseNodeAttribute(value, compVar, attName);
+            }
+          });
+          ms.overwrite(start, end, ret);
+          children.forEach(parseChildren(compVar));
+        }
+        function parseChildren(compVar) {
+          return (element) => {
+            const { openingElement, children, type, expression } = element;
+            if (type !== 'JSXElement') {
+              if (type === 'JSXExpressionContainer') {
+                parseJSXExpressionContainer(expression, compVar);
+              }
+              else if (type === 'CallExpression') {
+                parseJSXExpressionContainer(element, compVar);
+              }
+              return;
+            }
+            const { attributes, name, range } = openingElement;
+            parseJSX(range, name, children, attributes, compVar);
+          };
+        }
+        function parseJSXExpressionContainer(expression, compVar) {
+          const { type, callee, arguments: args } = expression;
+          if (type === 'CallExpression') {
+            const callback = args[0];
+            // console.log('CallExpression', callee, callback)
+            const { object } = callee;
+            const start = callee.range[0];
+            if (object.callee && object.callee.name === 'Array') {
+              const { name, left, right } = callback.params[1] || callback.params[0] || {};
+              const indexVar = name || (left === null || left === void 0 ? void 0 : left.name) || 'i';
+              const startIndex = right ? right.value : 0;
+              const loopCount = object.arguments[0].value + startIndex;
+              const end = callback.body.range[0];
+              ms.overwrite(start, end, `\n for(let ${indexVar} = ${startIndex}; ${indexVar} < ${loopCount}; ${indexVar}++) {`);
+              // console.log('callee', loopCount, callback.body)
+              parseChildren(compVar)(callback.body);
+              ms.replaceAll('))}', '}}');
+            }
+            else {
+              // console.log('loopVar', type, callback)
+              const { name, left, right } = callback.params[1] || {};
+              const indexVar = name || (left === null || left === void 0 ? void 0 : left.name) || 'i';
+              const loopVar = parseValue(object);
+              const itemVar = callback.params[0].name;
+              const startIndex = right ? right.value : 0;
+              const end = callback.body.range[0];
+              if (startIndex) {
+                ms.overwrite(start, end, `\n for(let ${indexVar} = ${startIndex}; ${indexVar} < ${loopVar}.length + ${startIndex}; ${indexVar}++) {` +
+                  `\n const ${itemVar} = ${loopVar}[${indexVar} - ${startIndex}]`);
+              }
+              else {
+                ms.overwrite(start, end, `\n for(let ${indexVar} = 0; ${indexVar} < ${loopVar}.length; ${indexVar}++) {` +
+                  `\n const ${itemVar} = ${loopVar}[${indexVar}]`);
+              }
+              parseChildren(compVar)(callback.body);
+              ms.replaceAll('))}', '}}');
+            }
+          }
+        }
+        parseJSX(range, rootTag, children, attributes);
+        const end = jsxBlock.parentRange[1];
+        // if (listMethods.includes('start')) {
+        //     ms.appendRight(end, `\n${classVar}.start();`);
+        // }
+        // if (!/import {([\s\S]*?)instantiate([\s\S]*?)} from ["']@safe-engine/.test(code))
+        //     ms.prepend(`import { instantiate } from '@safe-engine/${sourceFramework}'\n`);
+        if (!isScene)
+          ms.appendRight(end, `\n    return ${classVar}`);
+        // console.log('Program', currentClassName, output)
+      }
+      // if (listComponentX.length && sourceFramework) {
+      //     if (!/import {([\s\S]*?)registerSystem([\s\S]*?)} from ["']@safe-engine/.test(code))
+      //         ms.prepend(`import { registerSystem } from '@safe-engine/${sourceFramework}'\n`);
+      //     const registerCode = listComponentX
+      //         .map((name) => {
+      //         return `\nregisterSystem(${name})`;
+      //     })
+      //         .join('');
+      //     ms.append(registerCode);
+      // }
+      else {
+        return;
+      }
       return {
         code: ms.toString(),
         map: ms.generateMap({
@@ -97,287 +364,4 @@ export function sdlTsxTransform(): Plugin {
       };
     },
   };
-}
-
-function isJsxRuntimeImport(node: ts.ImportDeclaration): boolean {
-  return node.moduleSpecifier.getText().replaceAll("\"", "'") === "'./jsx-runtime'";
-}
-
-function isMountCall(node: ts.CallExpression): boolean {
-  return ts.isIdentifier(node.expression) && node.expression.text === "mount" &&
-    node.arguments.length === 1;
-}
-
-class ScenePrinter {
-  private index = 0;
-  private usesChildExpressions = false;
-  body = "";
-
-  constructor(private readonly source: ts.SourceFile) {}
-
-  get helpers(): string {
-    if (!this.usesChildExpressions) return "";
-    return "  const flattenSceneChildren = (value) => Array.isArray(value) ? value.flatMap(flattenSceneChildren) : value ? [value] : [];\n";
-  }
-
-  printElement(element: SceneElement): string {
-    const tagName = getElementTagName(element);
-    if (tagName === "Node") return this.printNodeFactory(element);
-    if (isComponentTag(tagName)) return this.printNodeFactoryCall(element);
-    throw new Error("An SDL TSX scene tree must have a Node or component at its root");
-  }
-
-  private printNodeFactory(element: SceneElement): string {
-    const tagName = getElementTagName(element);
-    if (tagName !== "Node") {
-      throw new Error("An SDL TSX scene tree must have a Node at its root");
-    }
-
-    const nodeVar = this.varName(tagName, "Node");
-    const attrs = getElementAttrs(element);
-    const nameAttr = findAttr(attrs, "name");
-    const nodeName = nameAttr ? attrValue(nameAttr, this.source) : "\"\"";
-
-    this.line(`const ${nodeVar} = new Node(${nodeName});`);
-    this.printNodeProps(nodeVar, attrs);
-
-    if (ts.isJsxElement(element)) {
-      for (const child of element.children) {
-        if (isSceneElement(child)) {
-          const childTag = getElementTagName(child);
-          if (childTag === "Node") {
-            const childVar = this.printNodeFactory(child);
-            this.line(`${nodeVar}.addChild(${childVar});`);
-          } else if (isComponentTag(childTag)) {
-            this.printComponentFactory(nodeVar, child);
-          } else {
-            const childVar = this.printNodeFactoryCall(child);
-            this.line(`${nodeVar}.addChild(${childVar});`);
-          }
-        } else if (ts.isJsxExpression(child) && child.expression) {
-          this.usesChildExpressions = true;
-          this.line(`for (const child of flattenSceneChildren(${child.expression.getText(this.source)})) ${nodeVar}.addChild(child);`);
-        }
-      }
-    }
-
-    return nodeVar;
-  }
-
-  private printNodeFactoryCall(element: SceneElement): string {
-    const tagName = getElementTagName(element);
-    const nodeVar = this.varName("node", "Node");
-    this.line(`const ${nodeVar} = new Node("${tagName}");`);
-    this.printComponentFactory(nodeVar, element);
-    return nodeVar;
-  }
-
-  private printComponentFactory(parentVar: string, element: SceneElement): void {
-    const tagName = getElementTagName(element);
-    const compVar = this.varName(tagName, "Comp");
-    const attrs = getElementAttrs(element);
-
-    this.line(`const ${compVar} = ${parentVar}.addComponent(${tagName});`);
-    this.printComponentProps(compVar, tagName, attrs);
-  }
-
-  private printNodeProps(nodeVar: string, attrs: ts.NodeArray<Attr>): void {
-    for (const attr of attrs) {
-      if (!ts.isJsxAttribute(attr)) {
-        throw new Error("JSX spread attributes are not supported in SDL TSX scenes");
-      }
-
-      const name = attr.name.text;
-      if (name === "name") continue;
-
-      const value = attrValue(attr, this.source);
-      if (name === "transform") {
-        this.line(`Object.assign(${nodeVar}.transform, ${value});`);
-      } else if (name === "ref") {
-        this.line(refStatement(attr, nodeVar, this.source));
-      } else {
-        this.line(`${nodeVar}.${name} = ${value};`);
-      }
-    }
-  }
-
-  private printComponentProps(
-    compVar: string,
-    tagName: string,
-    attrs: ts.NodeArray<Attr>,
-  ): void {
-    const assigned = new Set<string>();
-    const get = (name: string) => findAttr(attrs, name);
-
-    if (tagName === "Sprite") {
-      const spriteFrame = get("spriteFrame");
-      if (spriteFrame) {
-        this.line(`${compVar}.setTexture(${attrValue(spriteFrame, this.source)});`);
-        assigned.add("spriteFrame");
-      }
-    }
-
-    if (tagName === "Label") {
-      const text = get("string");
-      const font = get("font");
-      const size = get("size");
-
-      if (text) {
-        this.line(`${compVar}.setText(${attrValue(text, this.source)});`);
-        assigned.add("string");
-      }
-      if (font) {
-        const fontSize = size ? attrValue(size, this.source) : `${compVar}.fontSize`;
-        this.line(`${compVar}.setFont(${attrValue(font, this.source)}, ${fontSize});`);
-        assigned.add("font");
-        assigned.add("size");
-      } else if (size) {
-        this.line(`${compVar}.fontSize = ${attrValue(size, this.source)};`);
-        assigned.add("size");
-      }
-    }
-
-    for (const attr of attrs) {
-      if (!ts.isJsxAttribute(attr)) {
-        throw new Error("JSX spread attributes are not supported in SDL TSX scenes");
-      }
-
-      const name = attr.name.text;
-      if (assigned.has(name)) continue;
-
-      const value = attrValue(attr, this.source);
-      if (name === "ref") {
-        this.line(refStatement(attr, compVar, this.source));
-      } else {
-        this.line(`${compVar}.${name} = ${value};`);
-      }
-    }
-  }
-
-  private varName(tagName: string, suffix: string): string {
-    this.index += 1;
-    return `${tagName[0].toLowerCase()}${tagName.slice(1)}${suffix}${this.index}`;
-  }
-
-  private line(code: string): void {
-    this.body += `  ${code}\n`;
-  }
-}
-
-interface ClassView {
-  node: ts.ClassDeclaration;
-  kind: "scene" | "component";
-  hook: ts.MethodDeclaration | undefined;
-}
-
-function getClassView(node: ts.ClassDeclaration): ClassView | null {
-  const view = node.members.find((member) =>
-    ts.isMethodDeclaration(member) && member.name.getText() === "__view"
-  );
-  if (!view) return null;
-
-  const kind = classExtends(node, "Scene")
-    ? "scene"
-    : classExtends(node, "Component")
-      ? "component"
-      : null;
-  if (!kind) return null;
-
-  const hookName = kind === "scene" ? "onLoad" : "onAwake";
-  const hook = node.members.find((member): member is ts.MethodDeclaration =>
-    ts.isMethodDeclaration(member) && member.name.getText() === hookName
-  );
-
-  return { node, kind, hook };
-}
-
-function injectClassView(
-  ms: MagicString,
-  classView: ClassView,
-  source: ts.SourceFile,
-): void {
-  const hookName = classView.kind === "scene" ? "onLoad" : "onAwake";
-  const target = classView.kind === "scene" ? "this.root" : "this.node!";
-  const code = `const __view = this.__view();\n    ${target}.addChild(__view);\n    `;
-
-  if (classView.hook?.body) {
-    ms.appendLeft(classView.hook.body.getStart(source) + 1, `\n    ${code}`);
-    return;
-  }
-
-  const classEnd = classView.node.getEnd() - 1;
-  ms.appendLeft(classEnd, `\n\n  ${hookName}(): void {\n    ${code}\n  }\n`);
-}
-
-function classExtends(node: ts.ClassDeclaration, baseName: string): boolean {
-  return !!node.heritageClauses?.some((clause) =>
-    clause.types.some((type) => getExpressionName(type.expression) === baseName)
-  );
-}
-
-function getExpressionName(expression: ts.ExpressionWithTypeArguments["expression"]): string {
-  if (ts.isIdentifier(expression)) return expression.text;
-  if (ts.isPropertyAccessExpression(expression)) return expression.name.text;
-  return expression.getText();
-}
-
-function findAttr(
-  attrs: ts.NodeArray<Attr>,
-  name: string,
-): ts.JsxAttribute | undefined {
-  return attrs.find((attr): attr is ts.JsxAttribute =>
-    ts.isJsxAttribute(attr) && attr.name.text === name
-  );
-}
-
-function attrValue(attr: ts.JsxAttribute, source: ts.SourceFile): string {
-  const initializer = attr.initializer;
-  if (!initializer) return "true";
-  if (ts.isStringLiteral(initializer)) return initializer.getText(source);
-  if (ts.isJsxExpression(initializer) && initializer.expression) {
-    return initializer.expression.getText(source);
-  }
-  throw new Error(`Unsupported JSX attribute value for ${attr.name.text}`);
-}
-
-function refStatement(
-  attr: ts.JsxAttribute,
-  value: string,
-  source: ts.SourceFile,
-): string {
-  const initializer = attr.initializer;
-  if (initializer && ts.isJsxExpression(initializer) && initializer.expression) {
-    const expression = initializer.expression;
-    if (
-      ts.isPropertyAccessExpression(expression) ||
-      ts.isElementAccessExpression(expression)
-    ) {
-      return `${expression.getText(source)} = ${value};`;
-    }
-  }
-
-  return `(${attrValue(attr, source)})(${value});`;
-}
-
-function isComponentTag(tagName: string): boolean {
-  return COMPONENT_TAGS.has(tagName) || /^[A-Z]/.test(tagName);
-}
-
-function getTagName(name: ts.JsxTagNameExpression): string {
-  if (ts.isIdentifier(name)) return name.text;
-  return name.getText();
-}
-
-function isSceneElement(node: ts.Node): node is SceneElement {
-  return ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node);
-}
-
-function getElementTagName(element: SceneElement): string {
-  if (ts.isJsxElement(element)) return getTagName(element.openingElement.tagName);
-  return getTagName(element.tagName);
-}
-
-function getElementAttrs(element: SceneElement): ts.NodeArray<Attr> {
-  if (ts.isJsxElement(element)) return element.openingElement.attributes.properties;
-  return element.attributes.properties;
 }

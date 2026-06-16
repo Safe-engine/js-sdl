@@ -65,7 +65,7 @@ function applyNodeProps(node: Node, props: Record<string, unknown>): void {
     | undefined;
 
   if (transform) {
-    Object.assign(node.transform, transform);
+    Object.assign(node, transform);
   }
 
   callRef(props.ref, node);

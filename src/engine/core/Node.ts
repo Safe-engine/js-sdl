@@ -1,29 +1,109 @@
+import { Color } from "../animation/Tween";
 import { Component } from "./Component";
-import { Transform } from "./Transform";
 
 type Constructor<T = any> = new (...args: any[]) => T;
+type ComponentInput<T extends Component> = Constructor<T> | T;
+
 export class Node {
   readonly name: string;
   parent: Node | null = null;
   children: Node[] = [];
   components: Component[] = [];
   active = true;
+  width = 64;
+  height = 64;
+  flipX = false;
+  flipY = false;
+  visible = true;
+  opacity = 1;
+  color: Color = { r: 255, g: 255, b: 255, a: 255 };
 
-  constructor(name: string = "") {
+  x = 0;
+  y = 0;
+  rotation = 0;
+  scaleX = 1;
+  scaleY = 1;
+  anchorX = 0.5;
+  anchorY = 0.5;
+  constructor(name?: string) {
     this.name = name;
-    this.addComponent(Transform);
   }
 
-  get transform(): Transform {
-    return this.getComponent(Transform)!;
+  get transform(): this {
+    return this;
   }
 
-  addComponent<T extends Component>(c: Constructor<T>): T {
-    const component = new c();
+  get worldX(): number {
+    const pt = this._getParentTransform();
+    if (!pt) return this.x;
+
+    const radians = pt.worldRotation * Math.PI / 180;
+    const cos = Math.cos(radians);
+    const sin = Math.sin(radians);
+    const x = this.x * pt.worldScaleX;
+    const y = this.y * pt.worldScaleY;
+    return pt.worldX + x * cos - y * sin;
+  }
+
+  get worldY(): number {
+    const pt = this._getParentTransform();
+    if (!pt) return this.y;
+
+    const radians = pt.worldRotation * Math.PI / 180;
+    const cos = Math.cos(radians);
+    const sin = Math.sin(radians);
+    const x = this.x * pt.worldScaleX;
+    const y = this.y * pt.worldScaleY;
+    return pt.worldY + x * sin + y * cos;
+  }
+
+  get worldRotation(): number {
+    const pt = this._getParentTransform();
+    return (pt?.worldRotation ?? 0) + this.rotation;
+  }
+
+  get worldScaleX(): number {
+    const pt = this._getParentTransform();
+    return (pt?.worldScaleX ?? 1) * this.scaleX;
+  }
+
+  get worldScaleY(): number {
+    const pt = this._getParentTransform();
+    return (pt?.worldScaleY ?? 1) * this.scaleY;
+  }
+
+  private _getParentTransform() {
+    const p = this.parent ?? null;
+    return p;
+  }
+
+  setPosition(x: number, y: number): this {
+    this.x = x;
+    this.y = y;
+    return this;
+  }
+
+  setScale(sx: number, sy: number): this {
+    this.scaleX = sx;
+    this.scaleY = sy;
+    return this;
+  }
+
+  addComponent<T extends Component>(c: ComponentInput<T>, data?: ConstructorParameters<Constructor<T>>[0]): T {
+    const component = typeof c === "function" ? new c(data) : c;
+    if (component.node && component.node !== this) {
+      component.node.components = component.node.components.filter((item) => item !== component);
+    }
     component.node = this;
-    this.components.push(component);
+    if (!this.components.includes(component)) {
+      this.components.push(component);
+    }
     component.onAwake();
     return component;
+  }
+
+  resolveComponent<T extends Component>(component: T): T {
+    return this.addComponent(component);
   }
 
   getComponent<T extends Component>(type: Constructor<T>): T | null {

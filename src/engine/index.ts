@@ -1,42 +1,27 @@
-export { Engine } from "./Engine";
-export { Scene } from "./core/Scene";
-export type { Orientation } from "./core/Scene";
-export { Node } from "./core/Node";
-export { Component } from "./core/Component";
-export { Transform } from "./core/Transform";
 export {
   Easing,
   Tween,
   TweenHandle,
-  TweenSequence,
+  TweenSequence
 } from "./animation/Tween";
 export type {
   Color,
   EasingFunction,
   TweenOptions,
-  TweenValues,
+  TweenValues
 } from "./animation/Tween";
-export { Viewport } from "./Viewport";
-export { InputEvent, InputSystem } from "./Input";
-export type { InputEventType } from "./Input";
-export type {
-  Insets,
-  Point,
-  Rect,
-  ViewportMetrics,
-} from "./Viewport";
 export {
   AssetGroup,
   AssetManager,
   FontAsset,
   SpriteSheet,
   TextureAsset,
-  TextureAtlas,
+  TextureAtlas
 } from "./AssetManager";
 export type {
   PreloadProgress,
   PreloadRequest,
-  TextureRegion,
+  TextureRegion
 } from "./AssetManager";
 export {
   Audio,
@@ -44,26 +29,42 @@ export {
   AudioGroup,
   AudioHandle,
   AudioManager,
-  Sound,
+  Sound
 } from "./Audio";
 export type { PlayOptions, SoundOptions } from "./Audio";
+export { Component } from "./core/Component";
+export { Container } from "./core/Container";
+export { instantiate } from "./core/instantiate";
+export { Node } from "./core/Node";
+export { Scene } from "./core/Scene";
+export type { Orientation } from "./core/Scene";
+export { Engine } from "./Engine";
+export { InputEvent, InputSystem } from "./Input";
+export type { InputEventType } from "./Input";
 export { Localization } from "./Localization";
 export type { TranslationTable } from "./Localization";
 export { PersistenceJSON } from "./PersistenceJSON";
 export type {
   LocalStorage,
   PersistenceJSONOptions,
-  PersistenceMigration,
+  PersistenceMigration
 } from "./PersistenceJSON";
+export { Viewport } from "./Viewport";
+export type {
+  Insets,
+  Point,
+  Rect,
+  ViewportMetrics
+} from "./Viewport";
 
 // Components
-export { Sprite } from "./components/Sprite";
+export { Button } from "./components/Button";
 export { Label } from "./components/Label";
 export type {
   TextAlignment,
-  VerticalTextAlignment,
+  VerticalTextAlignment
 } from "./components/Label";
-export { Button } from "./components/Button";
+export { Sprite } from "./components/Sprite";
 export {
   NineSlice,
   Panel,
@@ -72,10 +73,9 @@ export {
   Toggle,
   UIContainer,
   UIElement,
-  UIImage,
+  UIImage
 } from "./components/UI";
 export type {
-  Insets as UIInsets,
   LayoutAlignment,
-  LayoutDirection,
+  LayoutDirection, Insets as UIInsets
 } from "./components/UI";

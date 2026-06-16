@@ -1,9 +1,15 @@
 import { Component } from "../core/Component";
 import { InputEvent } from "../Input";
-import { Sprite } from "./Sprite";
 
-export class Button extends Component {
-  onClick: (() => void) | null = null;
+interface ButtonCompProps {
+  // spriteFrame: string
+  selectedImage?: string
+  disableImage?: string
+  zoomScale?: number
+  capInsets?: [number, number, number, number]
+  onPress?: (target?: Button) => void
+}
+export class Button extends Component<ButtonCompProps> {
   inputEnabled = true;
   consumeInput = true;
 
@@ -20,7 +26,7 @@ export class Button extends Component {
 
   onPointerEnd(event: InputEvent): void {
     if (this.pressed && this.containsPoint(event.x, event.y)) {
-      this.onClick?.();
+      this.props.onPress?.(this);
     }
     this.pressed = false;
     if (this.consumeInput) event.stopPropagation();
@@ -38,31 +44,30 @@ export class Button extends Component {
   /** @deprecated Input is dispatched automatically by the active scene. */
   handleTouchEnd(x: number, y: number): void {
     if (this.pressed && this.containsPoint(x, y)) {
-      this.onClick?.();
+      this.props.onPress?.(this);
     }
     this.pressed = false;
   }
 
   containsPoint(x: number, y: number): boolean {
-    const sprite = this.node!.getComponent(Sprite);
-    if (!sprite) return false;
+    const node = this.node;
+    if (!node) return false;
 
-    const transform = this.node!.transform;
-    const radians = -transform.worldRotation * Math.PI / 180;
+    const radians = -node.worldRotation * Math.PI / 180;
     const cos = Math.cos(radians);
     const sin = Math.sin(radians);
-    const dx = x - transform.worldX;
-    const dy = y - transform.worldY;
-    const localX = (dx * cos - dy * sin) / transform.worldScaleX;
-    const localY = (dx * sin + dy * cos) / transform.worldScaleY;
-    const left = -transform.anchorX * sprite.width;
-    const top = -transform.anchorY * sprite.height;
+    const dx = x - node.worldX;
+    const dy = y - node.worldY;
+    const localX = (dx * cos - dy * sin) / node.worldScaleX;
+    const localY = (dx * sin + dy * cos) / node.worldScaleY;
+    const left = -node.anchorX * node.width;
+    const top = -node.anchorY * node.height;
 
     return (
       localX >= left &&
-      localX <= left + sprite.width &&
+      localX <= left + node.width &&
       localY >= top &&
-      localY <= top + sprite.height
+      localY <= top + node.height
     );
   }
 }

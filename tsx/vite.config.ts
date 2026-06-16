@@ -1,19 +1,21 @@
-import path from "node:path";
 import { defineConfig } from "vite";
 import { sdlTsxTransform } from "./vite-plugin-sdl-tsx";
 
+const root = new URL(".", import.meta.url).pathname;
+
 export default defineConfig({
-  root: __dirname,
-  publicDir: path.resolve(__dirname, "../res"),
+  root,
+  publicDir: new URL("../res", import.meta.url).pathname,
   plugins: [sdlTsxTransform()],
   resolve: {
     alias: {
-      sdl3: path.resolve(__dirname, "../web/sdl3.ts"),
+      sdl3: new URL("../web/sdl3.ts", import.meta.url).pathname,
     },
   },
   build: {
-    outDir: path.resolve(__dirname, "../dist-web"),
+    outDir: new URL("../dist-web", import.meta.url).pathname,
     emptyOutDir: true,
     target: "es2020",
+    minify: false,
   },
 });
