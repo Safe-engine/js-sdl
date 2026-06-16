@@ -176,8 +176,9 @@ export function sdlTsxTransform() {
       // console.log('transform', id)
       const parsed = parse(code);
       const ms = new MagicString(code);
-      // let sourceFramework = '';
-      let jsxBlock;
+      let sourceFramework = '../src/engine';
+      const jsxBlocks = [];
+      let jsxDepth = 0;
       let currentClassName;
       let isScene = false;
       const listComponentX = [];
@@ -204,21 +205,27 @@ export function sdlTsxTransform() {
             listMethods.push(node.key.name);
           }
           else if ('JSXElement' === node.type) {
-            if (!jsxBlock) {
-              jsxBlock = node;
-              jsxBlock.parentRange = parent.range;
+            if (jsxDepth === 0) {
+              node.parentRange = parent.range;
+              jsxBlocks.push(node);
             }
+            jsxDepth++;
             if (node.closingElement) {
               const [rs, re] = node.closingElement.range;
               ms.remove(rs, re);
             }
           }
         },
+        leave(node) {
+          if ('JSXElement' === node.type) {
+            jsxDepth--;
+          }
+        },
         fallback: 'iteration',
       });
-      if (jsxBlock) {
-        const { openingElement, children } = jsxBlock;
-        const { attributes, name: rootTag, range } = openingElement;
+      if (jsxBlocks.length) {
+        const { openingElement } = jsxBlocks[0];
+        const { name: rootTag } = openingElement;
         const classVar = getComponentName(currentClassName);
         function parseJSX(range, tagName, children, attributes = [], parentVar) {
           let ret = '';
@@ -238,17 +245,20 @@ export function sdlTsxTransform() {
           const createComponentString = `\n    const ${compVar} = instantiate(${componentName}, ${params})`;
           if (!parentVar) {
             ms.appendLeft(start, createComponentString);
-            ms.appendLeft(start, `\n   const ${classVar} = ${compVar}.addComponent(this)`);
-            if (listMethods.includes('onLoad')) {
+            if (isScene) {
+              ret += `\nthis.root.addChild(${compVar}.node)`;
+            }
+            else {
+              ms.appendLeft(start, `\n   const ${classVar} = ${compVar}.addComponent(this)`);
+            }
+            if (!isScene && listMethods.includes('onLoad')) {
               ret += `\n${classVar}.onLoad();`;
             }
           }
           else {
             ret += createComponentString;
           }
-          if (!isScene) {
-            ret += `\nthis.root.addChild(${compVar}.node)`;
-          } else if (parentVar) {
+          if (parentVar) {
             ret += `\n     ${parentVar}.node.resolveComponent(${compVar})`;
           }
           attributes.forEach(({ name, value }) => {
@@ -329,13 +339,17 @@ export function sdlTsxTransform() {
             }
           }
         }
-        parseJSX(range, rootTag, children, attributes);
-        const end = jsxBlock.parentRange[1];
+        jsxBlocks.forEach((jsxBlock) => {
+          const { openingElement, children } = jsxBlock;
+          const { attributes, name, range } = openingElement;
+          parseJSX(range, name, children, attributes);
+        });
+        const end = jsxBlocks[0].parentRange[1];
         // if (listMethods.includes('start')) {
         //     ms.appendRight(end, `\n${classVar}.start();`);
         // }
-        // if (!/import {([\s\S]*?)instantiate([\s\S]*?)} from ["']@safe-engine/.test(code))
-        //     ms.prepend(`import { instantiate } from '@safe-engine/${sourceFramework}'\n`);
+        if (!/import\s*{[^}]*\binstantiate\b[^}]*}\s*from\s*["']/.test(code))
+            ms.prepend(`import { instantiate } from '${sourceFramework}'\n`);
         if (!isScene)
           ms.appendRight(end, `\n    return ${classVar}`);
         // console.log('Program', currentClassName, output)

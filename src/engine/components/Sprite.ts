@@ -26,6 +26,12 @@ export class Sprite extends Component<SpriteProps> {
   private loadedPath = "";
   private loadedAtlas: TextureAtlas | null = null;
 
+  onAwake(): void {
+    if (this.props.spriteFrame) {
+      this.setTexture(this.props.spriteFrame);
+    }
+  }
+
   onStart(): void {
     this.ensureTexture();
   }

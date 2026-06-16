@@ -1,5 +1,5 @@
-import { Node } from "./Node";
 import { InputSystem } from "../Input";
+import { Node } from "./Node";
 
 export type Orientation =
   | "unknown"
@@ -13,6 +13,7 @@ export class Scene {
   readonly root: Node;
   readonly input: InputSystem;
   private _started = false;
+  __view?(): void;
 
   constructor(name: string = "Scene") {
     this.name = name;

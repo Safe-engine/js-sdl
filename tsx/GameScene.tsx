@@ -2,8 +2,8 @@ import {
   lilita_one_regularFont,
 } from "../src/assets";
 import {
-  Label,
   instantiate,
+  Label,
   Scene
 } from "../src/engine";
 import { Bullet } from "./Bullet";
@@ -59,7 +59,7 @@ export class GameScene extends Scene {
   __view() {
     <Player $ref={this.player} node={{ x: 360, y: 1040, anchorX: 0.5, anchorY: 0.5 }}>
     </Player>;
-    <Label node={{ x: 24, y: 24 }}
+    <Label node={{ x: 24, y: 24, width: 240, height: 40, anchorX: 0, anchorY: 0 }}
       string="Tap to shoot"
       font={lilita_one_regularFont}
       size={26}

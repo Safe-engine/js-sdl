@@ -19,6 +19,7 @@ import {
   present,
 } from "sdl3";
 import { Orientation, Scene } from "./core/Scene";
+import { setSceneActivator } from "./core/instantiate";
 import { Point, Viewport } from "./Viewport";
 import { Tween } from "./animation/Tween";
 import { Audio } from "./Audio";
@@ -176,6 +177,7 @@ class EngineImpl {
   }
 
   private _activateScene(scene: Scene): void {
+    scene.__view?.();
     scene.onLoad();
     if (this._currentScene === scene) {
       scene.onEnter();
@@ -191,3 +193,7 @@ class EngineImpl {
 
 /** Global engine singleton. */
 export const Engine = new EngineImpl();
+
+setSceneActivator((scene) => {
+  Engine.scene = scene;
+});

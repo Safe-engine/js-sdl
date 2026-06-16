@@ -39,6 +39,17 @@ export class Label extends Component<LabelCompProps> {
   private loadedFontKey = "";
   private localizationRevision = -1;
 
+  onAwake(): void {
+    if (this.props.string !== undefined) {
+      this.setText(this.props.string);
+    }
+    if (this.props.font) {
+      this.setFont(this.props.font, this.props.size ?? this.fontSize);
+    } else if (this.props.size !== undefined) {
+      this.fontSize = this.props.size;
+    }
+  }
+
   onStart(): void {
     this.ensureAssets();
   }
