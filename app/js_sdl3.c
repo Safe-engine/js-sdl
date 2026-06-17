@@ -1,4 +1,5 @@
 #include "js_sdl3.h"
+#include "box2d.h"
 #include <SDL3_image/SDL_image.h>
 #include <SDL3_ttf/SDL_ttf.h>
 #include <stdio.h>
@@ -349,6 +350,37 @@ static JSValue js_getViewportMetrics(
     for (uint32_t i = 0; i < 12; i++) {
         JS_SetPropertyUint32(ctx, result, i, JS_NewFloat64(ctx, values[i]));
     }
+    return result;
+}
+
+/* --- Binding: loadTextFile(path) -> string|null --- */
+static JSValue js_loadTextFile(
+    JSContext *ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst *argv)
+{
+    (void)this_val;
+    if (argc < 1) return JS_NULL;
+
+    const char *path = JS_ToCString(ctx, argv[0]);
+    if (!path) return JS_EXCEPTION;
+
+    char *resolved_path = resolve_resource_path(path);
+    size_t length = 0;
+    void *contents = resolved_path
+        ? SDL_LoadFile(resolved_path, &length)
+        : NULL;
+    if (!contents && resolved_path && strcmp(resolved_path, path) != 0) {
+        contents = SDL_LoadFile(path, &length);
+    }
+
+    free(resolved_path);
+    JS_FreeCString(ctx, path);
+
+    if (!contents) return JS_NULL;
+    JSValue result = JS_NewStringLen(ctx, contents, length);
+    SDL_free(contents);
     return result;
 }
 
@@ -985,6 +1017,154 @@ static JSValue js_drawRect(
     return JS_UNDEFINED;
 }
 
+static void js_set_draw_color(
+    double red, double green, double blue, double alpha)
+{
+    SDL_SetRenderDrawBlendMode(g_renderer, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(
+        g_renderer,
+        (Uint8)SDL_clamp(red, 0, 255),
+        (Uint8)SDL_clamp(green, 0, 255),
+        (Uint8)SDL_clamp(blue, 0, 255),
+        (Uint8)SDL_clamp(alpha, 0, 255));
+}
+
+static JSValue js_drawLine(
+    JSContext *ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst *argv)
+{
+    (void)this_val;
+    double x1, y1, x2, y2, red, green, blue, alpha = 255;
+    JS_ToFloat64(ctx, &x1, argv[0]);
+    JS_ToFloat64(ctx, &y1, argv[1]);
+    JS_ToFloat64(ctx, &x2, argv[2]);
+    JS_ToFloat64(ctx, &y2, argv[3]);
+    JS_ToFloat64(ctx, &red, argv[4]);
+    JS_ToFloat64(ctx, &green, argv[5]);
+    JS_ToFloat64(ctx, &blue, argv[6]);
+    if (argc > 7) JS_ToFloat64(ctx, &alpha, argv[7]);
+
+    js_set_draw_color(red, green, blue, alpha);
+    SDL_RenderLine(g_renderer, (float)x1, (float)y1, (float)x2, (float)y2);
+    return JS_UNDEFINED;
+}
+
+static JSValue js_drawPoint(
+    JSContext *ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst *argv)
+{
+    (void)this_val;
+    double x, y, red, green, blue, alpha = 255;
+    JS_ToFloat64(ctx, &x, argv[0]);
+    JS_ToFloat64(ctx, &y, argv[1]);
+    JS_ToFloat64(ctx, &red, argv[2]);
+    JS_ToFloat64(ctx, &green, argv[3]);
+    JS_ToFloat64(ctx, &blue, argv[4]);
+    if (argc > 5) JS_ToFloat64(ctx, &alpha, argv[5]);
+
+    js_set_draw_color(red, green, blue, alpha);
+    SDL_RenderPoint(g_renderer, (float)x, (float)y);
+    return JS_UNDEFINED;
+}
+
+static JSValue js_drawCircle(
+    JSContext *ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst *argv)
+{
+    (void)this_val;
+    double x, y, radius, red, green, blue, alpha = 255;
+    int fill = 0;
+    JS_ToFloat64(ctx, &x, argv[0]);
+    JS_ToFloat64(ctx, &y, argv[1]);
+    JS_ToFloat64(ctx, &radius, argv[2]);
+    JS_ToFloat64(ctx, &red, argv[3]);
+    JS_ToFloat64(ctx, &green, argv[4]);
+    JS_ToFloat64(ctx, &blue, argv[5]);
+    if (argc > 6) JS_ToFloat64(ctx, &alpha, argv[6]);
+    if (argc > 7) JS_ToInt32(ctx, &fill, argv[7]);
+
+    js_set_draw_color(red, green, blue, alpha);
+    int r = (int)SDL_max(0.0, radius);
+    int cx = (int)x;
+    int cy = (int)y;
+
+    for (int dy = -r; dy <= r; dy++) {
+        int dx_limit = (int)SDL_sqrt((float)(r * r - dy * dy));
+        if (fill) {
+            SDL_RenderLine(
+                g_renderer,
+                (float)(cx - dx_limit),
+                (float)(cy + dy),
+                (float)(cx + dx_limit),
+                (float)(cy + dy));
+        } else {
+            SDL_RenderPoint(g_renderer, (float)(cx - dx_limit), (float)(cy + dy));
+            SDL_RenderPoint(g_renderer, (float)(cx + dx_limit), (float)(cy + dy));
+        }
+    }
+    return JS_UNDEFINED;
+}
+
+static JSValue js_drawPolyline(
+    JSContext *ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst *argv)
+{
+    (void)this_val;
+    if (argc < 5) return JS_UNDEFINED;
+    int closed = 0;
+    double red, green, blue, alpha = 255;
+    JS_ToFloat64(ctx, &red, argv[1]);
+    JS_ToFloat64(ctx, &green, argv[2]);
+    JS_ToFloat64(ctx, &blue, argv[3]);
+    if (argc > 4) JS_ToFloat64(ctx, &alpha, argv[4]);
+    if (argc > 5) JS_ToInt32(ctx, &closed, argv[5]);
+
+    int64_t length_value = 0;
+    JS_GetLength(ctx, argv[0], &length_value);
+    if (length_value < 2) return JS_UNDEFINED;
+
+    js_set_draw_color(red, green, blue, alpha);
+    double first_x = 0, first_y = 0, previous_x = 0, previous_y = 0;
+    for (int64_t i = 0; i < length_value; i++) {
+        JSValue point = JS_GetPropertyUint32(ctx, argv[0], (uint32_t)i);
+        JSValue x_value = JS_GetPropertyStr(ctx, point, "x");
+        JSValue y_value = JS_GetPropertyStr(ctx, point, "y");
+        double x = 0, y = 0;
+        JS_ToFloat64(ctx, &x, x_value);
+        JS_ToFloat64(ctx, &y, y_value);
+        JS_FreeValue(ctx, x_value);
+        JS_FreeValue(ctx, y_value);
+        JS_FreeValue(ctx, point);
+
+        if (i == 0) {
+            first_x = previous_x = x;
+            first_y = previous_y = y;
+            continue;
+        }
+        SDL_RenderLine(
+            g_renderer,
+            (float)previous_x, (float)previous_y,
+            (float)x, (float)y);
+        previous_x = x;
+        previous_y = y;
+    }
+    if (closed) {
+        SDL_RenderLine(
+            g_renderer,
+            (float)previous_x, (float)previous_y,
+            (float)first_x, (float)first_y);
+    }
+    return JS_UNDEFINED;
+}
+
 static JSValue js_pushClipRect(
     JSContext *ctx,
     JSValueConst this_val,
@@ -1152,6 +1332,7 @@ static const JSCFunctionListEntry funcs[] =
 {
     JS_CFUNC_DEF("createWindow",            3, js_createWindow),
     JS_CFUNC_DEF("getViewportMetrics",      0, js_getViewportMetrics),
+    JS_CFUNC_DEF("loadTextFile",            1, js_loadTextFile),
     JS_CFUNC_DEF("loadTexture",             1, js_loadTexture),
     JS_CFUNC_DEF("loadFont",                2, js_loadFont),
     JS_CFUNC_DEF("loadTextTexture",         2, js_loadTextTexture),
@@ -1173,6 +1354,10 @@ static const JSCFunctionListEntry funcs[] =
     JS_CFUNC_DEF("drawTextureRotated",     14, js_drawTextureRotated),
     JS_CFUNC_DEF("drawTextureRegionRotated", 18, js_drawTextureRegionRotated),
     JS_CFUNC_DEF("drawRect",                8, js_drawRect),
+    JS_CFUNC_DEF("drawLine",                8, js_drawLine),
+    JS_CFUNC_DEF("drawPoint",               6, js_drawPoint),
+    JS_CFUNC_DEF("drawCircle",              8, js_drawCircle),
+    JS_CFUNC_DEF("drawPolyline",            6, js_drawPolyline),
     JS_CFUNC_DEF("pushClipRect",            4, js_pushClipRect),
     JS_CFUNC_DEF("popClipRect",             0, js_popClipRect),
     JS_CFUNC_DEF("present",                 0, js_present),
@@ -1240,12 +1425,15 @@ int js_init_console(JSContext *ctx)
 int js_init_sdl3(JSContext *ctx)
 {
     js_init_module_sdl3(ctx, "sdl3");
+    js_init_box2d(ctx);
     js_init_console(ctx);
     return 0;
 }
 
 void js_sdl3_shutdown(JSContext *ctx)
 {
+    js_box2d_shutdown();
+
     JS_FreeValue(ctx, g_onInit);
     JS_FreeValue(ctx, g_onUpdate);
     JS_FreeValue(ctx, g_onRender);

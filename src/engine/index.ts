@@ -66,6 +66,31 @@ export type {
 } from "./components/Label";
 export { Sprite } from "./components/Sprite";
 export {
+  BoxShape,
+  ChainShape,
+  CircleShape,
+  EdgeShape,
+  PhysicsWorld,
+  PolygonShape,
+  RigidBody,
+  Vec2,
+  World,
+  box,
+  circle,
+  edge,
+  polygon
+} from "./components/Physics";
+export type {
+  BodyType,
+  ContactValue,
+  Float,
+  PhysicsDebugDrawOptions,
+  PhysicsShape,
+  PhysicsShapeDef,
+  PhysicsWorldProps,
+  RigidBodyProps
+} from "./components/Physics";
+export {
   NineSlice,
   Panel,
   ProgressBar,

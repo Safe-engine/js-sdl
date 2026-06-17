@@ -4,9 +4,19 @@ import {
   Engine,
   Label,
   Node,
+  PhysicsWorld,
+  RigidBody,
   Scene,
   Sprite,
+  box,
 } from "./engine";
+import { DragonBones } from "../tsx/dragonbones";
+
+const MECHA_DRAGON_BONES = {
+  skeleton: "res/DragonBones/mecha_1004d/mecha_1004d_show_ske.json",
+  atlas: "res/DragonBones/mecha_1004d/mecha_1004d_show_tex.json",
+  texture: "res/DragonBones/mecha_1004d/mecha_1004d_show_tex.png",
+};
 
 /* ── Custom Components ─────────────────────────────── */
 
@@ -45,6 +55,14 @@ class EnemyAI extends Component {
 class GameScene extends Scene {
 
   onLoad(): void {
+    this.root.addComponent(PhysicsWorld, {
+      gravity: { x: 0, y: 9.8 },
+      pixelsPerMeter: 32,
+      velocityIterations: 4,
+      fixedTimeStep: 1 / 60,
+      debugDraw: { enabled: true, alpha: 190 },
+    });
+
     // Player
     const player = new Node();
     player.setPosition(300, 350);
@@ -53,7 +71,43 @@ class GameScene extends Scene {
     spr.node.width = 64;
     spr.node.height = 64;
     player.addComponent(PlayerController);
+    player.addComponent(RigidBody, {
+      type: "dynamic",
+      density: 1,
+      restitution: 0.25,
+      friction: 0.3,
+      shapes: box(64, 64),
+      onBeginContact: (other) => {
+        console.log("player contact", other.tag ?? "untagged");
+      },
+    });
     this.root.addChild(player);
+
+    const floor = new Node("Floor");
+    floor.setPosition(360, 660);
+    floor.width = 720;
+    floor.height = 32;
+    floor.addComponent(RigidBody, {
+      type: "static",
+      tag: 100,
+      friction: 0.6,
+      shapes: box(720, 32),
+    });
+    this.root.addChild(floor);
+
+    const mecha = new Node("DragonBonesMecha");
+    mecha.setPosition(520, 610);
+    mecha.setScale(0.35, 0.35);
+    mecha.addComponent(DragonBones, {
+      data: MECHA_DRAGON_BONES,
+      animation: "idle",
+      playTimes: 0,
+      timeScale: 1,
+      onAnimationComplete: (name, count) => {
+        console.log("dragonbones loop", name, count);
+      },
+    });
+    this.root.addChild(mecha);
 
     // Enemy
     const enemy = new Node("Enemy");
@@ -96,7 +150,7 @@ class HomeScene extends Scene {
     sprite.node.height = 68;
 
     const playButton = button.addComponent(Button);
-    playButton.onClick = () => {
+    playButton.props.onPress = () => {
       Engine.scene = new GameScene();
     };
 

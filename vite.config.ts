@@ -48,7 +48,7 @@ function runSdl3jsPlugin() {
 }
 
 // Vite lib-mode produces a single ESM bundle compatible with QuickJS-NG.
-// Native module "sdl3" is external — resolved at runtime by the C host.
+// Native modules are external — resolved at runtime by the C host.
 export default defineConfig({
   build: {
     lib: {
@@ -60,7 +60,7 @@ export default defineConfig({
     target: "esnext",
     minify: false,
     rollupOptions: {
-      external: ["sdl3"],
+      external: ["sdl3", "box2d"],
     },
   },
   plugins: [safexTransform(), runSdl3jsPlugin()],

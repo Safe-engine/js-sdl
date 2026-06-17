@@ -23,6 +23,9 @@ declare module "sdl3" {
   /** Load a texture from disk.  Returns a texture id (or -1 on failure). */
   export function loadTexture(path: string): number;
 
+  /** Load a UTF-8 text file from disk. Returns null on failure. */
+  export function loadTextFile(path: string): string | null;
+
   /** Load a TrueType font.  Returns a font id (or -1 on failure). */
   export function loadFont(path: string, ptsize: number): number;
 
@@ -93,6 +96,33 @@ declare module "sdl3" {
     red: number, green: number, blue: number, alpha?: number,
   ): void;
 
+  export interface DrawPoint {
+    x: number;
+    y: number;
+  }
+
+  export function drawLine(
+    x1: number, y1: number, x2: number, y2: number,
+    red: number, green: number, blue: number, alpha?: number,
+  ): void;
+
+  export function drawPoint(
+    x: number, y: number,
+    red: number, green: number, blue: number, alpha?: number,
+  ): void;
+
+  export function drawCircle(
+    x: number, y: number, radius: number,
+    red: number, green: number, blue: number, alpha?: number,
+    fill?: boolean,
+  ): void;
+
+  export function drawPolyline(
+    points: DrawPoint[],
+    red: number, green: number, blue: number, alpha?: number,
+    closed?: boolean,
+  ): void;
+
   /** Intersect subsequent rendering with a logical rectangle. */
   export function pushClipRect(
     x: number, y: number, width: number, height: number,
@@ -132,4 +162,82 @@ declare module "sdl3" {
     cb: (orientation: number, width: number, height: number) => void,
   ): void;
   export function onTerminate(cb: () => void): void;
+}
+
+declare module "box2d" {
+  export type BodyType = 0 | 1 | 2;
+  export interface Vec2Value {
+    x: number;
+    y: number;
+  }
+  export interface BodyTransform extends Vec2Value {
+    angle: number;
+  }
+  export interface ContactEvents {
+    begin: Array<[number, number]>;
+    end: Array<[number, number]>;
+  }
+  export type DebugPrimitive =
+    | { type: "line"; x1: number; y1: number; x2: number; y2: number; color: number }
+    | { type: "circle"; x: number; y: number; radius: number; color: number; fill?: boolean }
+    | { type: "polygon"; points: Vec2Value[]; color: number; fill?: boolean }
+    | { type: "point"; x: number; y: number; size: number; color: number };
+
+  export function createWorld(gravity?: Vec2Value): number;
+  export function destroyWorld(world: number): void;
+  export function stepWorld(world: number, timeStep: number, subStepCount?: number): void;
+  export function setGravity(world: number, gravity: Vec2Value): void;
+  export function createBody(
+    world: number,
+    type: BodyType,
+    position: Vec2Value,
+    angle: number,
+    gravityScale: number,
+    userData: number,
+  ): number;
+  export function destroyBody(body: number): void;
+  export function createBoxShape(
+    body: number,
+    halfWidth: number,
+    halfHeight: number,
+    center: Vec2Value,
+    angle: number,
+    density?: number,
+    friction?: number,
+    restitution?: number,
+    isSensor?: boolean,
+  ): number;
+  export function createCircleShape(
+    body: number,
+    radius: number,
+    center: Vec2Value,
+    density?: number,
+    friction?: number,
+    restitution?: number,
+    isSensor?: boolean,
+  ): number;
+  export function createPolygonShape(
+    body: number,
+    points: Vec2Value[],
+    density?: number,
+    friction?: number,
+    restitution?: number,
+    isSensor?: boolean,
+  ): number;
+  export function createSegmentShape(
+    body: number,
+    a: Vec2Value,
+    b: Vec2Value,
+    density?: number,
+    friction?: number,
+    restitution?: number,
+    isSensor?: boolean,
+  ): number;
+  export function getBodyTransform(body: number): BodyTransform | null;
+  export function setBodyTransform(body: number, position: Vec2Value, angle: number): void;
+  export function setLinearVelocity(body: number, velocity: Vec2Value): void;
+  export function applyForceToCenter(body: number, force: Vec2Value): void;
+  export function applyLinearImpulseToCenter(body: number, impulse: Vec2Value): void;
+  export function getContactEvents(world: number): ContactEvents;
+  export function getDebugDraw(world: number, pixelsPerMeter: number): DebugPrimitive[];
 }

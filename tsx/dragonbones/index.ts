@@ -14,7 +14,7 @@ import {
   type Matrix,
   type SlotData,
 } from "dragonbones-es";
-import { drawTextureRegionRotated } from "sdl3";
+import { drawTextureRegionRotated, loadTextFile } from "sdl3";
 import { AssetManager, type TextureAsset } from "../../src/engine/AssetManager";
 import { Component } from "../../src/engine/core/Component";
 
@@ -432,13 +432,18 @@ async function loadDragonBonesData(data: DragonBonesData): Promise<LoadedDragonB
 function loadJson(path: string): Promise<any> {
   let promise = jsonCache.get(path);
   if (!promise) {
-    if (typeof fetch !== "function") {
-      throw new Error(`DragonBones JSON loading requires fetch(): ${path}`);
+    if (typeof fetch === "function") {
+      promise = fetch(path).then((response) => {
+        if (!response.ok) throw new Error(`Failed to load DragonBones JSON: ${path}`);
+        return response.json();
+      });
+    } else {
+      const text = loadTextFile(path);
+      if (text === null) {
+        throw new Error(`Failed to load DragonBones JSON: ${path}`);
+      }
+      promise = Promise.resolve(JSON.parse(text));
     }
-    promise = fetch(path).then((response) => {
-      if (!response.ok) throw new Error(`Failed to load DragonBones JSON: ${path}`);
-      return response.json();
-    });
     jsonCache.set(path, promise);
   }
   return promise;

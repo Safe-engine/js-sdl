@@ -14,7 +14,7 @@ if(ANDROID OR CMAKE_SYSTEM_NAME STREQUAL "iOS")
 endif()
 
 if(JS_SDL_USE_VENDORED)
-    foreach(dependency SDL SDL_image SDL_ttf quickjs)
+    foreach(dependency SDL SDL_image SDL_ttf quickjs box2d)
         if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/third_party/${dependency}/CMakeLists.txt")
             message(FATAL_ERROR
                 "Missing third_party/${dependency}. Run scripts/bootstrap-mobile-deps.sh first.")
@@ -58,12 +58,22 @@ else()
     find_package(SDL3_image REQUIRED)
     find_package(SDL3_ttf REQUIRED)
     find_package(qjs REQUIRED)
+    find_package(box2d QUIET)
 endif()
 
 set(JS_SDL_SOURCES
     app/main.c
+    app/box2d.c
     app/js_sdl3.c
 )
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/third_party/box2d/CMakeLists.txt")
+    set(BOX2D_SAMPLES OFF CACHE BOOL "" FORCE)
+    set(BOX2D_BENCHMARKS OFF CACHE BOOL "" FORCE)
+    set(BOX2D_DOCS OFF CACHE BOOL "" FORCE)
+    set(BOX2D_UNIT_TESTS OFF CACHE BOOL "" FORCE)
+    add_subdirectory(third_party/box2d EXCLUDE_FROM_ALL)
+endif()
 
 if(ANDROID)
     add_library(main SHARED ${JS_SDL_SOURCES})
@@ -94,9 +104,22 @@ target_link_libraries(
         ${QUICKJS_TARGET}
 )
 
+set(BOX2D_TARGET "")
+if(TARGET box2d::box2d)
+    set(BOX2D_TARGET box2d::box2d)
+elseif(TARGET box2d)
+    set(BOX2D_TARGET box2d)
+endif()
+
+if(BOX2D_TARGET)
+    target_link_libraries(${JS_SDL_TARGET} PRIVATE ${BOX2D_TARGET})
+    target_compile_definitions(${JS_SDL_TARGET} PRIVATE JS_SDL_HAS_BOX2D=1)
+endif()
+
 if(BUILD_TESTING)
     add_executable(js_sdl3_native_tests
         tests/native_binding_tests.c
+        app/box2d.c
         app/js_sdl3.c
     )
     target_include_directories(js_sdl3_native_tests PRIVATE app)
@@ -108,6 +131,10 @@ if(BUILD_TESTING)
             SDL3_ttf::SDL3_ttf
             ${QUICKJS_TARGET}
     )
+    if(BOX2D_TARGET)
+        target_link_libraries(js_sdl3_native_tests PRIVATE ${BOX2D_TARGET})
+        target_compile_definitions(js_sdl3_native_tests PRIVATE JS_SDL_HAS_BOX2D=1)
+    endif()
     add_test(NAME js_sdl3_native_tests COMMAND js_sdl3_native_tests)
 endif()
 

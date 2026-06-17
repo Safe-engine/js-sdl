@@ -1,12 +1,17 @@
 import {
   lilita_one_regularFont,
+  sf_button,
 } from "../src/assets";
 import {
+  Button,
   instantiate,
   Label,
-  Scene
+  Scene,
+  Sprite
 } from "../src/engine";
+import { loadScene } from "../src/engine/core/instantiate";
 import { Bullet } from "./Bullet";
+import { HomeScene } from "./HomeScene";
 import { PhysicsWorld } from "./planck";
 import { Player } from "./Player";
 
@@ -57,15 +62,30 @@ export class GameScene extends Scene {
     this.shootCooldown = 0.12;
   }
 
+  onClick = () => {
+    console.log("clicked button");
+    loadScene(HomeScene);
+  };
+
   __view() {
-    <PhysicsWorld />;
+    <PhysicsWorld debugDraw={{ enabled: true, alpha: 190 }} />;
     <Player $ref={this.player} node={{ x: 360, y: 1040, anchorX: 0.5, anchorY: 0.5 }}>
     </Player>;
     <Label node={{ x: 24, y: 24, width: 240, height: 40, anchorX: 0, anchorY: 0 }}
       string="Tap to shoot"
       font={lilita_one_regularFont}
       size={26}
-    />
+    />;
+    <Sprite spriteFrame={sf_button} node={{ x: 360, y: 240, width: 220, height: 68 }}>
+      <Button onPress={this.onClick} />
+      <Label
+        string="PLAY"
+        font={lilita_one_regularFont}
+        size={32}
+        align="center"
+        verticalAlign="middle"
+      />
+    </Sprite>;
   }
 }
 

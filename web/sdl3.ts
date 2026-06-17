@@ -472,6 +472,10 @@ export function loadTexture(path: string): number {
   return id;
 }
 
+export function loadTextFile(_path: string): string | null {
+  throw new Error("loadTextFile is only available in the native SDL runtime.");
+}
+
 export function loadFont(path: string, ptsize: number): number {
   const key = `${path}\0${ptsize}`;
   const existingId = fontIds.get(key);
@@ -758,6 +762,90 @@ export function drawRect(
   textures.delete(id);
 }
 
+export interface DrawPoint {
+  x: number;
+  y: number;
+}
+
+export function drawLine(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  red: number,
+  green: number,
+  blue: number,
+  alpha = 255,
+): void {
+  const length = Math.hypot(x2 - x1, y2 - y1);
+  if (length <= 0 || !whiteTexture) return;
+  const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+  const id = -1;
+  textures.set(id, {
+    texture: whiteTexture,
+    width: 1,
+    height: 1,
+    refs: 1,
+    key: "__white",
+  });
+  draw(id, 0, 0, 1, 1, x1, y1 - 0.5, length, 1, angle, 0, 0, false, false,
+    red, green, blue, alpha);
+  textures.delete(id);
+}
+
+export function drawPoint(
+  x: number,
+  y: number,
+  red: number,
+  green: number,
+  blue: number,
+  alpha = 255,
+): void {
+  drawRect(x - 1, y - 1, 2, 2, red, green, blue, alpha);
+}
+
+export function drawCircle(
+  x: number,
+  y: number,
+  radius: number,
+  red: number,
+  green: number,
+  blue: number,
+  alpha = 255,
+  fill = false,
+): void {
+  const segments = Math.max(12, Math.ceil(radius / 2));
+  let previous = { x: x + radius, y };
+  for (let i = 1; i <= segments; i++) {
+    const angle = i / segments * Math.PI * 2;
+    const current = {
+      x: x + Math.cos(angle) * radius,
+      y: y + Math.sin(angle) * radius,
+    };
+    drawLine(previous.x, previous.y, current.x, current.y, red, green, blue, alpha);
+    if (fill) drawLine(x, y, current.x, current.y, red, green, blue, alpha * 0.35);
+    previous = current;
+  }
+}
+
+export function drawPolyline(
+  points: DrawPoint[],
+  red: number,
+  green: number,
+  blue: number,
+  alpha = 255,
+  closed = false,
+): void {
+  for (let i = 1; i < points.length; i++) {
+    drawLine(points[i - 1].x, points[i - 1].y, points[i].x, points[i].y, red, green, blue, alpha);
+  }
+  if (closed && points.length > 1) {
+    const last = points[points.length - 1];
+    const first = points[0];
+    drawLine(last.x, last.y, first.x, first.y, red, green, blue, alpha);
+  }
+}
+
 export function pushClipRect(
   x: number,
   y: number,
@@ -861,20 +949,25 @@ export function onTerminate(callback: VoidCallback): void {
   terminateCallback = callback;
 }
 
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden) {
-    pauseCallback?.();
-    interruptionCallback?.(true);
-    backgroundCallback?.();
-    lastFrameTime = 0;
-  } else {
-    foregroundCallback?.();
-    interruptionCallback?.(false);
-    resumeCallback?.();
-  }
-});
-window.addEventListener("orientationchange", emitOrientation);
-window.addEventListener("pagehide", () => terminateCallback?.());
+if (typeof document !== "undefined") {
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      pauseCallback?.();
+      interruptionCallback?.(true);
+      backgroundCallback?.();
+      lastFrameTime = 0;
+    } else {
+      foregroundCallback?.();
+      interruptionCallback?.(false);
+      resumeCallback?.();
+    }
+  });
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("orientationchange", emitOrientation);
+  window.addEventListener("pagehide", () => terminateCallback?.());
+}
 
 // Browsers do not expose an equivalent low-memory event.
 void lowMemoryCallback;

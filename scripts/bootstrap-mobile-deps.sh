@@ -32,5 +32,8 @@ clone_dependency SDL_ttf \
 clone_dependency quickjs \
     https://github.com/quickjs-ng/quickjs.git \
     "${QUICKJS_REVISION:-master}"
+clone_dependency box2d \
+    https://github.com/erincatto/box2d.git \
+    "${BOX2D_REVISION:-main}"
 
 echo "Mobile dependencies are ready in third_party/."

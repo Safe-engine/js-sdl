@@ -67,8 +67,8 @@ static void test_callbacks_and_invalid_resource_paths(JSContext *ctx)
     const char *source =
         "import {"
         "  drawTexture, drawTextureRegionRotated, drawTextureRotated,"
-        "  getTextureHeight, getTextureWidth, isAudioPlaying, onBackground,"
-        "  onForeground, onInit, onInterruption, onLowMemory,"
+        "  getTextureHeight, getTextureWidth, isAudioPlaying, loadTextFile,"
+        "  onBackground, onForeground, onInit, onInterruption, onLowMemory,"
         "  onOrientationChange, onPause, onRender, onResume, onTerminate,"
         "  onTouchEnd, onTouchMove, onTouchStart, onUpdate, pauseAudio,"
         "  releaseAudio, releaseFont, releaseTexture, resumeAudio,"
@@ -78,7 +78,8 @@ static void test_callbacks_and_invalid_resource_paths(JSContext *ctx)
         "globalThis.invalids = ["
         "  getTextureWidth(-1),"
         "  getTextureHeight(999),"
-        "  isAudioPlaying(12)"
+        "  isAudioPlaying(12),"
+        "  loadTextFile('__missing__.json')"
         "];"
         "releaseTexture(-1);"
         "releaseFont(-1);"
@@ -149,7 +150,7 @@ static void test_callbacks_and_invalid_resource_paths(JSContext *ctx)
     expect_string(
         "invalid resource queries return neutral values",
         invalids_json,
-        "[0,0,false]");
+        "[0,0,false,null]");
     JS_FreeCString(ctx, invalids_json);
     JS_FreeValue(ctx, invalids);
 }
@@ -181,6 +182,50 @@ static void test_coordinate_conversion_without_renderer(void)
             fabsf(event.motion.y - 25.0f) < 0.001f);
 }
 
+static void test_box2d_module_registration(JSContext *ctx)
+{
+    JSValue result = eval_js(
+        ctx,
+        "import {"
+        "  createBody, createBoxShape, createWorld, destroyWorld, getDebugDraw"
+        "} from 'box2d';"
+        "globalThis.box2dCreateWorldType = typeof createWorld;"
+        "globalThis.box2dCreateWorld = createWorld;"
+        "globalThis.box2dCreateBody = createBody;"
+        "globalThis.box2dCreateBoxShape = createBoxShape;"
+        "globalThis.box2dDestroyWorld = destroyWorld;"
+        "globalThis.box2dGetDebugDraw = getDebugDraw;",
+        JS_EVAL_TYPE_MODULE);
+    JS_FreeValue(ctx, result);
+    if (failures > 0) return;
+
+    JSValue type = eval_js(ctx, "globalThis.box2dCreateWorldType", JS_EVAL_TYPE_GLOBAL);
+    const char *type_string = JS_ToCString(ctx, type);
+    expect_string("box2d module exports createWorld", type_string, "function");
+    JS_FreeCString(ctx, type_string);
+    JS_FreeValue(ctx, type);
+
+    JSValue debug_count = eval_js(
+        ctx,
+        "globalThis.box2dDebugPrimitiveCount = (() => {"
+        "  try {"
+        "    const world = globalThis.box2dCreateWorld({ x: 0, y: 0 });"
+        "    const body = globalThis.box2dCreateBody(world, 0, { x: 1, y: 2 }, 0, 1, 1);"
+        "    globalThis.box2dCreateBoxShape(body, 0.5, 0.5, { x: 0, y: 0 }, 0, 1, 0.2, 0, false);"
+        "    const count = globalThis.box2dGetDebugDraw(world, 32).length;"
+        "    globalThis.box2dDestroyWorld(world);"
+        "    return count;"
+        "  } catch (_) {"
+        "    return -1;"
+        "  }"
+        "})()",
+        JS_EVAL_TYPE_GLOBAL);
+    int count = 0;
+    JS_ToInt32(ctx, &count, debug_count);
+    expect_true("box2d debug draw returns primitives when linked", count != 0);
+    JS_FreeValue(ctx, debug_count);
+}
+
 int main(void)
 {
     if (!SDL_Init(0)) {
@@ -200,6 +245,7 @@ int main(void)
 
     js_init_sdl3(ctx);
     test_callbacks_and_invalid_resource_paths(ctx);
+    test_box2d_module_registration(ctx);
     test_window_size_defaults();
     test_coordinate_conversion_without_renderer();
     js_sdl3_shutdown(ctx);

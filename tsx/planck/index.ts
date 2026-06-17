@@ -1,6 +1,13 @@
 import * as planck from "planck";
 import { Component } from "../../src/engine/core/Component";
 import type { Node } from "../../src/engine/core/Node";
+import {
+  drawCircle,
+  drawLine,
+  drawPoint,
+  drawPolyline,
+  type DrawPoint,
+} from "../../web/sdl3";
 
 export type BodyType = planck.BodyType;
 export type Float = number;
@@ -41,6 +48,13 @@ export interface PhysicsWorldProps {
   positionIterations?: number;
   fixedTimeStep?: Float;
   maxSubSteps?: number;
+  debugDraw?: boolean | PhysicsDebugDrawOptions;
+}
+
+export interface PhysicsDebugDrawOptions {
+  enabled?: boolean;
+  alpha?: number;
+  color?: number;
 }
 
 const DEFAULT_PIXELS_PER_METER = 32;
@@ -118,6 +132,26 @@ export class PhysicsWorld extends Component<PhysicsWorldProps> {
     }
     if (steps === this.maxSubSteps) this.accumulator = 0;
     this.syncBodies();
+  }
+
+  onRenderEnd(): void {
+    const debugDraw = this.props.debugDraw;
+    const enabled = typeof debugDraw === "boolean"
+      ? debugDraw
+      : debugDraw?.enabled ?? false;
+    if (!enabled) return;
+
+    const color = debugColor(
+      typeof debugDraw === "object" ? debugDraw.color ?? 0x6ee7ff : 0x6ee7ff,
+      typeof debugDraw === "object" ? debugDraw.alpha ?? 180 : 180,
+    );
+
+    for (let body = this.world.getBodyList(); body; body = body.getNext()) {
+      const transform = body.getTransform();
+      for (let fixture = body.getFixtureList(); fixture; fixture = fixture.getNext()) {
+        drawFixtureDebug(fixture, transform, this.pixelsPerMeter, color);
+      }
+    }
   }
 
   createBody(rigidBody: RigidBody): planck.Body {
@@ -294,4 +328,68 @@ function dispatchContact(
   if (!a || !b) return;
   callback(a, b);
   callback(b, a);
+}
+
+function drawFixtureDebug(
+  fixture: planck.Fixture,
+  transform: planck.TransformValue,
+  pixelsPerMeter: number,
+  color: { r: number; g: number; b: number; a: number },
+): void {
+  const shape = fixture.getShape();
+  switch (shape.getType()) {
+    case "circle": {
+      const circleShape = shape as planck.CircleShape;
+      const center = toDebugPoint(
+        planck.Transform.mulVec2(transform, circleShape.getCenter()),
+        pixelsPerMeter,
+      );
+      drawCircle(
+        center.x,
+        center.y,
+        circleShape.getRadius() * pixelsPerMeter,
+        color.r,
+        color.g,
+        color.b,
+        color.a,
+      );
+      drawPoint(center.x, center.y, color.r, color.g, color.b, color.a);
+      break;
+    }
+    case "edge": {
+      const edgeShape = shape as planck.EdgeShape;
+      const a = toDebugPoint(planck.Transform.mulVec2(transform, edgeShape.m_vertex1), pixelsPerMeter);
+      const b = toDebugPoint(planck.Transform.mulVec2(transform, edgeShape.m_vertex2), pixelsPerMeter);
+      drawLine(a.x, a.y, b.x, b.y, color.r, color.g, color.b, color.a);
+      break;
+    }
+    case "polygon": {
+      const polygonShape = shape as planck.PolygonShape;
+      const points: DrawPoint[] = [];
+      for (let i = 0; i < polygonShape.m_count; i++) {
+        points.push(toDebugPoint(
+          planck.Transform.mulVec2(transform, polygonShape.m_vertices[i]),
+          pixelsPerMeter,
+        ));
+      }
+      drawPolyline(points, color.r, color.g, color.b, color.a, true);
+      break;
+    }
+  }
+}
+
+function toDebugPoint(point: planck.Vec2Value, pixelsPerMeter: number): DrawPoint {
+  return {
+    x: point.x * pixelsPerMeter,
+    y: point.y * pixelsPerMeter,
+  };
+}
+
+function debugColor(hex: number, alpha: number): { r: number; g: number; b: number; a: number } {
+  return {
+    r: (hex >> 16) & 0xff,
+    g: (hex >> 8) & 0xff,
+    b: hex & 0xff,
+    a: alpha,
+  };
 }
