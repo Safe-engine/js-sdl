@@ -27,6 +27,7 @@
     "vite": "^6.3.0"
   },
   "dependencies": {
+    "dragonbones-es": "^1.0.0",
     "planck": "^1.5.0",
     "safex-sync-res": "^1.4.2",
     "vite-plugin-safex-transform": "^1.0.4"
