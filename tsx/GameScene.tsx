@@ -7,6 +7,7 @@ import {
   Scene
 } from "../src/engine";
 import { Bullet } from "./Bullet";
+import { PhysicsWorld } from "./planck";
 import { Player } from "./Player";
 
 interface BulletState {
@@ -57,6 +58,7 @@ export class GameScene extends Scene {
   }
 
   __view() {
+    <PhysicsWorld />;
     <Player $ref={this.player} node={{ x: 360, y: 1040, anchorX: 0.5, anchorY: 0.5 }}>
     </Player>;
     <Label node={{ x: 24, y: 24, width: 240, height: 40, anchorX: 0, anchorY: 0 }}

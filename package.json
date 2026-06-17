@@ -3,7 +3,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "bun run test:ts && bun run test:native",
     "test:ts": "bun test tests",
     "test:native": "cmake -S . -B build && cmake --build build --target js_sdl3_native_tests --parallel && ctest --test-dir build --output-on-failure",
     "sync-res": "bun ./node_modules/safex-sync-res/src/index.ts",
@@ -28,6 +27,7 @@
     "vite": "^6.3.0"
   },
   "dependencies": {
+    "planck": "^1.5.0",
     "safex-sync-res": "^1.4.2",
     "vite-plugin-safex-transform": "^1.0.4"
   }
