@@ -1,4 +1,4 @@
-#include "box2d.h"
+#include "js_box2d.h"
 
 #include <stdint.h>
 #include <stdlib.h>

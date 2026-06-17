@@ -1,5 +1,7 @@
 #include "js_sdl3.h"
-#include "box2d.h"
+#ifdef JS_SDL_ENABLE_BOX2D_MODULE
+#include "js_box2d.h"
+#endif
 #include <SDL3_image/SDL_image.h>
 #include <SDL3_ttf/SDL_ttf.h>
 #include <stdio.h>
@@ -1425,14 +1427,18 @@ int js_init_console(JSContext *ctx)
 int js_init_sdl3(JSContext *ctx)
 {
     js_init_module_sdl3(ctx, "sdl3");
+#ifdef JS_SDL_ENABLE_BOX2D_MODULE
     js_init_box2d(ctx);
+#endif
     js_init_console(ctx);
     return 0;
 }
 
 void js_sdl3_shutdown(JSContext *ctx)
 {
+#ifdef JS_SDL_ENABLE_BOX2D_MODULE
     js_box2d_shutdown();
+#endif
 
     JS_FreeValue(ctx, g_onInit);
     JS_FreeValue(ctx, g_onUpdate);

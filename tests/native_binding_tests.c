@@ -184,6 +184,8 @@ static void test_coordinate_conversion_without_renderer(void)
 
 static void test_box2d_module_registration(JSContext *ctx)
 {
+#ifdef JS_SDL_ENABLE_BOX2D_MODULE
+#ifdef JS_SDL_HAS_BOX2D
     JSValue result = eval_js(
         ctx,
         "import {"
@@ -224,6 +226,43 @@ static void test_box2d_module_registration(JSContext *ctx)
     JS_ToInt32(ctx, &count, debug_count);
     expect_true("box2d debug draw returns primitives when linked", count != 0);
     JS_FreeValue(ctx, debug_count);
+#else
+    JSValue result = eval_js(
+        ctx,
+        "import { createWorld, getDebugDraw } from 'box2d';"
+        "globalThis.box2dCreateWorldType = typeof createWorld;"
+        "globalThis.box2dUnavailableThrows = (() => {"
+        "  try {"
+        "    createWorld({ x: 0, y: 0 });"
+        "    return false;"
+        "  } catch (_) {"
+        "    return true;"
+        "  }"
+        "})();"
+        "globalThis.box2dGetDebugDrawType = typeof getDebugDraw;",
+        JS_EVAL_TYPE_MODULE);
+    JS_FreeValue(ctx, result);
+    if (failures > 0) return;
+
+    JSValue type = eval_js(ctx, "globalThis.box2dCreateWorldType", JS_EVAL_TYPE_GLOBAL);
+    const char *type_string = JS_ToCString(ctx, type);
+    expect_string("box2d fallback exports createWorld", type_string, "function");
+    JS_FreeCString(ctx, type_string);
+    JS_FreeValue(ctx, type);
+
+    JSValue get_debug_draw_type = eval_js(ctx, "globalThis.box2dGetDebugDrawType", JS_EVAL_TYPE_GLOBAL);
+    const char *get_debug_draw_type_string = JS_ToCString(ctx, get_debug_draw_type);
+    expect_string("box2d fallback exports getDebugDraw", get_debug_draw_type_string, "function");
+    JS_FreeCString(ctx, get_debug_draw_type_string);
+    JS_FreeValue(ctx, get_debug_draw_type);
+
+    JSValue throws = eval_js(ctx, "globalThis.box2dUnavailableThrows", JS_EVAL_TYPE_GLOBAL);
+    expect_true("box2d fallback throws when not linked", JS_ToBool(ctx, throws));
+    JS_FreeValue(ctx, throws);
+#endif
+#else
+    (void)ctx;
+#endif
 }
 
 int main(void)

@@ -13,7 +13,8 @@ vcpkg install sdl3 sdl3-image --triplet x64-windows
 
 ### Build
 - `cmake -S . -B build`
-- `cmake --build build --parallel && ./build/sdl3js`
+- `cmake -S . -B build -DENABLE_BOX2D=OFF`: Build without the native Box2D module:
+- `cmake --build build --parallel && ./build/sdl3js`: Run
 
 ### Web
 
