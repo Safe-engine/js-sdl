@@ -1,3 +1,4 @@
+import { PhysicsWorld } from "#engine/physics";
 import {
   lilita_one_regularFont,
   sf_button,
@@ -12,7 +13,6 @@ import {
 import { loadScene } from "../src/engine/core/instantiate";
 import { Bullet } from "./Bullet";
 import { HomeScene } from "./HomeScene";
-import { PhysicsWorld } from "./planck";
 import { Player } from "./Player";
 
 interface BulletState {

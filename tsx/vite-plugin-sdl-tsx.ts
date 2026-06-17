@@ -227,7 +227,7 @@ export function sdlTsxTransform() {
         const { openingElement } = jsxBlocks[0];
         const { name: rootTag } = openingElement;
         const classVar = getComponentName(currentClassName);
-        function parseJSX(range, tagName, children, attributes = [], parentVar) {
+        function parseJSX(range, tagName, children, attributes = [], parentVar?: string) {
           let ret = '';
           const [start, end] = range;
           const componentName = tagName.name;

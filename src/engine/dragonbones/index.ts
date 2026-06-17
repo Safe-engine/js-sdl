@@ -1,22 +1,22 @@
 import {
-  Armature,
-  BaseFactory,
-  BaseObject,
-  DragonBones as DragonBonesRuntime,
-  EventObject,
-  Slot,
-  TextureAtlasData,
-  TextureData,
-  type Animation,
-  type BuildArmaturePackage,
-  type EventStringType,
-  type IArmatureProxy,
-  type Matrix,
-  type SlotData,
+    Armature,
+    BaseFactory,
+    BaseObject,
+    DragonBones as DragonBonesRuntime,
+    EventObject,
+    Slot,
+    TextureAtlasData,
+    TextureData,
+    type Animation,
+    type BuildArmaturePackage,
+    type EventStringType,
+    type IArmatureProxy,
+    type Matrix,
+    type SlotData,
 } from "dragonbones-es";
 import { drawTextureRegionRotated, loadTextFile } from "sdl3";
-import { AssetManager, type TextureAsset } from "../../src/engine/AssetManager";
-import { Component } from "../../src/engine/core/Component";
+import { AssetManager, type TextureAsset } from "../AssetManager";
+import { Component } from "../core/Component";
 
 export type Integer = number;
 export type Float = number;

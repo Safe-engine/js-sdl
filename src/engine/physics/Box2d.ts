@@ -1,4 +1,4 @@
-import * as box2d from "box2d";
+import { applyForceToCenter, applyLinearImpulseToCenter, createBody, createBoxShape, createCircleShape, createPolygonShape, createSegmentShape, createWorld, destroyBody, destroyWorld, getBodyTransform, getContactEvents, getDebugDraw, setBodyTransform, setLinearVelocity, stepWorld } from "box2d";
 import {
   drawCircle,
   drawLine,
@@ -71,7 +71,6 @@ export class Vec2 implements Vec2Value {
   constructor(public x = 0, public y = 0) {}
 }
 
-export const World = box2d;
 export const CircleShape = circle;
 export const BoxShape = box;
 export const PolygonShape = polygon;
@@ -114,13 +113,13 @@ export class PhysicsWorld extends Component<PhysicsWorldProps> {
     this.positionIterations = props.positionIterations ?? this.positionIterations;
     this.fixedTimeStep = props.fixedTimeStep ?? this.fixedTimeStep;
     this.maxSubSteps = props.maxSubSteps ?? this.maxSubSteps;
-    this.world = box2d.createWorld(props.gravity ?? { x: 0, y: 9.8 });
+    this.world = createWorld(props.gravity ?? { x: 0, y: 9.8 });
     if (!this.world) throw new Error("Failed to create Box2D world.");
   }
 
   onDestroy(): void {
     if (activePhysicsWorld === this) activePhysicsWorld = null;
-    if (this.world) box2d.destroyWorld(this.world);
+    if (this.world) destroyWorld(this.world);
     this.world = 0;
     this.bodies.clear();
     this.contactIds.clear();
@@ -151,7 +150,7 @@ export class PhysicsWorld extends Component<PhysicsWorldProps> {
     if (!enabled || !this.world) return;
 
     const alpha = typeof debugDraw === "object" ? debugDraw.alpha ?? 180 : 180;
-    for (const primitive of box2d.getDebugDraw(this.world, this.pixelsPerMeter)) {
+    for (const primitive of getDebugDraw(this.world, this.pixelsPerMeter)) {
       const color = debugColor(primitive.color, alpha);
       switch (primitive.type) {
         case "line":
@@ -190,7 +189,7 @@ export class PhysicsWorld extends Component<PhysicsWorldProps> {
     if (!this.world) throw new Error("PhysicsWorld is not initialized.");
     const node = rigidBody.node!;
     const contactId = this.nextContactId++;
-    const body = box2d.createBody(
+    const body = createBody(
       this.world,
       toNativeBodyType(rigidBody.props.type ?? "dynamic"),
       this.toWorldPoint(node.worldX, node.worldY),
@@ -212,7 +211,7 @@ export class PhysicsWorld extends Component<PhysicsWorldProps> {
   }
 
   destroyBody(body: number): void {
-    if (body) box2d.destroyBody(body);
+    if (body) destroyBody(body);
     for (const rigidBody of this.bodies) {
       if (rigidBody.body !== body) continue;
       this.bodies.delete(rigidBody);
@@ -231,7 +230,7 @@ export class PhysicsWorld extends Component<PhysicsWorldProps> {
   }
 
   private step(dt: number): void {
-    box2d.stepWorld(this.world, dt, this.velocityIterations);
+    stepWorld(this.world, dt, this.velocityIterations);
     this.dispatchContactEvents();
     this.syncBodies();
   }
@@ -244,7 +243,7 @@ export class PhysicsWorld extends Component<PhysicsWorldProps> {
 
     switch (shape.kind) {
       case "box":
-        box2d.createBoxShape(
+        createBoxShape(
           body,
           (shape.width ?? 0) / this.pixelsPerMeter / 2,
           (shape.height ?? 0) / this.pixelsPerMeter / 2,
@@ -257,7 +256,7 @@ export class PhysicsWorld extends Component<PhysicsWorldProps> {
         );
         break;
       case "circle":
-        box2d.createCircleShape(
+        createCircleShape(
           body,
           (shape.radius ?? 0) / this.pixelsPerMeter,
           this.toWorldPoint(shape.x ?? 0, shape.y ?? 0),
@@ -268,7 +267,7 @@ export class PhysicsWorld extends Component<PhysicsWorldProps> {
         );
         break;
       case "polygon":
-        box2d.createPolygonShape(
+        createPolygonShape(
           body,
           (shape.points ?? []).map((point) => this.toWorldPoint(point.x, point.y)),
           density,
@@ -279,7 +278,7 @@ export class PhysicsWorld extends Component<PhysicsWorldProps> {
         break;
       case "edge": {
         const [a, b] = shape.points ?? [];
-        box2d.createSegmentShape(
+        createSegmentShape(
           body,
           this.toWorldPoint(a?.x ?? 0, a?.y ?? 0),
           this.toWorldPoint(b?.x ?? 0, b?.y ?? 0),
@@ -294,7 +293,7 @@ export class PhysicsWorld extends Component<PhysicsWorldProps> {
   }
 
   private dispatchContactEvents(): void {
-    const events = box2d.getContactEvents(this.world);
+    const events = getContactEvents(this.world);
     for (const [aId, bId] of events.begin) {
       this.dispatchContact(aId, bId, (body, other) => body.props.onBeginContact?.(other));
     }
@@ -346,7 +345,7 @@ export class RigidBody extends Component<RigidBodyProps> {
 
   syncNodeFromBody(): void {
     if (!this.body || !this.node || toNativeBodyType(this.props.type ?? "dynamic") === 0) return;
-    const transform = box2d.getBodyTransform(this.body);
+    const transform = getBodyTransform(this.body);
     if (!transform) return;
     const p = this.world!.toNodePoint(transform);
     this.node.x = p.x;
@@ -356,7 +355,7 @@ export class RigidBody extends Component<RigidBodyProps> {
 
   syncBodyFromNode(): void {
     if (!this.body || !this.world || !this.node) return;
-    box2d.setBodyTransform(
+    setBodyTransform(
       this.body,
       this.world.toWorldPoint(this.node.worldX, this.node.worldY),
       this.node.worldRotation * DEG_TO_RAD,
@@ -365,17 +364,17 @@ export class RigidBody extends Component<RigidBodyProps> {
 
   setVelocity(x: Float, y: Float): void {
     if (!this.body) return;
-    box2d.setLinearVelocity(this.body, { x, y });
+    setLinearVelocity(this.body, { x, y });
   }
 
   applyForce(x: Float, y: Float): void {
     if (!this.body) return;
-    box2d.applyForceToCenter(this.body, { x, y });
+    applyForceToCenter(this.body, { x, y });
   }
 
   applyImpulse(x: Float, y: Float): void {
     if (!this.body) return;
-    box2d.applyLinearImpulseToCenter(this.body, { x, y });
+    applyLinearImpulseToCenter(this.body, { x, y });
   }
 
   private ensureBody(): void {

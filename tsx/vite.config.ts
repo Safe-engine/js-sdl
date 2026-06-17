@@ -9,6 +9,7 @@ export default defineConfig({
   plugins: [sdlTsxTransform()],
   resolve: {
     alias: {
+      "#engine/physics": new URL("../src/engine/physics/Planck.ts", import.meta.url).pathname,
       box2d: new URL("../web/box2d.ts", import.meta.url).pathname,
       sdl3: new URL("../web/sdl3.ts", import.meta.url).pathname,
     },

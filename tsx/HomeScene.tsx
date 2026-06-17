@@ -10,7 +10,7 @@ import {
   Sprite
 } from "../src/engine";
 import { loadScene } from "../src/engine/core/instantiate";
-import { DragonBones } from "./dragonbones";
+import { DragonBones } from "../src/engine/dragonbones";
 import { GameScene } from "./GameScene";
 
 export class HomeScene extends Scene {

@@ -58,28 +58,13 @@ export type {
 } from "./Viewport";
 
 // Components
-export { Button } from "./components/Button";
-export { Label } from "./components/Label";
-export type {
-  TextAlignment,
-  VerticalTextAlignment
-} from "./components/Label";
-export { Sprite } from "./components/Sprite";
 export {
-  BoxShape,
-  ChainShape,
-  CircleShape,
-  EdgeShape,
-  PhysicsWorld,
-  PolygonShape,
+  box, BoxShape,
+  ChainShape, circle, CircleShape, edge, EdgeShape,
+  PhysicsWorld, polygon, PolygonShape,
   RigidBody,
-  Vec2,
-  World,
-  box,
-  circle,
-  edge,
-  polygon
-} from "./components/Physics";
+  Vec2
+} from "#engine/physics";
 export type {
   BodyType,
   ContactValue,
@@ -89,7 +74,14 @@ export type {
   PhysicsShapeDef,
   PhysicsWorldProps,
   RigidBodyProps
-} from "./components/Physics";
+} from "#engine/physics";
+export { Button } from "./components/Button";
+export { Label } from "./components/Label";
+export type {
+  TextAlignment,
+  VerticalTextAlignment
+} from "./components/Label";
+export { Sprite } from "./components/Sprite";
 export {
   NineSlice,
   Panel,
@@ -104,3 +96,4 @@ export type {
   LayoutAlignment,
   LayoutDirection, Insets as UIInsets
 } from "./components/UI";
+

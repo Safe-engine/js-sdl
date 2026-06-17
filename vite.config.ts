@@ -1,7 +1,7 @@
-import { defineConfig } from "vite";
-import path from "path";
-import { safexTransform } from 'vite-plugin-safex-transform'
 import { spawn } from "child_process";
+import path from "path";
+import { defineConfig } from "vite";
+import { safexTransform } from 'vite-plugin-safex-transform';
 
 function runSdl3jsPlugin() {
   let child: ReturnType<typeof spawn> | null = null;
@@ -50,6 +50,11 @@ function runSdl3jsPlugin() {
 // Vite lib-mode produces a single ESM bundle compatible with QuickJS-NG.
 // Native modules are external — resolved at runtime by the C host.
 export default defineConfig({
+  resolve: {
+    alias: {
+      "#engine/physics": path.resolve(__dirname, "src/engine/physics/Box2d.ts"),
+    },
+  },
   build: {
     lib: {
       entry: path.resolve(__dirname, "src/index.ts"),

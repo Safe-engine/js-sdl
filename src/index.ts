@@ -10,7 +10,7 @@ import {
   Sprite,
   box,
 } from "./engine";
-import { DragonBones } from "../tsx/dragonbones";
+import { DragonBones } from "./engine/dragonbones";
 
 const MECHA_DRAGON_BONES = {
   skeleton: "res/DragonBones/mecha_1004d/mecha_1004d_show_ske.json",

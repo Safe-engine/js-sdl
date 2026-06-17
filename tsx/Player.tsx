@@ -1,6 +1,6 @@
+import { box, RigidBody } from "#engine/physics";
 import { sf_player } from "../src/assets";
 import { Component, Sprite } from "../src/engine";
-import { box, RigidBody } from "./planck";
 
 export class Player extends Component {
   speed = 420;

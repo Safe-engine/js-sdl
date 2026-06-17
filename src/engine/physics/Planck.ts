@@ -1,18 +1,17 @@
-import * as planck from "planck";
-import { Component } from "../../src/engine/core/Component";
-import type { Node } from "../../src/engine/core/Node";
+import { Body, BodyType, BoxShape, CircleShape, Contact, ContactImpulse, EdgeShape, Fixture, Manifold, PolygonShape, Shape, Transform, TransformValue, Vec2, Vec2Value, World } from "planck";
 import {
   drawCircle,
   drawLine,
   drawPoint,
   drawPolyline,
   type DrawPoint,
-} from "../../web/sdl3";
+} from "sdl3";
+import { Component } from "../core/Component";
+import type { Node } from "../core/Node";
 
-export type BodyType = planck.BodyType;
 export type Float = number;
-export type PhysicsShape = planck.Shape | PhysicsShapeDef;
-export type ContactValue = planck.Contact | planck.Manifold | planck.ContactImpulse;
+export type PhysicsShape = Shape | PhysicsShapeDef;
+export type ContactValue = Contact | Manifold | ContactImpulse;
 
 export interface PhysicsShapeDef {
   kind: "box" | "circle" | "polygon" | "edge";
@@ -22,7 +21,7 @@ export interface PhysicsShapeDef {
   x?: Float;
   y?: Float;
   angle?: Float;
-  points?: planck.Vec2Value[];
+  points?: Vec2Value[];
 }
 
 export interface RigidBodyProps {
@@ -42,7 +41,7 @@ export interface RigidBodyProps {
 }
 
 export interface PhysicsWorldProps {
-  gravity?: planck.Vec2Value;
+  gravity?: Vec2Value;
   pixelsPerMeter?: Float;
   velocityIterations?: number;
   positionIterations?: number;
@@ -67,13 +66,8 @@ interface BodyUserData {
 
 let activePhysicsWorld: PhysicsWorld | null = null;
 
-export const Vec2 = planck.Vec2;
-export const World = planck.World;
-export const CircleShape = planck.CircleShape;
-export const BoxShape = planck.BoxShape;
-export const PolygonShape = planck.PolygonShape;
-export const EdgeShape = planck.EdgeShape;
-export const ChainShape = planck.ChainShape;
+export { BoxShape, CircleShape, EdgeShape, PolygonShape, Vec2 };
+export const ChainShape = polygon;
 
 export function box(width: Float, height: Float, x = 0, y = 0, angle = 0): PhysicsShapeDef {
   return { kind: "box", width, height, x, y, angle };
@@ -83,16 +77,16 @@ export function circle(radius: Float, x = 0, y = 0): PhysicsShapeDef {
   return { kind: "circle", radius, x, y };
 }
 
-export function polygon(points: planck.Vec2Value[]): PhysicsShapeDef {
+export function polygon(points: Vec2Value[]): PhysicsShapeDef {
   return { kind: "polygon", points };
 }
 
-export function edge(a: planck.Vec2Value, b: planck.Vec2Value): PhysicsShapeDef {
+export function edge(a: Vec2Value, b: Vec2Value): PhysicsShapeDef {
   return { kind: "edge", points: [a, b] };
 }
 
 export class PhysicsWorld extends Component<PhysicsWorldProps> {
-  readonly world = new planck.World({ x: 0, y: 9.8 });
+  readonly world = new World({ x: 0, y: 9.8 });
   pixelsPerMeter = DEFAULT_PIXELS_PER_METER;
   velocityIterations = 8;
   positionIterations = 3;
@@ -154,7 +148,7 @@ export class PhysicsWorld extends Component<PhysicsWorldProps> {
     }
   }
 
-  createBody(rigidBody: RigidBody): planck.Body {
+  createBody(rigidBody: RigidBody): Body {
     const node = rigidBody.node!;
     const body = this.world.createBody({
       type: rigidBody.props.type ?? "dynamic",
@@ -177,16 +171,16 @@ export class PhysicsWorld extends Component<PhysicsWorldProps> {
     return body;
   }
 
-  destroyBody(body: planck.Body): void {
+  destroyBody(body: Body): void {
     this.world.destroyBody(body);
   }
 
-  toWorldPoint(x: number, y: number): planck.Vec2 {
-    return new planck.Vec2(x / this.pixelsPerMeter, y / this.pixelsPerMeter);
+  toWorldPoint(x: number, y: number): Vec2 {
+    return new Vec2(x / this.pixelsPerMeter, y / this.pixelsPerMeter);
   }
 
-  toNodePoint(point: planck.Vec2Value): planck.Vec2 {
-    return new planck.Vec2(point.x * this.pixelsPerMeter, point.y * this.pixelsPerMeter);
+  toNodePoint(point: Vec2Value): Vec2 {
+    return new Vec2(point.x * this.pixelsPerMeter, point.y * this.pixelsPerMeter);
   }
 
   private installContactListeners(): void {
@@ -213,7 +207,7 @@ export class PhysicsWorld extends Component<PhysicsWorldProps> {
 }
 
 export class RigidBody extends Component<RigidBodyProps> {
-  body: planck.Body | null = null;
+  body: Body | null = null;
   world: PhysicsWorld | null = null;
 
   get tag(): number | undefined {
@@ -249,17 +243,17 @@ export class RigidBody extends Component<RigidBodyProps> {
   }
 
   setVelocity(x: Float, y: Float): void {
-    this.body?.setLinearVelocity(new planck.Vec2(x, y));
+    this.body?.setLinearVelocity(new Vec2(x, y));
   }
 
   applyForce(x: Float, y: Float): void {
     if (!this.body) return;
-    this.body.applyForceToCenter(new planck.Vec2(x, y), true);
+    this.body.applyForceToCenter(new Vec2(x, y), true);
   }
 
   applyImpulse(x: Float, y: Float): void {
     if (!this.body) return;
-    this.body.applyLinearImpulse(new planck.Vec2(x, y), this.body.getWorldCenter(), true);
+    this.body.applyLinearImpulse(new Vec2(x, y), this.body.getWorldCenter(), true);
   }
 
   private ensureBody(): void {
@@ -276,32 +270,32 @@ function asArray<T>(value: T | T[]): T[] {
   return Array.isArray(value) ? value : [value];
 }
 
-function toPlanckShape(shape: PhysicsShape, pixelsPerMeter: number): planck.Shape {
-  if (shape instanceof planck.Shape) return shape;
+function toPlanckShape(shape: PhysicsShape, pixelsPerMeter: number): Shape {
+  if (shape instanceof Shape) return shape;
 
   switch (shape.kind) {
     case "box":
-      return new planck.BoxShape(
+      return new BoxShape(
         (shape.width ?? 0) / pixelsPerMeter / 2,
         (shape.height ?? 0) / pixelsPerMeter / 2,
-        new planck.Vec2((shape.x ?? 0) / pixelsPerMeter, (shape.y ?? 0) / pixelsPerMeter),
+        new Vec2((shape.x ?? 0) / pixelsPerMeter, (shape.y ?? 0) / pixelsPerMeter),
         (shape.angle ?? 0) * DEG_TO_RAD,
       );
     case "circle":
-      return new planck.CircleShape(
-        new planck.Vec2((shape.x ?? 0) / pixelsPerMeter, (shape.y ?? 0) / pixelsPerMeter),
+      return new CircleShape(
+        new Vec2((shape.x ?? 0) / pixelsPerMeter, (shape.y ?? 0) / pixelsPerMeter),
         (shape.radius ?? 0) / pixelsPerMeter,
       );
     case "polygon":
-      return new planck.PolygonShape((shape.points ?? []).map((p) => ({
+      return new PolygonShape((shape.points ?? []).map((p) => ({
         x: p.x / pixelsPerMeter,
         y: p.y / pixelsPerMeter,
       })));
     case "edge": {
       const [a, b] = shape.points ?? [];
-      return new planck.EdgeShape(
-        new planck.Vec2((a?.x ?? 0) / pixelsPerMeter, (a?.y ?? 0) / pixelsPerMeter),
-        new planck.Vec2((b?.x ?? 0) / pixelsPerMeter, (b?.y ?? 0) / pixelsPerMeter),
+      return new EdgeShape(
+        new Vec2((a?.x ?? 0) / pixelsPerMeter, (a?.y ?? 0) / pixelsPerMeter),
+        new Vec2((b?.x ?? 0) / pixelsPerMeter, (b?.y ?? 0) / pixelsPerMeter),
       );
     }
   }
@@ -315,12 +309,12 @@ function findPhysicsWorld(node: Node | null = null): PhysicsWorld | null {
   return activePhysicsWorld;
 }
 
-function getRigidBody(body: planck.Body): RigidBody | null {
+function getRigidBody(body: Body): RigidBody | null {
   return ((body.getUserData() as BodyUserData | null)?.rigidBody) ?? null;
 }
 
 function dispatchContact(
-  contact: planck.Contact,
+  contact: Contact,
   callback: (body: RigidBody, other: RigidBody) => void,
 ): void {
   const a = getRigidBody(contact.getFixtureA().getBody());
@@ -331,17 +325,17 @@ function dispatchContact(
 }
 
 function drawFixtureDebug(
-  fixture: planck.Fixture,
-  transform: planck.TransformValue,
+  fixture: Fixture,
+  transform: TransformValue,
   pixelsPerMeter: number,
   color: { r: number; g: number; b: number; a: number },
 ): void {
   const shape = fixture.getShape();
   switch (shape.getType()) {
     case "circle": {
-      const circleShape = shape as planck.CircleShape;
+      const circleShape = shape as CircleShape;
       const center = toDebugPoint(
-        planck.Transform.mulVec2(transform, circleShape.getCenter()),
+        Transform.mulVec2(transform, circleShape.getCenter()),
         pixelsPerMeter,
       );
       drawCircle(
@@ -357,18 +351,18 @@ function drawFixtureDebug(
       break;
     }
     case "edge": {
-      const edgeShape = shape as planck.EdgeShape;
-      const a = toDebugPoint(planck.Transform.mulVec2(transform, edgeShape.m_vertex1), pixelsPerMeter);
-      const b = toDebugPoint(planck.Transform.mulVec2(transform, edgeShape.m_vertex2), pixelsPerMeter);
+      const edgeShape = shape as EdgeShape;
+      const a = toDebugPoint(Transform.mulVec2(transform, edgeShape.m_vertex1), pixelsPerMeter);
+      const b = toDebugPoint(Transform.mulVec2(transform, edgeShape.m_vertex2), pixelsPerMeter);
       drawLine(a.x, a.y, b.x, b.y, color.r, color.g, color.b, color.a);
       break;
     }
     case "polygon": {
-      const polygonShape = shape as planck.PolygonShape;
+      const polygonShape = shape as PolygonShape;
       const points: DrawPoint[] = [];
       for (let i = 0; i < polygonShape.m_count; i++) {
         points.push(toDebugPoint(
-          planck.Transform.mulVec2(transform, polygonShape.m_vertices[i]),
+          Transform.mulVec2(transform, polygonShape.m_vertices[i]),
           pixelsPerMeter,
         ));
       }
@@ -378,7 +372,7 @@ function drawFixtureDebug(
   }
 }
 
-function toDebugPoint(point: planck.Vec2Value, pixelsPerMeter: number): DrawPoint {
+function toDebugPoint(point: Vec2Value, pixelsPerMeter: number): DrawPoint {
   return {
     x: point.x * pixelsPerMeter,
     y: point.y * pixelsPerMeter,
