@@ -1,16 +1,16 @@
 import {
-  db_mecha_1004d_show,
-  lilita_one_regularFont,
-  sf_button,
-} from "../src/assets";
-import {
   Button,
   Label,
   Scene,
   Sprite
-} from "../src/engine";
-import { loadScene } from "../src/engine/core/instantiate";
-import { DragonBones } from "../src/engine/dragonbones";
+} from "../engine";
+import { loadScene } from "../engine/core/instantiate";
+import { DragonBones } from "../engine/dragonbones";
+import {
+  db_mecha_1004d_show,
+  lilita_one_regularFont,
+  sf_button,
+} from "./assets";
 import { GameScene } from "./GameScene";
 
 export class HomeScene extends Scene {

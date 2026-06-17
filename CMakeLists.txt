@@ -70,12 +70,12 @@ else()
 endif()
 
 set(JS_SDL_SOURCES
-    app/main.c
-    app/js_sdl3.c
+    native/main.c
+    native/js_sdl3.c
 )
 
 if(ENABLE_BOX2D)
-    list(APPEND JS_SDL_SOURCES app/js_box2d.c)
+    list(APPEND JS_SDL_SOURCES native/js_box2d.c)
 endif()
 
 if(ENABLE_BOX2D AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/third_party/box2d/CMakeLists.txt")
@@ -136,14 +136,14 @@ endif()
 if(BUILD_TESTING)
     set(JS_SDL_TEST_SOURCES
         tests/native_binding_tests.c
-        app/js_sdl3.c
+        native/js_sdl3.c
     )
     if(ENABLE_BOX2D)
-        list(APPEND JS_SDL_TEST_SOURCES app/js_box2d.c)
+        list(APPEND JS_SDL_TEST_SOURCES native/js_box2d.c)
     endif()
 
     add_executable(js_sdl3_native_tests ${JS_SDL_TEST_SOURCES})
-    target_include_directories(js_sdl3_native_tests PRIVATE app)
+    target_include_directories(js_sdl3_native_tests PRIVATE native)
     target_link_libraries(
         js_sdl3_native_tests
         PRIVATE

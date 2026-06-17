@@ -664,6 +664,21 @@ static const JSCFunctionListEntry funcs[] = {
     JS_CFUNC_DEF("getDebugDraw", 2, js_getDebugDraw),
 #else
     JS_CFUNC_DEF("createWorld", 1, js_box2dUnavailable),
+    JS_CFUNC_DEF("destroyWorld", 1, js_box2dUnavailable),
+    JS_CFUNC_DEF("stepWorld", 3, js_box2dUnavailable),
+    JS_CFUNC_DEF("setGravity", 2, js_box2dUnavailable),
+    JS_CFUNC_DEF("createBody", 6, js_box2dUnavailable),
+    JS_CFUNC_DEF("destroyBody", 1, js_box2dUnavailable),
+    JS_CFUNC_DEF("createBoxShape", 9, js_box2dUnavailable),
+    JS_CFUNC_DEF("createCircleShape", 7, js_box2dUnavailable),
+    JS_CFUNC_DEF("createPolygonShape", 6, js_box2dUnavailable),
+    JS_CFUNC_DEF("createSegmentShape", 7, js_box2dUnavailable),
+    JS_CFUNC_DEF("getBodyTransform", 1, js_box2dUnavailable),
+    JS_CFUNC_DEF("setBodyTransform", 3, js_box2dUnavailable),
+    JS_CFUNC_DEF("setLinearVelocity", 2, js_box2dUnavailable),
+    JS_CFUNC_DEF("applyForceToCenter", 2, js_box2dUnavailable),
+    JS_CFUNC_DEF("applyLinearImpulseToCenter", 2, js_box2dUnavailable),
+    JS_CFUNC_DEF("getContactEvents", 1, js_box2dUnavailable),
     JS_CFUNC_DEF("getDebugDraw", 2, js_box2dUnavailable),
 #endif
 };

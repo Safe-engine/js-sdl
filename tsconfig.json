@@ -17,11 +17,15 @@
     "outDir": "dist",
     "declaration": false,
     "sourceMap": false,
+    "typeRoots": [
+      "./node_modules/@types",
+      "./@types/*",
+    ],
     "isolatedModules": true
   },
   "include": [
     "src",
-    "tsx",
+    "web",
     "safex-sdl"
   ]
 }

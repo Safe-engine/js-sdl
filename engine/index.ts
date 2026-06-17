@@ -34,7 +34,7 @@ export {
 export type { PlayOptions, SoundOptions } from "./Audio";
 export { Component } from "./core/Component";
 export { Container } from "./core/Container";
-export { instantiate } from "./core/instantiate";
+export { instantiate, loadScene } from "./core/instantiate";
 export { Node } from "./core/Node";
 export { Scene } from "./core/Scene";
 export type { Orientation } from "./core/Scene";

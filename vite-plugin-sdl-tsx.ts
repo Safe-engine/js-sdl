@@ -176,7 +176,7 @@ export function sdlTsxTransform() {
       // console.log('transform', id)
       const parsed = parse(code);
       const ms = new MagicString(code);
-      let sourceFramework = '../src/engine';
+      let sourceFramework = '../engine';
       const jsxBlocks = [];
       let jsxDepth = 0;
       let currentClassName;

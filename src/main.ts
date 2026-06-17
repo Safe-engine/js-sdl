@@ -1,5 +1,4 @@
-import { Engine } from "../src/engine";
-import { loadScene } from "../src/engine/core/instantiate";
+import { Engine, loadScene } from "../engine";
 import { HomeScene } from "./HomeScene";
 
 /* ── Bootstrap ─────────────────────────────────────── */

@@ -99,6 +99,25 @@ static char *copy_string(const char *value)
     return copy;
 }
 
+static bool has_resource_prefix(const char *path)
+{
+    return strncmp(path, "res/", 4) == 0 || strncmp(path, "res\\", 4) == 0;
+}
+
+static char *resource_prefixed_path(const char *path)
+{
+    if (!path || !*path || path[0] == '/' || strstr(path, "://") ||
+        has_resource_prefix(path)) {
+        return NULL;
+    }
+
+    size_t length = strlen("res/") + strlen(path) + 1;
+    char *resolved = malloc(length);
+    if (!resolved) return NULL;
+    snprintf(resolved, length, "res/%s", path);
+    return resolved;
+}
+
 static char *resolve_resource_path(const char *path)
 {
     if (!path || !*path || path[0] == '/' || strstr(path, "://")) {
@@ -108,10 +127,15 @@ static char *resolve_resource_path(const char *path)
     const char *base_path = SDL_GetBasePath();
     if (!base_path) return copy_string(path);
 
-    size_t length = strlen(base_path) + strlen(path) + 1;
+    const char *resource_prefix = has_resource_prefix(path) ? "" : "res/";
+    size_t length =
+        strlen(base_path) +
+        strlen(resource_prefix) +
+        strlen(path) +
+        1;
     char *resolved = malloc(length);
     if (!resolved) return NULL;
-    snprintf(resolved, length, "%s%s", base_path, path);
+    snprintf(resolved, length, "%s%s%s", base_path, resource_prefix, path);
     return resolved;
 }
 
@@ -376,6 +400,11 @@ static JSValue js_loadTextFile(
     if (!contents && resolved_path && strcmp(resolved_path, path) != 0) {
         contents = SDL_LoadFile(path, &length);
     }
+    char *prefixed_path = resource_prefixed_path(path);
+    if (!contents && prefixed_path) {
+        contents = SDL_LoadFile(prefixed_path, &length);
+    }
+    free(prefixed_path);
 
     free(resolved_path);
     JS_FreeCString(ctx, path);
@@ -419,6 +448,11 @@ static JSValue js_loadTexture(
     if (!tex && resolved_path && strcmp(resolved_path, path) != 0) {
         tex = IMG_LoadTexture(g_renderer, path);
     }
+    char *prefixed_path = resource_prefixed_path(path);
+    if (!tex && prefixed_path) {
+        tex = IMG_LoadTexture(g_renderer, prefixed_path);
+    }
+    free(prefixed_path);
     free(resolved_path);
     if (!tex) {
         JS_FreeCString(ctx, path);
@@ -480,6 +514,11 @@ static JSValue js_loadFont(
     if (!font && resolved_path && strcmp(resolved_path, path) != 0) {
         font = TTF_OpenFont(path, (float)ptsize);
     }
+    char *prefixed_path = resource_prefixed_path(path);
+    if (!font && prefixed_path) {
+        font = TTF_OpenFont(prefixed_path, (float)ptsize);
+    }
+    free(prefixed_path);
     free(resolved_path);
     if (!font) {
         JS_FreeCString(ctx, path);
@@ -651,6 +690,11 @@ static JSValue js_loadAudio(
     if (!loaded && resolved_path && strcmp(resolved_path, path) != 0) {
         loaded = SDL_LoadWAV(path, &spec, &data, &length);
     }
+    char *prefixed_path = resource_prefixed_path(path);
+    if (!loaded && prefixed_path) {
+        loaded = SDL_LoadWAV(prefixed_path, &spec, &data, &length);
+    }
+    free(prefixed_path);
     free(resolved_path);
     if (!loaded) {
         SDL_LogError(

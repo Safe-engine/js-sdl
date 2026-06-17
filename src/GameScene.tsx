@@ -1,16 +1,16 @@
 import { PhysicsWorld } from "#engine/physics";
 import {
-  lilita_one_regularFont,
-  sf_button,
-} from "../src/assets";
-import {
   Button,
   instantiate,
   Label,
   Scene,
   Sprite
-} from "../src/engine";
-import { loadScene } from "../src/engine/core/instantiate";
+} from "../engine";
+import { loadScene } from "../engine/core/instantiate";
+import {
+  lilita_one_regularFont,
+  sf_button,
+} from "./assets";
 import { Bullet } from "./Bullet";
 import { HomeScene } from "./HomeScene";
 import { Player } from "./Player";

@@ -1,7 +1,7 @@
 /**
  * Ambient declarations for the native `sdl3` module.
  *
- * This module is implemented in C (app/js_sdl3.c) and registered as
+ * This module is implemented in C (native/js_sdl3.c) and registered as
  * a QuickJS native module.  Vite/Rollup treats `"sdl3"` as external
  * so the import is preserved as-is at runtime.
  */

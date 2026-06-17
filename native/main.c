@@ -40,20 +40,20 @@ static bool evaluate_bundle(JSContext *ctx)
 {
     const char *base_path = SDL_GetBasePath();
     char *bundle_path = NULL;
-    if (base_path) SDL_asprintf(&bundle_path, "%sdist/index.js", base_path);
+    if (base_path) SDL_asprintf(&bundle_path, "%sdist/main.js", base_path);
 
     size_t length = 0;
     void *contents = SDL_LoadFile(
-        bundle_path ? bundle_path : "dist/index.js",
+        bundle_path ? bundle_path : "dist/main.js",
         &length);
     if (!contents && bundle_path) {
-        contents = SDL_LoadFile("dist/index.js", &length);
+        contents = SDL_LoadFile("dist/main.js", &length);
     }
     SDL_free(bundle_path);
     if (!contents) {
         SDL_LogError(
             SDL_LOG_CATEGORY_APPLICATION,
-            "Cannot load dist/index.js: %s (run: bun run build)",
+            "Cannot load dist/main.js: %s (run: bun run build)",
             SDL_GetError());
         return false;
     }
@@ -62,7 +62,7 @@ static bool evaluate_bundle(JSContext *ctx)
         ctx,
         contents,
         length,
-        "dist/index.js",
+        "dist/main.js",
         JS_EVAL_TYPE_MODULE);
     SDL_free(contents);
 

@@ -1,7 +1,7 @@
 import { spawn } from "child_process";
 import path from "path";
 import { defineConfig } from "vite";
-import { safexTransform } from 'vite-plugin-safex-transform';
+import { sdlTsxTransform } from "../vite-plugin-sdl-tsx";
 
 function runSdl3jsPlugin() {
   let child: ReturnType<typeof spawn> | null = null;
@@ -52,14 +52,14 @@ function runSdl3jsPlugin() {
 export default defineConfig({
   resolve: {
     alias: {
-      "#engine/physics": path.resolve(__dirname, "src/engine/physics/Box2d.ts"),
+      "#engine/physics": path.resolve(__dirname, "../engine/physics/Box2d.ts"),
     },
   },
   build: {
     lib: {
-      entry: path.resolve(__dirname, "src/index.ts"),
+      entry: path.resolve(__dirname, "../src/main.ts"),
       formats: ["es"],
-      fileName: () => "index.js",
+      fileName: () => "main.js",
     },
     outDir: "dist",
     target: "esnext",
@@ -68,5 +68,5 @@ export default defineConfig({
       external: ["sdl3", "box2d"],
     },
   },
-  plugins: [safexTransform(), runSdl3jsPlugin()],
+  plugins: [sdlTsxTransform(), runSdl3jsPlugin()],
 });
