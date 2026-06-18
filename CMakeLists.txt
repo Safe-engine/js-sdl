@@ -15,7 +15,7 @@ if(ANDROID OR CMAKE_SYSTEM_NAME STREQUAL "iOS")
 endif()
 
 if(JS_SDL_USE_VENDORED)
-    set(JS_SDL_VENDORED_DEPENDENCIES SDL SDL_image SDL_ttf quickjs)
+    set(JS_SDL_VENDORED_DEPENDENCIES SDL SDL_image freetype quickjs)
     if(ENABLE_BOX2D)
         list(APPEND JS_SDL_VENDORED_DEPENDENCIES box2d)
     endif()
@@ -45,7 +45,11 @@ if(JS_SDL_USE_VENDORED)
     set(SDLIMAGE_PNG_SHARED OFF CACHE BOOL "" FORCE)
     set(SDLIMAGE_TIF_SHARED OFF CACHE BOOL "" FORCE)
     set(SDLIMAGE_WEBP_SHARED OFF CACHE BOOL "" FORCE)
-    set(SDLTTF_VENDORED ON CACHE BOOL "" FORCE)
+    set(FT_DISABLE_ZLIB ON CACHE BOOL "" FORCE)
+    set(FT_DISABLE_BZIP2 ON CACHE BOOL "" FORCE)
+    set(FT_DISABLE_PNG ON CACHE BOOL "" FORCE)
+    set(FT_DISABLE_HARFBUZZ ON CACHE BOOL "" FORCE)
+    set(FT_DISABLE_BROTLI ON CACHE BOOL "" FORCE)
     set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 
     if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
@@ -57,16 +61,27 @@ if(JS_SDL_USE_VENDORED)
 
     add_subdirectory(third_party/SDL EXCLUDE_FROM_ALL)
     add_subdirectory(third_party/SDL_image EXCLUDE_FROM_ALL)
-    add_subdirectory(third_party/SDL_ttf EXCLUDE_FROM_ALL)
+    add_subdirectory(third_party/freetype EXCLUDE_FROM_ALL)
     add_subdirectory(third_party/quickjs EXCLUDE_FROM_ALL)
 else()
     find_package(SDL3 REQUIRED)
     find_package(SDL3_image REQUIRED)
-    find_package(SDL3_ttf REQUIRED)
+    find_package(Freetype REQUIRED)
     find_package(qjs REQUIRED)
     if(ENABLE_BOX2D)
         find_package(box2d QUIET)
     endif()
+endif()
+
+set(FREETYPE_TARGET "")
+if(TARGET Freetype::Freetype)
+    set(FREETYPE_TARGET Freetype::Freetype)
+elseif(TARGET freetype)
+    set(FREETYPE_TARGET freetype)
+endif()
+
+if(NOT FREETYPE_TARGET)
+    message(FATAL_ERROR "Could not find a usable FreeType target.")
 endif()
 
 set(JS_SDL_SOURCES
@@ -111,7 +126,7 @@ target_link_libraries(
     PRIVATE
         SDL3::SDL3
         SDL3_image::SDL3_image
-        SDL3_ttf::SDL3_ttf
+        ${FREETYPE_TARGET}
         ${QUICKJS_TARGET}
 )
 
@@ -149,7 +164,7 @@ if(BUILD_TESTING)
         PRIVATE
             SDL3::SDL3
             SDL3_image::SDL3_image
-            SDL3_ttf::SDL3_ttf
+            ${FREETYPE_TARGET}
             ${QUICKJS_TARGET}
     )
     if(BOX2D_TARGET)

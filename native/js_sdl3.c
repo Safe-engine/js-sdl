@@ -3,7 +3,8 @@
 #include "js_box2d.h"
 #endif
 #include <SDL3_image/SDL_image.h>
-#include <SDL3_ttf/SDL_ttf.h>
+#include <ft2build.h>
+#include FT_FREETYPE_H
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,6 +14,7 @@ static SDL_Window   *g_window   = NULL;
 static SDL_Renderer *g_renderer = NULL;
 static int           g_win_w    = 1280;
 static int           g_win_h    = 720;
+static FT_Library    g_ft_library = NULL;
 
 #define MAX_TEXTURES 256
 typedef enum TextureKind {
@@ -34,7 +36,7 @@ static TextureAsset g_textures[MAX_TEXTURES];
 
 #define MAX_FONTS 64
 typedef struct FontAsset {
-    TTF_Font *font;
+    FT_Face face;
     char *path;
     int ptsize;
     int refs;
@@ -150,7 +152,7 @@ static int find_free_texture_slot(void)
 static int find_free_font_slot(void)
 {
     for (int i = 0; i < MAX_FONTS; i++) {
-        if (!g_fonts[i].font) return i;
+        if (!g_fonts[i].face) return i;
     }
     return -1;
 }
@@ -162,7 +164,7 @@ static int valid_texture_id(int id)
 
 static int valid_font_id(int id)
 {
-    return id >= 0 && id < MAX_FONTS && g_fonts[id].font;
+    return id >= 0 && id < MAX_FONTS && g_fonts[id].face;
 }
 
 static int valid_audio_id(int id)
@@ -210,7 +212,7 @@ static void release_font_id(int id)
     if (!valid_font_id(id)) return;
     FontAsset *asset = &g_fonts[id];
     if (--asset->refs > 0) return;
-    TTF_CloseFont(asset->font);
+    FT_Done_Face(asset->face);
     free(asset->path);
     memset(asset, 0, sizeof(*asset));
 }
@@ -479,6 +481,206 @@ static JSValue js_loadTexture(
     return JS_NewInt32(ctx, id);
 }
 
+static bool ensure_freetype(void)
+{
+    return g_ft_library || FT_Init_FreeType(&g_ft_library) == 0;
+}
+
+static const char *next_utf8_codepoint(const char *text, FT_ULong *codepoint)
+{
+    const unsigned char *cursor = (const unsigned char *)text;
+    unsigned char first = cursor[0];
+
+    if (first < 0x80) {
+        *codepoint = first;
+        return (const char *)(cursor + 1);
+    }
+    if ((first & 0xE0) == 0xC0 && (cursor[1] & 0xC0) == 0x80) {
+        *codepoint = ((FT_ULong)(first & 0x1F) << 6) |
+                     (FT_ULong)(cursor[1] & 0x3F);
+        return (const char *)(cursor + 2);
+    }
+    if ((first & 0xF0) == 0xE0 &&
+        (cursor[1] & 0xC0) == 0x80 &&
+        (cursor[2] & 0xC0) == 0x80) {
+        *codepoint = ((FT_ULong)(first & 0x0F) << 12) |
+                     ((FT_ULong)(cursor[1] & 0x3F) << 6) |
+                     (FT_ULong)(cursor[2] & 0x3F);
+        return (const char *)(cursor + 3);
+    }
+    if ((first & 0xF8) == 0xF0 &&
+        (cursor[1] & 0xC0) == 0x80 &&
+        (cursor[2] & 0xC0) == 0x80 &&
+        (cursor[3] & 0xC0) == 0x80) {
+        *codepoint = ((FT_ULong)(first & 0x07) << 18) |
+                     ((FT_ULong)(cursor[1] & 0x3F) << 12) |
+                     ((FT_ULong)(cursor[2] & 0x3F) << 6) |
+                     (FT_ULong)(cursor[3] & 0x3F);
+        return (const char *)(cursor + 4);
+    }
+
+    *codepoint = 0xFFFD;
+    return (const char *)(cursor + 1);
+}
+
+static Uint8 glyph_bitmap_alpha(const FT_Bitmap *bitmap, int x, int y)
+{
+    const unsigned char *row = bitmap->buffer +
+        (bitmap->pitch >= 0 ? y : (int)bitmap->rows - 1 - y) *
+        abs(bitmap->pitch);
+
+    if (bitmap->pixel_mode == FT_PIXEL_MODE_MONO) {
+        return (row[x / 8] & (0x80 >> (x % 8))) ? 255 : 0;
+    }
+    if (bitmap->pixel_mode == FT_PIXEL_MODE_GRAY) {
+        return row[x];
+    }
+    return 0;
+}
+
+static void measure_text_bounds(
+    FT_Face face,
+    const char *text,
+    int *out_min_x,
+    int *out_min_y,
+    int *out_max_x,
+    int *out_max_y)
+{
+    int min_x = 0;
+    int min_y = 0;
+    int max_x = 1;
+    int max_y = 1;
+    int pen_x = 0;
+    int baseline = face->size ? (int)(face->size->metrics.ascender >> 6) : 0;
+    bool saw_glyph = false;
+    FT_UInt previous_glyph = 0;
+
+    for (const char *cursor = text; *cursor;) {
+        FT_ULong codepoint;
+        cursor = next_utf8_codepoint(cursor, &codepoint);
+        FT_UInt glyph_index = FT_Get_Char_Index(face, codepoint);
+
+        if (previous_glyph && glyph_index && FT_HAS_KERNING(face)) {
+            FT_Vector delta;
+            if (FT_Get_Kerning(
+                    face,
+                    previous_glyph,
+                    glyph_index,
+                    FT_KERNING_DEFAULT,
+                    &delta) == 0) {
+                pen_x += (int)(delta.x >> 6);
+            }
+        }
+
+        if (FT_Load_Glyph(face, glyph_index, FT_LOAD_RENDER) == 0) {
+            FT_GlyphSlot glyph = face->glyph;
+            int x0 = pen_x + glyph->bitmap_left;
+            int y0 = baseline - glyph->bitmap_top;
+            int x1 = x0 + (int)glyph->bitmap.width;
+            int y1 = y0 + (int)glyph->bitmap.rows;
+
+            if (!saw_glyph || x0 < min_x) min_x = x0;
+            if (!saw_glyph || y0 < min_y) min_y = y0;
+            if (!saw_glyph || x1 > max_x) max_x = x1;
+            if (!saw_glyph || y1 > max_y) max_y = y1;
+            pen_x += (int)(glyph->advance.x >> 6);
+            if (pen_x > max_x) max_x = pen_x;
+            saw_glyph = true;
+        }
+
+        previous_glyph = glyph_index;
+    }
+
+    if (!saw_glyph) {
+        int line_height = face->size ? (int)(face->size->metrics.height >> 6) : 1;
+        max_y = line_height > 0 ? line_height : 1;
+    }
+
+    *out_min_x = min_x;
+    *out_min_y = min_y;
+    *out_max_x = max_x > min_x ? max_x : min_x + 1;
+    *out_max_y = max_y > min_y ? max_y : min_y + 1;
+}
+
+static SDL_Surface *render_text_surface(
+    FT_Face face,
+    const char *text,
+    SDL_Color color)
+{
+    int min_x;
+    int min_y;
+    int max_x;
+    int max_y;
+    measure_text_bounds(face, text, &min_x, &min_y, &max_x, &max_y);
+
+    SDL_Surface *surface = SDL_CreateSurface(
+        max_x - min_x,
+        max_y - min_y,
+        SDL_PIXELFORMAT_RGBA32);
+    if (!surface) return NULL;
+    SDL_memset(surface->pixels, 0, (size_t)surface->pitch * surface->h);
+
+    int pen_x = -min_x;
+    int baseline = (face->size ? (int)(face->size->metrics.ascender >> 6) : 0) -
+        min_y;
+    FT_UInt previous_glyph = 0;
+
+    for (const char *cursor = text; *cursor;) {
+        FT_ULong codepoint;
+        cursor = next_utf8_codepoint(cursor, &codepoint);
+        FT_UInt glyph_index = FT_Get_Char_Index(face, codepoint);
+
+        if (previous_glyph && glyph_index && FT_HAS_KERNING(face)) {
+            FT_Vector delta;
+            if (FT_Get_Kerning(
+                    face,
+                    previous_glyph,
+                    glyph_index,
+                    FT_KERNING_DEFAULT,
+                    &delta) == 0) {
+                pen_x += (int)(delta.x >> 6);
+            }
+        }
+
+        if (FT_Load_Glyph(face, glyph_index, FT_LOAD_RENDER) == 0) {
+            FT_GlyphSlot glyph = face->glyph;
+            FT_Bitmap *bitmap = &glyph->bitmap;
+            int origin_x = pen_x + glyph->bitmap_left;
+            int origin_y = baseline - glyph->bitmap_top;
+
+            for (int y = 0; y < (int)bitmap->rows; y++) {
+                int dst_y = origin_y + y;
+                if (dst_y < 0 || dst_y >= surface->h) continue;
+
+                for (int x = 0; x < (int)bitmap->width; x++) {
+                    int dst_x = origin_x + x;
+                    if (dst_x < 0 || dst_x >= surface->w) continue;
+
+                    Uint8 coverage = glyph_bitmap_alpha(bitmap, x, y);
+                    if (coverage == 0) continue;
+
+                    Uint8 alpha = (Uint8)((coverage * color.a + 127) / 255);
+                    Uint32 *pixel = (Uint32 *)((Uint8 *)surface->pixels +
+                        dst_y * surface->pitch +
+                        dst_x * (int)sizeof(Uint32));
+                    *pixel = SDL_MapSurfaceRGBA(
+                        surface,
+                        color.r,
+                        color.g,
+                        color.b,
+                        alpha);
+                }
+            }
+
+            pen_x += (int)(glyph->advance.x >> 6);
+        }
+
+        previous_glyph = glyph_index;
+    }
+
+    return surface;
+}
+
 /* --- Binding: loadFont(path, ptsize) → id --- */
 static JSValue js_loadFont(
     JSContext *ctx,
@@ -493,7 +695,7 @@ static JSValue js_loadFont(
 
     for (int i = 0; i < MAX_FONTS; i++) {
         FontAsset *asset = &g_fonts[i];
-        if (asset->font && asset->ptsize == ptsize &&
+        if (asset->face && asset->ptsize == ptsize &&
             strcmp(asset->path, path) == 0) {
             asset->refs++;
             JS_FreeCString(ctx, path);
@@ -507,32 +709,43 @@ static JSValue js_loadFont(
         return JS_NewInt32(ctx, -1);
     }
 
+    if (!ensure_freetype()) {
+        JS_FreeCString(ctx, path);
+        return JS_NewInt32(ctx, -1);
+    }
+
     char *resolved_path = resolve_resource_path(path);
-    TTF_Font *font = resolved_path
-        ? TTF_OpenFont(resolved_path, (float)ptsize)
-        : NULL;
-    if (!font && resolved_path && strcmp(resolved_path, path) != 0) {
-        font = TTF_OpenFont(path, (float)ptsize);
+    FT_Face face = NULL;
+    if (resolved_path) {
+        FT_New_Face(g_ft_library, resolved_path, 0, &face);
+    }
+    if (!face && resolved_path && strcmp(resolved_path, path) != 0) {
+        FT_New_Face(g_ft_library, path, 0, &face);
     }
     char *prefixed_path = resource_prefixed_path(path);
-    if (!font && prefixed_path) {
-        font = TTF_OpenFont(prefixed_path, (float)ptsize);
+    if (!face && prefixed_path) {
+        FT_New_Face(g_ft_library, prefixed_path, 0, &face);
     }
     free(prefixed_path);
     free(resolved_path);
-    if (!font) {
+    if (!face) {
+        JS_FreeCString(ctx, path);
+        return JS_NewInt32(ctx, -1);
+    }
+    if (FT_Set_Pixel_Sizes(face, 0, (FT_UInt)ptsize) != 0) {
+        FT_Done_Face(face);
         JS_FreeCString(ctx, path);
         return JS_NewInt32(ctx, -1);
     }
     char *stored_path = copy_string(path);
     if (!stored_path) {
-        TTF_CloseFont(font);
+        FT_Done_Face(face);
         JS_FreeCString(ctx, path);
         return JS_NewInt32(ctx, -1);
     }
 
     FontAsset *asset = &g_fonts[id];
-    asset->font = font;
+    asset->face = face;
     asset->path = stored_path;
     asset->ptsize = ptsize;
     asset->refs = 1;
@@ -580,9 +793,8 @@ static JSValue js_loadTextTexture(
         return JS_NewInt32(ctx, -1);
     }
 
-    SDL_Color color = { 220, 220, 220, 255 };
-    SDL_Surface *surface = TTF_RenderText_Blended(
-        g_fonts[font_id].font, text, strlen(text), color);
+    SDL_Color color = { 255, 255, 255, 255 };
+    SDL_Surface *surface = render_text_surface(g_fonts[font_id].face, text, color);
     JS_FreeCString(ctx, text);
     if (!surface) {
         free(key);
@@ -1513,8 +1725,8 @@ void js_sdl3_shutdown(JSContext *ctx)
         }
     }
     for (int i = 0; i < MAX_FONTS; i++) {
-        if (g_fonts[i].font) {
-            TTF_CloseFont(g_fonts[i].font);
+        if (g_fonts[i].face) {
+            FT_Done_Face(g_fonts[i].face);
             free(g_fonts[i].path);
             memset(&g_fonts[i], 0, sizeof(g_fonts[i]));
         }
@@ -1540,6 +1752,10 @@ void js_sdl3_shutdown(JSContext *ctx)
     if (g_window) {
         SDL_DestroyWindow(g_window);
         g_window = NULL;
+    }
+    if (g_ft_library) {
+        FT_Done_FreeType(g_ft_library);
+        g_ft_library = NULL;
     }
 }
 

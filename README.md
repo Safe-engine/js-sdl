@@ -1,13 +1,13 @@
 ### Install on macOS (Homebrew)
 
 ```bash
-brew install sdl3 sdl3_image sdl3_ttf box2d quickjs-ng
+brew install sdl3 sdl3_image freetype box2d quickjs-ng
 ```
 
 ### Install on Windows (vcpkg)
 
 ```powershell
-vcpkg install sdl3 sdl3-image sdl3_ttf box2d quickjs-ng --triplet x64-windows
+vcpkg install sdl3 sdl3-image freetype box2d quickjs-ng --triplet x64-windows
 # Then pass: -DCMAKE_TOOLCHAIN_FILE=<vcpkg>/scripts/buildsystems/vcpkg.cmake
 ```
 
@@ -33,7 +33,7 @@ bun run web:build
 
 ### Mobile prerequisites
 
-Mobile builds compile SDL3, SDL3_image, SDL3_ttf, and QuickJS from source:
+Mobile builds compile SDL3, SDL3_image, FreeType, and QuickJS from source:
 
 ```bash
 bun run mobile:deps

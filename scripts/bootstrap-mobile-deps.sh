@@ -26,9 +26,9 @@ clone_dependency SDL \
 clone_dependency SDL_image \
     https://github.com/libsdl-org/SDL_image.git \
     "${SDL_IMAGE_REVISION:-main}"
-clone_dependency SDL_ttf \
-    https://github.com/libsdl-org/SDL_ttf.git \
-    "${SDL_TTF_REVISION:-main}"
+clone_dependency freetype \
+    https://github.com/freetype/freetype.git \
+    "${FREETYPE_REVISION:-master}"
 clone_dependency quickjs \
     https://github.com/quickjs-ng/quickjs.git \
     "${QUICKJS_REVISION:-master}"
