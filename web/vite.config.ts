@@ -1,6 +1,6 @@
 import path from "node:path";
 import { defineConfig } from "vite";
-import { sdlTsxTransform } from "../vite-plugin-sdl-tsx";
+import { sdlTsxTransform } from "../scripts/vite-plugin-sdl-tsx";
 
 export default defineConfig({
   root: __dirname,

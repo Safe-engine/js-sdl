@@ -13,16 +13,21 @@
         "./engine/physics/Box2d.ts"
       ]
     },
-    "rootDir": ".",
+    "rootDir": "./engine",
     "outDir": "lib",
-    "declaration": false,
-    "sourceMap": false,
+    "declaration": true,
+    "sourceMap": true,
     "typeRoots": [
       "./node_modules/@types",
       "./@types"
     ],
     "isolatedModules": true
   },
+  "exclude": [
+    "scripts/vite-plugin-sdl-tsx.ts",
+    "src",
+    "web"
+  ],
   "include": [
     "src",
     "web",

@@ -1,7 +1,7 @@
 import { spawn } from "child_process";
 import path from "path";
 import { defineConfig } from "vite";
-import { sdlTsxTransform } from "../vite-plugin-sdl-tsx";
+import { sdlTsxTransform } from "../scripts/vite-plugin-sdl-tsx";
 
 function runSdl3jsPlugin() {
   let child: ReturnType<typeof spawn> | null = null;

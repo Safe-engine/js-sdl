@@ -2,7 +2,15 @@
   "name": "@safe-engine/sdl",
   "version": "0.0.0",
   "description": "safe-engine with sdl renderer support",
-  "private": true,
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "files": [
+    "lib",
+    "@types"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "scripts": {
     "test:ts": "bun test tests",
