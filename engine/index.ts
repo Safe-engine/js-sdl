@@ -103,8 +103,9 @@ export {
 } from "./components/UI";
 export type {
   LayoutAlignment,
-  LayoutDirection, Insets as UIInsets
+  LayoutDirection,
+  Insets as UIInsets,
+  ProgressBarProps
 } from "./components/UI";
 export { Spine, SpineSkeleton } from "./spine";
 export type { SpineData, SpineSkeletonProps } from "./spine";
-

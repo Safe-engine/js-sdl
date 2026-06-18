@@ -23,7 +23,7 @@ export type LayoutAlignment = "start" | "center" | "end" | "stretch";
 const zeroInsets = (): Insets => ({ top: 0, right: 0, bottom: 0, left: 0 });
 const white = (): Color => ({ r: 255, g: 255, b: 255, a: 255 });
 
-export class UIElement extends ComponentX {
+export class UIElement<Props = unknown> extends ComponentX<Props> {
   width = 100;
   height = 100;
   minWidth = 0;
@@ -272,7 +272,15 @@ export class UIImage extends NineSlice {
   border: Insets = zeroInsets();
 }
 
-export class ProgressBar extends UIElement {
+export interface ProgressBarProps {
+  spriteFrame: string;
+  fillType?: number;
+  fillRange?: number;
+  fillCenter?: Vec2;
+  isReverse?: boolean;
+}
+
+export class ProgressBar extends UIElement<ProgressBarProps> {
   value = 0;
   min = 0;
   max = 1;
@@ -280,9 +288,42 @@ export class ProgressBar extends UIElement {
   fillColor: Color = { r: 34, g: 197, b: 94, a: 255 };
   vertical = false;
   reverse = false;
+  texturePath = "";
+  fillType = 0;
+  fillRange: number | null = null;
+  fillCenter: Vec2 = { x: 0.5, y: 0.5 };
+  private texture: TextureAsset | null = null;
+  private loadedPath = "";
+
+  onAwake(): void {
+    if (this.props.spriteFrame) this.setTexture(this.props.spriteFrame);
+    if (this.props.fillType !== undefined) this.setFillType(this.props.fillType);
+    if (this.props.fillRange !== undefined) this.setFillRange(this.props.fillRange);
+    if (this.props.fillCenter) this.fillCenter = this.props.fillCenter;
+    if (this.props.isReverse !== undefined) this.reverse = this.props.isReverse;
+  }
 
   setValue(value: number): this {
     this.value = Math.max(this.min, Math.min(this.max, value));
+    return this;
+  }
+
+  setTexture(path: string): this {
+    if (this.texturePath === path) return this;
+    this.releaseTexture();
+    this.texturePath = path;
+    return this;
+  }
+
+  setFillType(fillType: number): this {
+    this.fillType = fillType;
+    this.vertical = fillType === 1;
+    return this;
+  }
+
+  setFillRange(fillRange: number): this {
+    this.fillRange = Math.max(0, Math.min(1, fillRange));
+    this.setValue(this.min + (this.max - this.min) * this.fillRange);
     return this;
   }
 
@@ -292,15 +333,64 @@ export class ProgressBar extends UIElement {
       this.backgroundColor.r, this.backgroundColor.g, this.backgroundColor.b,
       this.backgroundColor.a ?? 255);
     const range = this.max - this.min;
-    const ratio = range <= 0 ? 0 :
+    const valueRatio = range <= 0 ? 0 :
       Math.max(0, Math.min(1, (this.value - this.min) / range));
+    const ratio = this.fillRange ?? valueRatio;
     const width = this.vertical ? rect.width : rect.width * ratio;
     const height = this.vertical ? rect.height * ratio : rect.height;
     const x = this.reverse && !this.vertical ? rect.x + rect.width - width : rect.x;
     const y = this.reverse && this.vertical ? rect.y + rect.height - height : rect.y;
-    drawRect(x, y, width, height,
+
+    this.ensureTexture();
+    if (!this.texture) {
+      drawRect(x, y, width, height,
+        this.fillColor.r, this.fillColor.g, this.fillColor.b,
+        this.fillColor.a ?? 255);
+      return;
+    }
+
+    if (width <= 0 || height <= 0) return;
+
+    const sourceWidth = this.vertical ? this.texture.width : this.texture.width * ratio;
+    const sourceHeight = this.vertical ? this.texture.height * ratio : this.texture.height;
+    const sourceX = this.reverse && !this.vertical
+      ? this.texture.width - sourceWidth
+      : 0;
+    const sourceY = this.reverse && this.vertical
+      ? this.texture.height - sourceHeight
+      : 0;
+    drawTextureRegionRotated(
+      this.texture.id,
+      sourceX, sourceY, sourceWidth, sourceHeight,
+      x, y, width, height,
+      this.node.worldRotation,
+      this.fillCenter.x * width,
+      this.fillCenter.y * height,
+      false, false,
       this.fillColor.r, this.fillColor.g, this.fillColor.b,
-      this.fillColor.a ?? 255);
+      this.fillColor.a ?? 255,
+    );
+  }
+
+  onDestroy(): void {
+    this.releaseTexture();
+  }
+
+  private ensureTexture(): void {
+    if (!this.texturePath) {
+      this.releaseTexture();
+      return;
+    }
+    if (this.texture && this.loadedPath === this.texturePath) return;
+    this.releaseTexture();
+    this.texture = AssetManager.acquireTexture(this.texturePath);
+    this.loadedPath = this.texturePath;
+  }
+
+  private releaseTexture(): void {
+    this.texture?.release();
+    this.texture = null;
+    this.loadedPath = "";
   }
 }
 
