@@ -1,4 +1,4 @@
-import { Component } from "../core/Component";
+import { ComponentX } from "../core/ComponentX";
 import { Node } from "../core/Node";
 import {
   Collider,
@@ -10,7 +10,7 @@ export interface CollideSystemProps {
   debug?: boolean;
 }
 
-export class CollideSystem extends Component<CollideSystemProps> {
+export class CollideSystem extends ComponentX<CollideSystemProps> {
   debug = false;
   readonly colliders: Collider[] = [];
   private contacts = new Map<string, Contact>();

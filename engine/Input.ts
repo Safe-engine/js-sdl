@@ -1,4 +1,4 @@
-import { Component } from "./core/Component";
+import { ComponentX } from "./core/ComponentX";
 import { Node } from "./core/Node";
 
 export type InputEventType = "start" | "move" | "end";
@@ -7,15 +7,15 @@ export class InputEvent {
   readonly type: InputEventType;
   readonly x: number;
   readonly y: number;
-  readonly target: Component;
-  currentTarget: Component;
+  readonly target: ComponentX;
+  currentTarget: ComponentX;
   propagationStopped = false;
 
   constructor(
     type: InputEventType,
     x: number,
     y: number,
-    target: Component,
+    target: ComponentX,
   ) {
     this.type = type;
     this.x = x;
@@ -30,12 +30,12 @@ export class InputEvent {
 }
 
 interface InputCandidate {
-  component: Component;
+  component: ComponentX;
   renderOrder: number;
 }
 
 export class InputSystem {
-  private captured: Component[] = [];
+  private captured: ComponentX[] = [];
 
   constructor(private readonly root: Node) {}
 

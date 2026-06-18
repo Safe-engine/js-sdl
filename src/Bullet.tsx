@@ -1,7 +1,7 @@
-import { Component, Sprite } from "../engine";
+import { ComponentX, Sprite } from "../engine";
 import { sf_bullet } from "./assets";
 
-export class Bullet extends Component {
+export class Bullet extends ComponentX {
   speed = 720;
 
   __view() {

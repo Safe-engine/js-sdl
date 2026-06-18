@@ -1,4 +1,4 @@
-import { Component, type Constructor } from "../core/Component";
+import { ComponentX, type Constructor } from "../core/ComponentX";
 import type { Node } from "../core/Node";
 
 export type BodyType = "static" | "kinematic" | "dynamic" | 0 | 1 | 2;
@@ -94,7 +94,7 @@ export function debugColor(hex: number, alpha: number): { r: number; g: number; 
 
 export abstract class PhysicsWorldComponent<
   TProps extends PhysicsWorldProps = PhysicsWorldProps,
-> extends Component<TProps> {
+> extends ComponentX<TProps> {
   pixelsPerMeter = DEFAULT_PIXELS_PER_METER;
   velocityIterations = 8;
   positionIterations = 3;
@@ -171,7 +171,7 @@ export abstract class PhysicsRigidBodyComponent<
   TWorld extends PhysicsWorldComponent,
   TBody,
   TProps extends RigidBodyProps<any, any, any>,
-> extends Component<TProps> {
+> extends ComponentX<TProps> {
   body: TBody | null = null;
   world: TWorld | null = null;
 

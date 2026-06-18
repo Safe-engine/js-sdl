@@ -196,7 +196,7 @@ export function sdlTsxTransform() {
             const { superClass, id } = node;
             currentClassName = id.name;
             isScene = superClass && superClass.name === 'Scene';
-            const isComponentX = superClass && superClass.name && ['Component', 'SceneComponent'].includes(superClass.name);
+            const isComponentX = superClass && superClass.name && ['ComponentX', 'SceneComponent'].includes(superClass.name);
             if (isComponentX) {
               listComponentX.push(currentClassName);
             }

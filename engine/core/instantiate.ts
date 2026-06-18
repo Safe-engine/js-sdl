@@ -1,8 +1,8 @@
-import { Component, Constructor } from "./Component"
+import { ComponentX, Constructor } from "./ComponentX"
 import { Node } from "./Node"
 import { Scene } from "./Scene"
 
-export type GetProps<T> = T extends Component<infer P> ? P : never
+export type GetProps<T> = T extends ComponentX<infer P> ? P : never
 type SceneActivator = (scene: Scene) => void
 
 let activateScene: SceneActivator | null = null
@@ -15,7 +15,7 @@ export function setSceneActivator(activator: SceneActivator): void {
   }
 }
 
-export function instantiate<T extends Component>(ComponentType: Constructor<T>, data?: GetProps<T>): T {
+export function instantiate<T extends ComponentX>(ComponentType: Constructor<T>, data?: GetProps<T>): T {
   const instance = new ComponentType(data)
   instance.init(data)
   if (!instance.__view) {

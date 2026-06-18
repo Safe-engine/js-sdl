@@ -11,13 +11,13 @@ export interface BaseComponentProps<T> {
 }
 export type Constructor<T = any> = new (...args: any[]) => T;
 
-export class Component<Props = unknown> {
+export class ComponentX<Props = unknown> {
   props: Props = {} as any
   node: Node | null = null;
   inputEnabled = false;
   inputPriority = 0;
   __view?()
-  constructor(data?: BaseComponentProps<Component> & Props) {
+  constructor(data?: BaseComponentProps<ComponentX> & Props) {
     this.init(data)
   }
 
@@ -30,7 +30,7 @@ export class Component<Props = unknown> {
     }
   }
 
-  addComponent<T extends Component>(component: Constructor<T> | T, data?: ConstructorParameters<Constructor<T>>[0]): T {
+  addComponent<T extends ComponentX>(component: Constructor<T> | T, data?: ConstructorParameters<Constructor<T>>[0]): T {
     return this.node.addComponent(component, data);
   }
 

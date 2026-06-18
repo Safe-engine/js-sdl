@@ -1,7 +1,7 @@
-import { box, Component, RigidBody, Sprite } from "../engine";
+import { box, ComponentX, RigidBody, Sprite } from "../engine";
 import { sf_player } from "./assets";
 
-export class Player extends Component {
+export class Player extends ComponentX {
   speed = 420;
 
   __view() {

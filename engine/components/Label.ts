@@ -5,7 +5,7 @@ import {
   FontAsset,
   TextureAsset,
 } from "../AssetManager";
-import { Component } from "../core/Component";
+import { ComponentX } from "../core/ComponentX";
 import { Node } from "../core/Node";
 import { Localization } from "../Localization";
 
@@ -22,7 +22,7 @@ interface LabelCompProps {
   // shadow?: [ColorSource, number, Size]
   isAdaptWithSize?: boolean
 }
-export class Label extends Component<LabelCompProps> {
+export class Label extends ComponentX<LabelCompProps> {
   text = "";
   localizationKey = "";
   localizationValues: Readonly<Record<string, string | number>> = {};

@@ -1,4 +1,4 @@
-import { Component, type BaseComponentProps } from "../core/Component";
+import { ComponentX, type BaseComponentProps } from "../core/ComponentX";
 export interface ColliderProps extends BaseComponentProps<Collider> {
   tag?: number;
   offset?: [number, number];
@@ -28,7 +28,7 @@ export enum CollisionType {
   EXIT,
 }
 
-export class Collider<Props extends ColliderProps = ColliderProps> extends Component<Props> {
+export class Collider<Props extends ColliderProps = ColliderProps> extends ComponentX<Props> {
   tag = 0;
   enabled = true;
   readonly worldPoints: Vec2[] = [];

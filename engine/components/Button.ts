@@ -1,4 +1,4 @@
-import { Component } from "../core/Component";
+import { ComponentX } from "../core/ComponentX";
 import { InputEvent } from "../Input";
 
 interface ButtonCompProps {
@@ -9,7 +9,7 @@ interface ButtonCompProps {
   capInsets?: [number, number, number, number]
   onPress?: (target?: Button) => void
 }
-export class Button extends Component<ButtonCompProps> {
+export class Button extends ComponentX<ButtonCompProps> {
   inputEnabled = true;
   consumeInput = true;
 

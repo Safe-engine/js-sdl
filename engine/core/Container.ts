@@ -1,5 +1,5 @@
-import { Component } from "./Component";
+import { ComponentX } from "./ComponentX";
 
-export class Container extends Component {
+export class Container extends ComponentX {
 
 }

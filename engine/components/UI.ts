@@ -1,12 +1,12 @@
 import {
-  drawRect,
-  drawTextureRegionRotated,
-  popClipRect,
-  pushClipRect,
+    drawRect,
+    drawTextureRegionRotated,
+    popClipRect,
+    pushClipRect,
 } from "sdl3";
 import type { Color } from "../animation/Tween";
 import { AssetManager, TextureAsset, TextureRegion } from "../AssetManager";
-import { Component } from "../core/Component";
+import { ComponentX } from "../core/ComponentX";
 import type { Node } from "../core/Node";
 import type { InputEvent } from "../Input";
 
@@ -23,7 +23,7 @@ export type LayoutAlignment = "start" | "center" | "end" | "stretch";
 const zeroInsets = (): Insets => ({ top: 0, right: 0, bottom: 0, left: 0 });
 const white = (): Color => ({ r: 255, g: 255, b: 255, a: 255 });
 
-export class UIElement extends Component {
+export class UIElement extends ComponentX {
   width = 100;
   height = 100;
   minWidth = 0;

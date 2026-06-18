@@ -1,14 +1,14 @@
 import { Color } from "../animation/Tween";
-import { Component } from "./Component";
+import { ComponentX } from "./ComponentX";
 
 type Constructor<T = any> = new (...args: any[]) => T;
-type ComponentInput<T extends Component> = Constructor<T> | T;
+type ComponentInput<T extends ComponentX> = Constructor<T> | T;
 
 export class Node {
   readonly name: string;
   parent: Node | null = null;
   children: Node[] = [];
-  components: Component[] = [];
+  components: ComponentX[] = [];
   active = true;
   width = 64;
   height = 64;
@@ -89,7 +89,7 @@ export class Node {
     return this;
   }
 
-  addComponent<T extends Component>(c: ComponentInput<T>, data?: ConstructorParameters<Constructor<T>>[0]): T {
+  addComponent<T extends ComponentX>(c: ComponentInput<T>, data?: ConstructorParameters<Constructor<T>>[0]): T {
     const component = typeof c === "function" ? new c(data) : c;
     if (component.node && component.node !== this) {
       component.node.components = component.node.components.filter((item) => item !== component);
@@ -102,11 +102,11 @@ export class Node {
     return component;
   }
 
-  resolveComponent<T extends Component>(component: T): T {
+  resolveComponent<T extends ComponentX>(component: T): T {
     return this.addComponent(component);
   }
 
-  getComponent<T extends Component>(type: Constructor<T>): T | null {
+  getComponent<T extends ComponentX>(type: Constructor<T>): T | null {
     for (const c of this.components) {
       if (c instanceof type) return c as T;
     }

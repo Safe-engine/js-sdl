@@ -47,7 +47,7 @@ export type {
   ColliderProps,
   CollideSystemProps, PolygonColliderProps
 } from "./collider";
-export { Component } from "./core/Component";
+export { ComponentX } from "./core/ComponentX";
 export { Container } from "./core/Container";
 export { instantiate, loadScene } from "./core/instantiate";
 export { Node } from "./core/Node";

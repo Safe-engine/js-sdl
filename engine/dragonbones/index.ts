@@ -16,7 +16,7 @@ import {
 } from "dragonbones-es";
 import { drawTextureRegionRotated, loadTextFile } from "sdl3";
 import { AssetManager, type TextureAsset } from "../AssetManager";
-import { Component } from "../core/Component";
+import { ComponentX } from "../core/ComponentX";
 
 export type Integer = number;
 export type Float = number;
@@ -288,7 +288,7 @@ class SdlFactory extends BaseFactory {
   }
 }
 
-export class DragonBones extends Component<DragonBonesProps> {
+export class DragonBones extends ComponentX<DragonBonesProps> {
   private factory: SdlFactory | null = null;
   private armature: Armature | null = null;
   private loadedKey = "";

@@ -8,7 +8,7 @@ import {
   TextureAtlas,
   TextureRegion,
 } from "../AssetManager";
-import { Component } from "../core/Component";
+import { ComponentX } from "../core/ComponentX";
 
 interface SpriteProps {
   spriteFrame: string
@@ -17,7 +17,7 @@ interface SpriteProps {
   // tiledSize?: Size
 }
 
-export class Sprite extends Component<SpriteProps> {
+export class Sprite extends ComponentX<SpriteProps> {
   texturePath = "";
   textureId = -1;
   atlas: TextureAtlas | null = null;

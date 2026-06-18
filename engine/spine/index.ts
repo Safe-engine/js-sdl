@@ -1,20 +1,20 @@
 import {
-  AnimationState,
-  AnimationStateData,
-  AtlasAttachmentLoader,
-  Physics,
-  RegionAttachment,
-  Skeleton,
-  SkeletonJson,
-  Texture,
-  TextureAtlas,
-  TextureFilter,
-  TextureWrap,
-  type TrackEntry,
+    AnimationState,
+    AnimationStateData,
+    AtlasAttachmentLoader,
+    Physics,
+    RegionAttachment,
+    Skeleton,
+    SkeletonJson,
+    Texture,
+    TextureAtlas,
+    TextureFilter,
+    TextureWrap,
+    type TrackEntry,
 } from "@esotericsoftware/spine-core";
 import { drawTextureRegionRotated, loadTextFile } from "sdl3";
 import { AssetManager, type TextureAsset } from "../AssetManager";
-import { Component } from "../core/Component";
+import { ComponentX } from "../core/ComponentX";
 
 export interface SpineData {
   atlas: string
@@ -51,7 +51,7 @@ class SdlSpineTexture extends Texture {
   }
 }
 
-export class SpineSkeleton extends Component<SpineSkeletonProps> {
+export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
   private skeleton: Skeleton | null = null;
   private state: AnimationState | null = null;
   private textures: SdlSpineTexture[] = [];
