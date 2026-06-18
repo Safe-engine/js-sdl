@@ -53,6 +53,7 @@ export { Node } from "./core/Node";
 export { Scene } from "./core/Scene";
 export type { Orientation } from "./core/Scene";
 export { Engine } from "./Engine";
+export * from './hepler/assets-load';
 export { InputEvent, InputSystem } from "./Input";
 export type { InputEventType } from "./Input";
 export { Localization } from "./Localization";
@@ -67,7 +68,6 @@ export { Viewport } from "./Viewport";
 export type {
   ViewportMetrics
 } from "./Viewport";
-
 // Components
 export {
   box, BoxShape,
@@ -103,9 +103,8 @@ export {
 } from "./components/UI";
 export type {
   LayoutAlignment,
-  LayoutDirection,
-  Insets as UIInsets,
-  ProgressBarProps
+  LayoutDirection, ProgressBarProps, Insets as UIInsets
 } from "./components/UI";
 export { Spine, SpineSkeleton } from "./spine";
 export type { SpineData, SpineSkeletonProps } from "./spine";
+

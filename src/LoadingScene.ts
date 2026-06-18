@@ -1,9 +1,7 @@
-import { loadTextFile } from "sdl3";
 import {
-  AssetGroup,
-  AssetManager,
   instantiate,
   Label,
+  loadAll,
   loadScene,
   Panel,
   ProgressBar,
@@ -14,16 +12,6 @@ import {
   sf_button
 } from "./assets";
 import { HomeScene } from "./HomeScene";
-
-type DragonBonesAsset = {
-  atlas?: string;
-  skeleton?: string;
-  texture?: string;
-};
-
-const FONT_PRELOAD_SIZES = [26, 28, 32, 36];
-
-let loadedProjectAssets: AssetGroup | null = null;
 
 export class LoadingScene extends Scene {
   private progressBar: ProgressBar | null = null;
@@ -38,7 +26,7 @@ export class LoadingScene extends Scene {
 
   async load(): Promise<void> {
     try {
-      await loadProjectAssets((progress) => {
+      await loadAll(Assets, (progress) => {
         this.progressBar?.setFillRange(progress);
         this.percentLabel?.setText(`${Math.round(progress * 100)}%`);
         console.info("LoadingScene load assets", progress);
@@ -97,103 +85,4 @@ export class LoadingScene extends Scene {
     percentLabelComp.node.height = 40;
     this.percentLabel = percentLabelComp;
   }
-}
-
-async function loadProjectAssets(onProgress: (progress: number) => void): Promise<AssetGroup> {
-  loadedProjectAssets?.unload();
-
-  const group = AssetManager.createGroup();
-  const textAssets = new Set<string>();
-  const textureAssets = new Set<string>();
-  const fontAssets = new Set<string>();
-
-  collectProjectAssets(textureAssets, fontAssets, textAssets);
-
-  for (const texturePath of textureAssets) {
-    group.addTexture(texturePath, texturePath);
-  }
-
-  for (const fontPath of fontAssets) {
-    for (const size of FONT_PRELOAD_SIZES) {
-      group.addFont(`${fontPath}:${size}`, fontPath, size);
-    }
-  }
-
-  const groupTotal = textureAssets.size + fontAssets.size * FONT_PRELOAD_SIZES.length;
-  const total = groupTotal + textAssets.size;
-  let loaded = 0;
-  const report = () => onProgress(total === 0 ? 1 : loaded / total);
-
-  report();
-  await group.preload((progress) => {
-    loaded = progress.loaded;
-    report();
-  });
-
-  for (const path of textAssets) {
-    await loadTextAsset(path);
-    loaded++;
-    report();
-  }
-
-  loadedProjectAssets = group;
-  return group;
-}
-
-function collectProjectAssets(
-  textureAssets: Set<string>,
-  fontAssets: Set<string>,
-  textAssets: Set<string>,
-): void {
-  for (const value of Object.values(Assets)) {
-    if (typeof value === "string") {
-      collectAssetPath(value, textureAssets, fontAssets, textAssets);
-      continue;
-    }
-
-    if (isDragonBonesAsset(value)) {
-      if (value.texture) textureAssets.add(value.texture);
-      if (value.atlas) textAssets.add(value.atlas);
-      if (value.skeleton) textAssets.add(value.skeleton);
-    }
-  }
-}
-
-function collectAssetPath(
-  path: string,
-  textureAssets: Set<string>,
-  fontAssets: Set<string>,
-  textAssets: Set<string>,
-): void {
-  if (/\.(png|jpg|jpeg|webp)$/i.test(path)) {
-    textureAssets.add(path);
-    return;
-  }
-  if (/\.(ttf|otf)$/i.test(path)) {
-    fontAssets.add(path);
-    return;
-  }
-  if (/\.(json|txt|atlas)$/i.test(path)) {
-    textAssets.add(path);
-  }
-}
-
-function isDragonBonesAsset(value: unknown): value is DragonBonesAsset {
-  if (!value || typeof value !== "object") return false;
-  const data = value as DragonBonesAsset;
-  return typeof data.texture === "string" ||
-    typeof data.atlas === "string" ||
-    typeof data.skeleton === "string";
-}
-
-async function loadTextAsset(path: string): Promise<string> {
-  if (typeof fetch === "function") {
-    const response = await fetch(path);
-    if (!response.ok) throw new Error(`Failed to load text asset: ${path}`);
-    return response.text();
-  }
-
-  const text = loadTextFile(path);
-  if (text === null) throw new Error(`Failed to load text asset: ${path}`);
-  return text;
 }
