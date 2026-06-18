@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { Node } from "../src/engine/core/Node";
+import { Node } from "../engine/core/Node";
 import {
   PhysicsWorld,
   RigidBody,
   box,
   circle,
-} from "../tsx/planck";
+} from "../engine/physics/Planck";
 
 function start(root: Node): void {
   root._startTree();

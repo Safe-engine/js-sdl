@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { Localization } from "../src/engine/Localization";
+import { Localization } from "../engine/Localization";
 
 describe("Localization", () => {
   test("uses the active locale and replaces parameters", () => {

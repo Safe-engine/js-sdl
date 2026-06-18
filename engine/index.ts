@@ -33,6 +33,29 @@ export {
 } from "./Audio";
 export type { PlayOptions, SoundOptions } from "./Audio";
 export { Component } from "./core/Component";
+export {
+  BoxCollider,
+  CircleCollider,
+  Collider,
+  CollideSystem,
+  CollisionType,
+  Contact,
+  PolygonCollider,
+  circleCircle,
+  polygonCircle,
+  polygonPolygon,
+  rectIntersectsRect,
+  testCollision
+} from "./collider";
+export type {
+  BoxColliderProps,
+  CircleColliderProps,
+  ColliderProps,
+  CollideSystemProps,
+  PointLike,
+  PolygonColliderProps,
+  RectLike
+} from "./collider";
 export { Container } from "./core/Container";
 export { instantiate, loadScene } from "./core/instantiate";
 export { Node } from "./core/Node";

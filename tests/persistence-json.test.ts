@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   LocalStorage,
   PersistenceJSON,
-} from "../src/engine/PersistenceJSON";
+} from "../engine/PersistenceJSON";
 
 class MemoryStorage implements LocalStorage {
   readonly values = new Map<string, string>();
