@@ -13,7 +13,7 @@ export type Constructor<T = any> = new (...args: any[]) => T;
 
 export class ComponentX<Props = unknown> {
   props: Props = {} as any
-  node: Node | null = null;
+  node: Node
   inputEnabled = false;
   inputPriority = 0;
   __view?()

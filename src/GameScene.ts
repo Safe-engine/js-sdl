@@ -68,24 +68,33 @@ export class GameScene extends Scene {
   };
 
   __view() {
-    <PhysicsWorld debugDraw={{ enabled: true, alpha: 190 }} />;
-    <Player $ref={this.player} node={{ x: 360, y: 1040, anchorX: 0.5, anchorY: 0.5 }}>
-    </Player>;
-    <Label node={{ x: 24, y: 24, width: 240, height: 40, anchorX: 0, anchorY: 0 }}
-      string="Tap to shoot"
-      font={lilita_one_regularFont}
-      size={26}
-    />;
-    <Sprite spriteFrame={sf_button} node={{ x: 360, y: 240, width: 220, height: 68 }}>
-      <Button onPress={this.onClick} />
-      <Label
-        string="PLAY"
-        font={lilita_one_regularFont}
-        size={32}
-        align="center"
-        verticalAlign="middle"
-      />
-    </Sprite>;
+    const physicsWorldComp1 = instantiate(PhysicsWorld, { debugDraw: { enabled: true, alpha: 190 } });
+    this.root.addChild(physicsWorldComp1.node);
+    const playerComp1 = instantiate(Player, {});
+    this.root.addChild(playerComp1.node);
+    this.player = playerComp1;
+    playerComp1.node.x = 360;
+    playerComp1.node.y = 1040;
+    playerComp1.node.anchorX = 0.5;
+    playerComp1.node.anchorY = 0.5;
+    const labelComp2 = instantiate(Label, { string: "Tap to shoot", font: lilita_one_regularFont, size: 26 });
+    this.root.addChild(labelComp2.node);
+    labelComp2.node.x = 24;
+    labelComp2.node.y = 24;
+    labelComp2.node.width = 240;
+    labelComp2.node.height = 40;
+    labelComp2.node.anchorX = 0;
+    labelComp2.node.anchorY = 0;
+    const spriteComp2 = instantiate(Sprite, { spriteFrame: sf_button });
+    this.root.addChild(spriteComp2.node);
+    spriteComp2.node.x = 360;
+    spriteComp2.node.y = 240;
+    spriteComp2.node.width = 220;
+    spriteComp2.node.height = 68;
+    const buttonComp2 = instantiate(Button, { onPress: this.onClick });
+    spriteComp2.node.resolveComponent(buttonComp2);
+    const labelComp3 = instantiate(Label, { string: "PLAY", font: lilita_one_regularFont, size: 32, align: "center", verticalAlign: "middle" });
+    spriteComp2.node.resolveComponent(labelComp3);
   }
 }
 

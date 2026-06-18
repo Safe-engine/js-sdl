@@ -24,8 +24,9 @@ export function instantiate<T extends ComponentX>(ComponentType: Constructor<T>,
     }
     return instance
   }
-  return instance.__view()
+  return instance.__view() as T
 }
+
 export function loadScene<T extends Scene>(ComponentType: Constructor<T>): T | Promise<T> {
   const instance = new ComponentType()
   return activateLoadedScene(instance)
