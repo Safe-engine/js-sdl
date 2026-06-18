@@ -6,7 +6,6 @@ import {
   AssetManager,
   TextureAsset,
   TextureAtlas,
-  TextureRegion,
 } from "../AssetManager";
 import { ComponentX } from "../core/ComponentX";
 

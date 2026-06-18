@@ -20,8 +20,7 @@ export {
 } from "./AssetManager";
 export type {
   PreloadProgress,
-  PreloadRequest,
-  TextureRegion
+  PreloadRequest
 } from "./AssetManager";
 export {
   Audio,

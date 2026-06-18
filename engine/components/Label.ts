@@ -23,17 +23,18 @@ interface LabelCompProps {
   isAdaptWithSize?: boolean
 }
 export class Label extends ComponentX<LabelCompProps> {
+  static defaultFont: string
   text = "";
   localizationKey = "";
   localizationValues: Readonly<Record<string, string | number>> = {};
   fontPath = "";
-  fontSize = 24;
+  declare fontSize;
   fontId = -1;
   outlineColor: Color = { r: 0, g: 0, b: 0, a: 255 };
   outlineWidth = 0;
   lineHeight = 1.2;
-  align: TextAlignment = "left";
-  verticalAlign: VerticalTextAlignment = "top";
+  declare align: TextAlignment;
+  declare verticalAlign: VerticalTextAlignment;
   private font: FontAsset | null = null;
   private lineTextures: TextureAsset[] = [];
   private lines: string[] = [];
@@ -45,17 +46,10 @@ export class Label extends ComponentX<LabelCompProps> {
     if (this.props.string !== undefined) {
       this.setText(this.props.string);
     }
-    if (this.props.font) {
-      this.setFont(this.props.font, this.props.size ?? this.fontSize);
-    } else if (this.props.size !== undefined) {
-      this.fontSize = this.props.size;
-    }
-    if (this.props.align) {
-      this.align = this.props.align;
-    }
-    if (this.props.verticalAlign) {
-      this.verticalAlign = this.props.verticalAlign;
-    }
+    this.fontSize = this.props.size ?? 36;
+    this.setFont(this.props.font || Label.defaultFont, this.fontSize);
+    this.align = this.props.align ?? "left";
+    this.verticalAlign = this.props.verticalAlign ?? "top";
   }
 
   onStart(): void {
@@ -110,7 +104,7 @@ export class Label extends ComponentX<LabelCompProps> {
     const textHeight = this.lineTextures.length === 1
       ? this.lineTextures[0].height
       : (this.lineTextures.length - 1) * lineAdvance +
-        this.lineTextures[this.lineTextures.length - 1].height;
+      this.lineTextures[this.lineTextures.length - 1].height;
     const layoutHeight = this.node.height > 0 ? this.node.height : textHeight;
     let top = 0;
     if (this.verticalAlign === "middle") top = (layoutHeight - textHeight) * 0.5;

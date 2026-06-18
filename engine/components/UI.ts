@@ -1,11 +1,11 @@
 import {
-    drawRect,
-    drawTextureRegionRotated,
-    popClipRect,
-    pushClipRect,
+  drawRect,
+  drawTextureRegionRotated,
+  popClipRect,
+  pushClipRect,
 } from "sdl3";
 import type { Color } from "../animation/Tween";
-import { AssetManager, TextureAsset, TextureRegion } from "../AssetManager";
+import { AssetManager, TextureAsset } from "../AssetManager";
 import { ComponentX } from "../core/ComponentX";
 import type { Node } from "../core/Node";
 import type { InputEvent } from "../Input";

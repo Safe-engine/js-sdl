@@ -13,6 +13,7 @@ interface Rect {
   width: number;
   height: number;
 }
+declare type TextureRegion = Rect;
 
 interface Insets {
   top: number;

@@ -8,13 +8,6 @@ import {
   releaseTexture,
 } from "sdl3";
 
-export interface TextureRegion {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
 interface TextureRecord {
   id: number;
   width: number;
