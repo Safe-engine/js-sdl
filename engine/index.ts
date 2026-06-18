@@ -82,6 +82,8 @@ export type {
   VerticalTextAlignment
 } from "./components/Label";
 export { Sprite } from "./components/Sprite";
+export { Spine, SpineSkeleton } from "./spine";
+export type { SpineData, SpineSkeletonProps } from "./spine";
 export {
   NineSlice,
   Panel,
@@ -96,4 +98,3 @@ export type {
   LayoutAlignment,
   LayoutDirection, Insets as UIInsets
 } from "./components/UI";
-

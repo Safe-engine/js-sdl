@@ -25,6 +25,7 @@
     "vite": "^6.3.0"
   },
   "dependencies": {
+    "@esotericsoftware/spine-core": "^4.3.7",
     "dragonbones-es": "^1.0.0",
     "planck": "^1.5.0",
     "safex-sync-res": "^1.4.2",
