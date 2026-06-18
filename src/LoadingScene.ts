@@ -7,7 +7,7 @@ import {
   ProgressBar,
   Scene
 } from "../engine";
-import * as Assets from "./assets";
+import * as allAssets from "./assets";
 import {
   sf_button
 } from "./assets";
@@ -26,7 +26,7 @@ export class LoadingScene extends Scene {
 
   async load(): Promise<void> {
     try {
-      await loadAll(Assets, (progress) => {
+      await loadAll(allAssets, (progress) => {
         this.progressBar?.setFillRange(progress);
         this.percentLabel?.setText(`${Math.round(progress * 100)}%`);
         console.info("LoadingScene load assets", progress);

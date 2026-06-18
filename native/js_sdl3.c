@@ -1673,8 +1673,14 @@ int js_init_console(JSContext *ctx)
 {
     JSValue global = JS_GetGlobalObject(ctx);
     JSValue console = JS_NewObject(ctx);
-    JSValue log = JS_NewCFunction(ctx, js_consoleLog, "log", 1);
-    JS_SetPropertyStr(ctx, console, "log", log);
+    JS_SetPropertyStr(ctx, console, "log",
+        JS_NewCFunction(ctx, js_consoleLog, "log", 1));
+    JS_SetPropertyStr(ctx, console, "info",
+        JS_NewCFunction(ctx, js_consoleLog, "info", 1));
+    JS_SetPropertyStr(ctx, console, "warn",
+        JS_NewCFunction(ctx, js_consoleLog, "warn", 1));
+    JS_SetPropertyStr(ctx, console, "error",
+        JS_NewCFunction(ctx, js_consoleLog, "error", 1));
     JS_SetPropertyStr(ctx, global, "console", console);
     JS_FreeValue(ctx, global);
     return 0;
