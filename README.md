@@ -1,13 +1,13 @@
 ### Install on macOS (Homebrew)
 
 ```bash
-brew install sdl3 sdl3_image sdl3_ttf
+brew install sdl3 sdl3_image sdl3_ttf box2d quickjs-ng
 ```
 
 ### Install on Windows (vcpkg)
 
 ```powershell
-vcpkg install sdl3 sdl3-image --triplet x64-windows
+vcpkg install sdl3 sdl3-image sdl3_ttf box2d quickjs-ng --triplet x64-windows
 # Then pass: -DCMAKE_TOOLCHAIN_FILE=<vcpkg>/scripts/buildsystems/vcpkg.cmake
 ```
 

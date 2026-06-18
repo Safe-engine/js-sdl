@@ -2,12 +2,12 @@ import * as planck from "planck";
 
 export type BodyType = 0 | 1 | 2;
 
-export interface Vec2Value {
+export interface Vec2 {
   x: number;
   y: number;
 }
 
-export interface BodyTransform extends Vec2Value {
+export interface BodyTransform extends Vec2 {
   angle: number;
 }
 
@@ -19,7 +19,7 @@ export interface ContactEvents {
 export type DebugPrimitive =
   | { type: "line"; x1: number; y1: number; x2: number; y2: number; color: number }
   | { type: "circle"; x: number; y: number; radius: number; color: number; fill?: boolean }
-  | { type: "polygon"; points: Vec2Value[]; color: number; fill?: boolean }
+  | { type: "polygon"; points: Vec2[]; color: number; fill?: boolean }
   | { type: "point"; x: number; y: number; size: number; color: number };
 
 interface WorldState {
@@ -39,7 +39,7 @@ const bodies = new Map<number, planck.Body>();
 const bodyIds = new WeakMap<planck.Body, number>();
 const shapes = new Map<number, planck.Fixture>();
 
-export function createWorld(gravity: Vec2Value = { x: 0, y: 9.8 }): number {
+export function createWorld(gravity: Vec2 = { x: 0, y: 9.8 }): number {
   const id = nextWorldId++;
   const state: WorldState = {
     world: new planck.World(gravity),
@@ -75,14 +75,14 @@ export function stepWorld(worldId: number, timeStep: number, subStepCount = 8): 
   worlds.get(worldId)?.world.step(timeStep, subStepCount, 3);
 }
 
-export function setGravity(worldId: number, gravity: Vec2Value): void {
+export function setGravity(worldId: number, gravity: Vec2): void {
   worlds.get(worldId)?.world.setGravity(gravity);
 }
 
 export function createBody(
   worldId: number,
   type: BodyType,
-  position: Vec2Value,
+  position: Vec2,
   angle: number,
   gravityScale: number,
   userData: number,
@@ -114,7 +114,7 @@ export function createBoxShape(
   bodyId: number,
   halfWidth: number,
   halfHeight: number,
-  center: Vec2Value,
+  center: Vec2,
   angle: number,
   density = 1,
   friction = 0.2,
@@ -134,7 +134,7 @@ export function createBoxShape(
 export function createCircleShape(
   bodyId: number,
   radius: number,
-  center: Vec2Value,
+  center: Vec2,
   density = 1,
   friction = 0.2,
   restitution = 0,
@@ -152,7 +152,7 @@ export function createCircleShape(
 
 export function createPolygonShape(
   bodyId: number,
-  points: Vec2Value[],
+  points: Vec2[],
   density = 1,
   friction = 0.2,
   restitution = 0,
@@ -170,8 +170,8 @@ export function createPolygonShape(
 
 export function createSegmentShape(
   bodyId: number,
-  a: Vec2Value,
-  b: Vec2Value,
+  a: Vec2,
+  b: Vec2,
   density = 1,
   friction = 0.2,
   restitution = 0,
@@ -194,19 +194,19 @@ export function getBodyTransform(bodyId: number): BodyTransform | null {
   return { x: position.x, y: position.y, angle: body.getAngle() };
 }
 
-export function setBodyTransform(bodyId: number, position: Vec2Value, angle: number): void {
+export function setBodyTransform(bodyId: number, position: Vec2, angle: number): void {
   bodies.get(bodyId)?.setTransform(position, angle);
 }
 
-export function setLinearVelocity(bodyId: number, velocity: Vec2Value): void {
+export function setLinearVelocity(bodyId: number, velocity: Vec2): void {
   bodies.get(bodyId)?.setLinearVelocity(velocity);
 }
 
-export function applyForceToCenter(bodyId: number, force: Vec2Value): void {
+export function applyForceToCenter(bodyId: number, force: Vec2): void {
   bodies.get(bodyId)?.applyForceToCenter(force, true);
 }
 
-export function applyLinearImpulseToCenter(bodyId: number, impulse: Vec2Value): void {
+export function applyLinearImpulseToCenter(bodyId: number, impulse: Vec2): void {
   const body = bodies.get(bodyId);
   if (!body) return;
   body.applyLinearImpulse(impulse, body.getWorldCenter(), true);
@@ -309,7 +309,7 @@ function appendFixtureDebug(
     }
     case "polygon": {
       const polygon = shape as planck.PolygonShape;
-      const points: Vec2Value[] = [];
+      const points: Vec2[] = [];
       for (let i = 0; i < polygon.m_count; i++) {
         const point = planck.Transform.mulVec2(transform, polygon.m_vertices[i]);
         points.push({ x: point.x * pixelsPerMeter, y: point.y * pixelsPerMeter });

@@ -1,12 +1,12 @@
-import { PhysicsWorld } from "#engine/physics";
 import {
   Button,
   instantiate,
   Label,
+  loadScene,
+  PhysicsWorld,
   Scene,
   Sprite
 } from "../engine";
-import { loadScene } from "../engine/core/instantiate";
 import {
   lilita_one_regularFont,
   sf_button,

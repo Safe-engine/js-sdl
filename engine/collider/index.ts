@@ -1,23 +1,16 @@
 export {
-  BoxCollider,
-  CircleCollider,
+  BoxCollider, circleCircle, CircleCollider,
   Collider,
   CollisionType,
-  Contact,
-  PolygonCollider,
-  circleCircle,
-  polygonCircle,
-  polygonPolygon,
+  Contact, polygonCircle, PolygonCollider, polygonPolygon,
   rectIntersectsRect,
-  testCollision,
+  testCollision
 } from "./CollideComponent";
 export type {
   BoxColliderProps,
   CircleColliderProps,
-  ColliderProps,
-  PointLike,
-  PolygonColliderProps,
-  RectLike,
+  ColliderProps, PolygonColliderProps
 } from "./CollideComponent";
 export { CollideSystem } from "./CollideSystem";
 export type { CollideSystemProps } from "./CollideSystem";
+

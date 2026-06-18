@@ -10,22 +10,23 @@
     "forceConsistentCasingInFileNames": true,
     "paths": {
       "#engine/physics": [
-        "./src/engine/physics/Box2d.ts"
+        "./engine/physics/Box2d.ts"
       ]
     },
     "rootDir": ".",
-    "outDir": "dist",
+    "outDir": "lib",
     "declaration": false,
     "sourceMap": false,
     "typeRoots": [
       "./node_modules/@types",
-      "./@types/*",
+      "./@types"
     ],
     "isolatedModules": true
   },
   "include": [
     "src",
     "web",
-    "safex-sdl"
+    "engine",
+    "@types"
   ]
 }

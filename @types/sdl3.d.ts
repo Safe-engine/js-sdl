@@ -166,11 +166,8 @@ declare module "sdl3" {
 
 declare module "box2d" {
   export type BodyType = 0 | 1 | 2;
-  export interface Vec2Value {
-    x: number;
-    y: number;
-  }
-  export interface BodyTransform extends Vec2Value {
+
+  export interface BodyTransform extends Vec2 {
     angle: number;
   }
   export interface ContactEvents {
@@ -180,17 +177,17 @@ declare module "box2d" {
   export type DebugPrimitive =
     | { type: "line"; x1: number; y1: number; x2: number; y2: number; color: number }
     | { type: "circle"; x: number; y: number; radius: number; color: number; fill?: boolean }
-    | { type: "polygon"; points: Vec2Value[]; color: number; fill?: boolean }
+    | { type: "polygon"; points: Vec2[]; color: number; fill?: boolean }
     | { type: "point"; x: number; y: number; size: number; color: number };
 
-  export function createWorld(gravity?: Vec2Value): number;
+  export function createWorld(gravity?: Vec2): number;
   export function destroyWorld(world: number): void;
   export function stepWorld(world: number, timeStep: number, subStepCount?: number): void;
-  export function setGravity(world: number, gravity: Vec2Value): void;
+  export function setGravity(world: number, gravity: Vec2): void;
   export function createBody(
     world: number,
     type: BodyType,
-    position: Vec2Value,
+    position: Vec2,
     angle: number,
     gravityScale: number,
     userData: number,
@@ -200,7 +197,7 @@ declare module "box2d" {
     body: number,
     halfWidth: number,
     halfHeight: number,
-    center: Vec2Value,
+    center: Vec2,
     angle: number,
     density?: number,
     friction?: number,
@@ -210,7 +207,7 @@ declare module "box2d" {
   export function createCircleShape(
     body: number,
     radius: number,
-    center: Vec2Value,
+    center: Vec2,
     density?: number,
     friction?: number,
     restitution?: number,
@@ -218,7 +215,7 @@ declare module "box2d" {
   ): number;
   export function createPolygonShape(
     body: number,
-    points: Vec2Value[],
+    points: Vec2[],
     density?: number,
     friction?: number,
     restitution?: number,
@@ -226,18 +223,18 @@ declare module "box2d" {
   ): number;
   export function createSegmentShape(
     body: number,
-    a: Vec2Value,
-    b: Vec2Value,
+    a: Vec2,
+    b: Vec2,
     density?: number,
     friction?: number,
     restitution?: number,
     isSensor?: boolean,
   ): number;
   export function getBodyTransform(body: number): BodyTransform | null;
-  export function setBodyTransform(body: number, position: Vec2Value, angle: number): void;
-  export function setLinearVelocity(body: number, velocity: Vec2Value): void;
-  export function applyForceToCenter(body: number, force: Vec2Value): void;
-  export function applyLinearImpulseToCenter(body: number, impulse: Vec2Value): void;
+  export function setBodyTransform(body: number, position: Vec2, angle: number): void;
+  export function setLinearVelocity(body: number, velocity: Vec2): void;
+  export function applyForceToCenter(body: number, force: Vec2): void;
+  export function applyLinearImpulseToCenter(body: number, impulse: Vec2): void;
   export function getContactEvents(world: number): ContactEvents;
   export function getDebugDraw(world: number, pixelsPerMeter: number): DebugPrimitive[];
 }

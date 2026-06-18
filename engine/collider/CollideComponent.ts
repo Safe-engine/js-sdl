@@ -1,17 +1,4 @@
 import { Component, type BaseComponentProps } from "../core/Component";
-
-export interface PointLike {
-  x: number;
-  y: number;
-}
-
-export interface RectLike {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
 export interface ColliderProps extends BaseComponentProps<Collider> {
   tag?: number;
   offset?: [number, number];
@@ -31,7 +18,7 @@ export interface CircleColliderProps extends ColliderProps {
 }
 
 export interface PolygonColliderProps extends ColliderProps {
-  points: Array<PointLike | [number, number]>;
+  points: Array<Vec2 | [number, number]>;
 }
 
 export enum CollisionType {
@@ -44,11 +31,11 @@ export enum CollisionType {
 export class Collider<Props extends ColliderProps = ColliderProps> extends Component<Props> {
   tag = 0;
   enabled = true;
-  readonly worldPoints: PointLike[] = [];
-  worldPosition: PointLike = { x: 0, y: 0 };
+  readonly worldPoints: Vec2[] = [];
+  worldPosition: Vec2 = { x: 0, y: 0 };
   worldRadius = 0;
-  readonly aabb: RectLike = { x: 0, y: 0, width: 0, height: 0 };
-  readonly previousAabb: RectLike = { x: 0, y: 0, width: 0, height: 0 };
+  readonly aabb: Rect = { x: 0, y: 0, width: 0, height: 0 };
+  readonly previousAabb: Rect = { x: 0, y: 0, width: 0, height: 0 };
 
   onAwake(): void {
     this.syncProps();
@@ -62,7 +49,7 @@ export class Collider<Props extends ColliderProps = ColliderProps> extends Compo
     this.syncProps();
   }
 
-  getAABB(): RectLike {
+  getAABB(): Rect {
     return this.aabb;
   }
 
@@ -78,7 +65,7 @@ export class Collider<Props extends ColliderProps = ColliderProps> extends Compo
     this.previousAabb.height = this.aabb.height;
   }
 
-  protected localToWorld(localX: number, localY: number): PointLike {
+  protected localToWorld(localX: number, localY: number): Vec2 {
     const node = this.node!;
     const x = localX * node.worldScaleX;
     const y = localY * node.worldScaleY;
@@ -92,7 +79,7 @@ export class Collider<Props extends ColliderProps = ColliderProps> extends Compo
     };
   }
 
-  protected setAabbFromPoints(points: PointLike[]): void {
+  protected setAabbFromPoints(points: Vec2[]): void {
     this.copyAabb();
     if (!points.length) {
       this.aabb.x = 0;
@@ -165,13 +152,13 @@ export class CircleCollider extends Collider<CircleColliderProps> {
 }
 
 export class PolygonCollider extends Collider<PolygonColliderProps> {
-  get points(): PointLike[] {
+  get points(): Vec2[] {
     return this.props.points.map((point) => Array.isArray(point)
       ? { x: point[0], y: point[1] }
       : { x: point.x, y: point.y });
   }
 
-  set points(points: PointLike[]) {
+  set points(points: Vec2[]) {
     this.props.points = points;
   }
 
@@ -244,7 +231,7 @@ export function testCollision(a: Collider, b: Collider): boolean {
   return false;
 }
 
-export function rectIntersectsRect(a: RectLike, b: RectLike): boolean {
+export function rectIntersectsRect(a: Rect, b: Rect): boolean {
   return a.x <= b.x + b.width
     && b.x <= a.x + a.width
     && a.y <= b.y + b.height
@@ -252,9 +239,9 @@ export function rectIntersectsRect(a: RectLike, b: RectLike): boolean {
 }
 
 export function circleCircle(
-  a: PointLike,
+  a: Vec2,
   ar: number,
-  b: PointLike,
+  b: Vec2,
   br: number,
 ): boolean {
   const radius = ar + br;
@@ -262,8 +249,8 @@ export function circleCircle(
 }
 
 export function polygonCircle(
-  polygon: PointLike[],
-  circle: PointLike,
+  polygon: Vec2[],
+  circle: Vec2,
   radius: number,
 ): boolean {
   if (polygon.length < 3) return false;
@@ -278,7 +265,7 @@ export function polygonCircle(
   return false;
 }
 
-export function polygonPolygon(a: PointLike[], b: PointLike[]): boolean {
+export function polygonPolygon(a: Vec2[], b: Vec2[]): boolean {
   if (a.length < 3 || b.length < 3) return false;
   return !hasSeparatingAxis(a, b) && !hasSeparatingAxis(b, a);
 }
@@ -291,7 +278,7 @@ function isPolygonCollider(collider: Collider): collider is BoxCollider | Polygo
   return collider instanceof BoxCollider || collider instanceof PolygonCollider;
 }
 
-function hasSeparatingAxis(a: PointLike[], b: PointLike[]): boolean {
+function hasSeparatingAxis(a: Vec2[], b: Vec2[]): boolean {
   for (let i = 0; i < a.length; i++) {
     const p1 = a[i];
     const p2 = a[(i + 1) % a.length];
@@ -305,7 +292,7 @@ function hasSeparatingAxis(a: PointLike[], b: PointLike[]): boolean {
   return false;
 }
 
-function projectPolygon(points: PointLike[], axis: PointLike): { min: number; max: number } {
+function projectPolygon(points: Vec2[], axis: Vec2): { min: number; max: number } {
   let min = dot(points[0], axis);
   let max = min;
   for (let i = 1; i < points.length; i++) {
@@ -316,7 +303,7 @@ function projectPolygon(points: PointLike[], axis: PointLike): { min: number; ma
   return { min, max };
 }
 
-function pointInPolygon(point: PointLike, polygon: PointLike[]): boolean {
+function pointInPolygon(point: Vec2, polygon: Vec2[]): boolean {
   let inside = false;
   for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
     const pi = polygon[i];
@@ -328,7 +315,7 @@ function pointInPolygon(point: PointLike, polygon: PointLike[]): boolean {
   return inside;
 }
 
-function distancePointToSegmentSquared(point: PointLike, a: PointLike, b: PointLike): number {
+function distancePointToSegmentSquared(point: Vec2, a: Vec2, b: Vec2): number {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   if (dx === 0 && dy === 0) return distanceSquared(point, a);
@@ -342,12 +329,12 @@ function distancePointToSegmentSquared(point: PointLike, a: PointLike, b: PointL
   });
 }
 
-function distanceSquared(a: PointLike, b: PointLike): number {
+function distanceSquared(a: Vec2, b: Vec2): number {
   const dx = a.x - b.x;
   const dy = a.y - b.y;
   return dx * dx + dy * dy;
 }
 
-function dot(a: PointLike, b: PointLike): number {
+function dot(a: Vec2, b: Vec2): number {
   return a.x * b.x + a.y * b.y;
 }

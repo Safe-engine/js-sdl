@@ -1,22 +1,3 @@
-export interface Point {
-  x: number;
-  y: number;
-}
-
-export interface Rect {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-export interface Insets {
-  top: number;
-  right: number;
-  bottom: number;
-  left: number;
-}
-
 export type ViewportMetrics = readonly [
   logicalWidth: number,
   logicalHeight: number,

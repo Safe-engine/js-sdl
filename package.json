@@ -1,5 +1,7 @@
 {
-  "name": "js-sdl",
+  "name": "@safe-engine/sdl",
+  "version": "0.0.0",
+  "description": "safe-engine with sdl renderer support",
   "private": true,
   "type": "module",
   "scripts": {
@@ -7,7 +9,7 @@
     "test:native": "cmake -S . -B build && cmake --build build --target js_sdl3_native_tests --parallel && ctest --test-dir build --output-on-failure",
     "sync-res": "bun ./node_modules/safex-sync-res/src/index.ts",
     "predev": "bun run sync-res",
-    "build": "vite build --config native/vite.config.ts",
+    "build": "tsc --build tsconfig.json",
     "dev": "vite build --watch --config native/vite.config.ts",
     "web:dev": "vite --config web/vite.config.ts --host",
     "web:build": "vite build --config web/vite.config.ts",
@@ -21,6 +23,7 @@
     "ios:ipa": "./scripts/package-ios.sh"
   },
   "devDependencies": {
+    "@types/bun": "^1.3.14",
     "typescript": "^5.7.0",
     "vite": "^6.3.0"
   },

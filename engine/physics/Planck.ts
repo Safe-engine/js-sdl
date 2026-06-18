@@ -1,4 +1,4 @@
-import { Body, BodyType, BoxShape, CircleShape, Contact, ContactImpulse, EdgeShape, Fixture, Manifold, PolygonShape, Shape, Transform, TransformValue, Vec2, Vec2Value, World } from "planck";
+import { Body, BodyType, BoxShape, CircleShape, Contact, ContactImpulse, EdgeShape, Fixture, Manifold, PolygonShape, Shape, Transform, TransformValue, Vec2, World } from "planck";
 import {
   drawCircle,
   drawLine,
@@ -6,139 +6,48 @@ import {
   drawPolyline,
   type DrawPoint,
 } from "sdl3";
-import { Component } from "../core/Component";
-import type { Node } from "../core/Node";
+import {
+  DEG_TO_RAD,
+  PhysicsRigidBodyComponent,
+  PhysicsWorldComponent,
+  RAD_TO_DEG,
+  asArray,
+  box,
+  circle,
+  debugColor,
+  edge,
+  polygon,
+  type RigidBodyProps as BaseRigidBodyProps,
+  type PhysicsDebugDrawOptions,
+  type PhysicsShapeDef,
+  type PhysicsWorldProps,
+} from "./PhysicsComponent";
 
-export type Float = number;
-export type PhysicsShape = Shape | PhysicsShapeDef;
+export type { BodyType, PhysicsDebugDrawOptions, PhysicsShapeDef, PhysicsWorldProps };
 export type ContactValue = Contact | Manifold | ContactImpulse;
-
-export interface PhysicsShapeDef {
-  kind: "box" | "circle" | "polygon" | "edge";
-  width?: Float;
-  height?: Float;
-  radius?: Float;
-  x?: Float;
-  y?: Float;
-  angle?: Float;
-  points?: Vec2Value[];
-}
-
-export interface RigidBodyProps {
-  type?: BodyType;
-  density?: Float;
-  restitution?: Float;
-  friction?: Float;
-  gravityScale?: Float;
-  isSensor?: boolean;
-  tag?: number;
-  onBeginContact?: (other: RigidBody) => void;
-  onEndContact?: (other: RigidBody) => void;
-  onPreSolve?: (other: RigidBody, impulse?: ContactValue) => void;
-  onPostSolve?: (other: RigidBody, oldManifold?: ContactValue) => void;
-
-  shapes: PhysicsShape | PhysicsShape[];
-}
-
-export interface PhysicsWorldProps {
-  gravity?: Vec2Value;
-  pixelsPerMeter?: Float;
-  velocityIterations?: number;
-  positionIterations?: number;
-  fixedTimeStep?: Float;
-  maxSubSteps?: number;
-  debugDraw?: boolean | PhysicsDebugDrawOptions;
-}
-
-export interface PhysicsDebugDrawOptions {
-  enabled?: boolean;
-  alpha?: number;
-  color?: number;
-}
-
-const DEFAULT_PIXELS_PER_METER = 32;
-const DEG_TO_RAD = Math.PI / 180;
-const RAD_TO_DEG = 180 / Math.PI;
+export type PhysicsShape = Shape | PhysicsShapeDef;
+export type RigidBodyProps = BaseRigidBodyProps<RigidBody, PhysicsShape, ContactValue, BodyType>;
 
 interface BodyUserData {
   rigidBody: RigidBody;
 }
 
-let activePhysicsWorld: PhysicsWorld | null = null;
-
-export { BoxShape, CircleShape, EdgeShape, PolygonShape, Vec2 };
+export { BoxShape, CircleShape, EdgeShape, PolygonShape, Vec2, box, circle, edge, polygon };
 export const ChainShape = polygon;
 
-export function box(width: Float, height: Float, x = 0, y = 0, angle = 0): PhysicsShapeDef {
-  return { kind: "box", width, height, x, y, angle };
-}
-
-export function circle(radius: Float, x = 0, y = 0): PhysicsShapeDef {
-  return { kind: "circle", radius, x, y };
-}
-
-export function polygon(points: Vec2Value[]): PhysicsShapeDef {
-  return { kind: "polygon", points };
-}
-
-export function edge(a: Vec2Value, b: Vec2Value): PhysicsShapeDef {
-  return { kind: "edge", points: [a, b] };
-}
-
-export class PhysicsWorld extends Component<PhysicsWorldProps> {
+export class PhysicsWorld extends PhysicsWorldComponent<PhysicsWorldProps> {
   readonly world = new World({ x: 0, y: 9.8 });
-  pixelsPerMeter = DEFAULT_PIXELS_PER_METER;
-  velocityIterations = 8;
-  positionIterations = 3;
-  fixedTimeStep = 1 / 60;
-  maxSubSteps = 5;
-  private accumulator = 0;
 
   onAwake(): void {
-    const props = this.props;
-    activePhysicsWorld = this;
-    this.pixelsPerMeter = props.pixelsPerMeter ?? this.pixelsPerMeter;
-    this.velocityIterations = props.velocityIterations ?? this.velocityIterations;
-    this.positionIterations = props.positionIterations ?? this.positionIterations;
-    this.fixedTimeStep = props.fixedTimeStep ?? this.fixedTimeStep;
-    this.maxSubSteps = props.maxSubSteps ?? this.maxSubSteps;
-    if (props.gravity) this.world.setGravity(props.gravity);
+    super.onAwake();
+    if (this.props.gravity) this.world.setGravity(this.props.gravity);
     this.installContactListeners();
   }
 
-  onDestroy(): void {
-    if (activePhysicsWorld === this) activePhysicsWorld = null;
-  }
-
-  onUpdate(dt: number): void {
-    if (this.fixedTimeStep <= 0) {
-      this.world.step(dt, this.velocityIterations, this.positionIterations);
-      this.syncBodies();
-      return;
-    }
-
-    this.accumulator += dt;
-    let steps = 0;
-    while (this.accumulator >= this.fixedTimeStep && steps < this.maxSubSteps) {
-      this.world.step(this.fixedTimeStep, this.velocityIterations, this.positionIterations);
-      this.accumulator -= this.fixedTimeStep;
-      steps++;
-    }
-    if (steps === this.maxSubSteps) this.accumulator = 0;
-    this.syncBodies();
-  }
-
   onRenderEnd(): void {
-    const debugDraw = this.props.debugDraw;
-    const enabled = typeof debugDraw === "boolean"
-      ? debugDraw
-      : debugDraw?.enabled ?? false;
-    if (!enabled) return;
+    if (!this.debugDrawEnabled) return;
 
-    const color = debugColor(
-      typeof debugDraw === "object" ? debugDraw.color ?? 0x6ee7ff : 0x6ee7ff,
-      typeof debugDraw === "object" ? debugDraw.alpha ?? 180 : 180,
-    );
+    const color = debugColor(this.debugDrawColor, this.debugDrawAlpha);
 
     for (let body = this.world.getBodyList(); body; body = body.getNext()) {
       const transform = body.getTransform();
@@ -176,11 +85,18 @@ export class PhysicsWorld extends Component<PhysicsWorldProps> {
   }
 
   toWorldPoint(x: number, y: number): Vec2 {
-    return new Vec2(x / this.pixelsPerMeter, y / this.pixelsPerMeter);
+    const point = this.toWorldPointValue(x, y);
+    return new Vec2(point.x, point.y);
   }
 
-  toNodePoint(point: Vec2Value): Vec2 {
-    return new Vec2(point.x * this.pixelsPerMeter, point.y * this.pixelsPerMeter);
+  toNodePoint(point: Vec2): Vec2 {
+    const nodePoint = this.toNodePointValue(point);
+    return new Vec2(nodePoint.x, nodePoint.y);
+  }
+
+  protected stepPhysics(dt: number): void {
+    this.world.step(dt, this.velocityIterations, this.positionIterations);
+    this.syncBodies();
   }
 
   private installContactListeners(): void {
@@ -206,26 +122,7 @@ export class PhysicsWorld extends Component<PhysicsWorldProps> {
   }
 }
 
-export class RigidBody extends Component<RigidBodyProps> {
-  body: Body | null = null;
-  world: PhysicsWorld | null = null;
-
-  get tag(): number | undefined {
-    return this.props.tag;
-  }
-
-  onStart(): void {
-    this.ensureBody();
-  }
-
-  onDestroy(): void {
-    if (this.body && this.world) {
-      this.world.destroyBody(this.body);
-    }
-    this.body = null;
-    this.world = null;
-  }
-
+export class RigidBody extends PhysicsRigidBodyComponent<PhysicsWorld, Body, RigidBodyProps> {
   syncNodeFromBody(): void {
     if (!this.body || !this.node || this.body.isStatic()) return;
     const p = this.world!.toNodePoint(this.body.getPosition());
@@ -256,18 +153,9 @@ export class RigidBody extends Component<RigidBodyProps> {
     this.body.applyLinearImpulse(new Vec2(x, y), this.body.getWorldCenter(), true);
   }
 
-  private ensureBody(): void {
-    if (this.body) return;
-    this.world = findPhysicsWorld(this.node);
-    if (!this.world) {
-      throw new Error("RigidBody requires a PhysicsWorld component on this node or an ancestor.");
-    }
-    this.body = this.world.createBody(this);
+  protected getWorldConstructor(): typeof PhysicsWorld {
+    return PhysicsWorld;
   }
-}
-
-function asArray<T>(value: T | T[]): T[] {
-  return Array.isArray(value) ? value : [value];
 }
 
 function toPlanckShape(shape: PhysicsShape, pixelsPerMeter: number): Shape {
@@ -299,14 +187,6 @@ function toPlanckShape(shape: PhysicsShape, pixelsPerMeter: number): Shape {
       );
     }
   }
-}
-
-function findPhysicsWorld(node: Node | null = null): PhysicsWorld | null {
-  for (let current = node; current; current = current.parent) {
-    const world = current.getComponent(PhysicsWorld);
-    if (world) return world;
-  }
-  return activePhysicsWorld;
 }
 
 function getRigidBody(body: Body): RigidBody | null {
@@ -372,18 +252,9 @@ function drawFixtureDebug(
   }
 }
 
-function toDebugPoint(point: Vec2Value, pixelsPerMeter: number): DrawPoint {
+function toDebugPoint(point: Vec2, pixelsPerMeter: number): DrawPoint {
   return {
     x: point.x * pixelsPerMeter,
     y: point.y * pixelsPerMeter,
-  };
-}
-
-function debugColor(hex: number, alpha: number): { r: number; g: number; b: number; a: number } {
-  return {
-    r: (hex >> 16) & 0xff,
-    g: (hex >> 8) & 0xff,
-    b: hex & 0xff,
-    a: alpha,
   };
 }

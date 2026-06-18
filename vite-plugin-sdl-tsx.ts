@@ -167,7 +167,7 @@ function attributesToParams(attributes, listMethods = []) {
 export function sdlTsxTransform() {
   return {
     name: 'vite-plugin-sdl-tsx-transform',
-    enforce: 'pre',
+    enforce: 'pre' as any,
     async transform(code, id) {
       if (id.includes('packages/') || id.includes('node_modules/'))
         return;

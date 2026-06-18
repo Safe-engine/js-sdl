@@ -32,18 +32,12 @@ export {
   Sound
 } from "./Audio";
 export type { PlayOptions, SoundOptions } from "./Audio";
-export { Component } from "./core/Component";
 export {
-  BoxCollider,
-  CircleCollider,
+  BoxCollider, circleCircle, CircleCollider,
   Collider,
   CollideSystem,
   CollisionType,
-  Contact,
-  PolygonCollider,
-  circleCircle,
-  polygonCircle,
-  polygonPolygon,
+  Contact, polygonCircle, PolygonCollider, polygonPolygon,
   rectIntersectsRect,
   testCollision
 } from "./collider";
@@ -51,11 +45,9 @@ export type {
   BoxColliderProps,
   CircleColliderProps,
   ColliderProps,
-  CollideSystemProps,
-  PointLike,
-  PolygonColliderProps,
-  RectLike
+  CollideSystemProps, PolygonColliderProps
 } from "./collider";
+export { Component } from "./core/Component";
 export { Container } from "./core/Container";
 export { instantiate, loadScene } from "./core/instantiate";
 export { Node } from "./core/Node";
@@ -74,9 +66,6 @@ export type {
 } from "./PersistenceJSON";
 export { Viewport } from "./Viewport";
 export type {
-  Insets,
-  Point,
-  Rect,
   ViewportMetrics
 } from "./Viewport";
 
@@ -85,13 +74,11 @@ export {
   box, BoxShape,
   ChainShape, circle, CircleShape, edge, EdgeShape,
   PhysicsWorld, polygon, PolygonShape,
-  RigidBody,
-  Vec2
+  RigidBody
 } from "#engine/physics";
 export type {
   BodyType,
   ContactValue,
-  Float,
   PhysicsDebugDrawOptions,
   PhysicsShape,
   PhysicsShapeDef,
@@ -105,8 +92,6 @@ export type {
   VerticalTextAlignment
 } from "./components/Label";
 export { Sprite } from "./components/Sprite";
-export { Spine, SpineSkeleton } from "./spine";
-export type { SpineData, SpineSkeletonProps } from "./spine";
 export {
   NineSlice,
   Panel,
@@ -121,3 +106,6 @@ export type {
   LayoutAlignment,
   LayoutDirection, Insets as UIInsets
 } from "./components/UI";
+export { Spine, SpineSkeleton } from "./spine";
+export type { SpineData, SpineSkeletonProps } from "./spine";
+

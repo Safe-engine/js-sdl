@@ -1,28 +1,28 @@
 import {
+  clear,
   createWindow,
-  onInit,
-  onUpdate,
-  onRender,
-  onTouchStart,
-  onTouchMove,
-  onTouchEnd,
-  onPause,
-  onResume,
+  getViewportMetrics,
   onBackground,
   onForeground,
+  onInit,
   onInterruption,
   onLowMemory,
   onOrientationChange,
+  onPause,
+  onRender,
+  onResume,
   onTerminate,
-  clear,
-  getViewportMetrics,
+  onTouchEnd,
+  onTouchMove,
+  onTouchStart,
+  onUpdate,
   present,
 } from "sdl3";
-import { Orientation, Scene } from "./core/Scene";
-import { setSceneActivator } from "./core/instantiate";
-import { Point, Viewport } from "./Viewport";
 import { Tween } from "./animation/Tween";
 import { Audio } from "./Audio";
+import { setSceneActivator } from "./core/instantiate";
+import { Orientation, Scene } from "./core/Scene";
+import { Viewport } from "./Viewport";
 
 const ORIENTATIONS: Orientation[] = [
   "unknown",

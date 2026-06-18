@@ -1,5 +1,4 @@
-import { box, RigidBody } from "#engine/physics";
-import { Component, Sprite } from "../engine";
+import { box, Component, RigidBody, Sprite } from "../engine";
 import { sf_player } from "./assets";
 
 export class Player extends Component {
