@@ -1,6 +1,10 @@
 type Integer = number;
 type Float = number;
 
+interface Size {
+  width: Float;
+  height: Float;
+}
 interface Vec2 {
   x: Float;
   y: Float;

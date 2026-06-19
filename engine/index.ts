@@ -109,4 +109,3 @@ export type {
 } from "./physics";
 export { Spine, SpineSkeleton } from "./spine";
 export type { SpineData, SpineSkeletonProps } from "./spine";
-
