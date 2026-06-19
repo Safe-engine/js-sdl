@@ -1,9 +1,7 @@
 export {
-  BoxCollider, circleCircle, CircleCollider,
-  Collider,
-  CollisionType,
-  Contact, polygonCircle, PolygonCollider, polygonPolygon,
-  rectIntersectsRect,
+  BoxCollider, CircleCollider,
+  Collider, CollisionType,
+  Contact, PolygonCollider,
   testCollision
 } from "./CollideComponent";
 export type {

@@ -21,3 +21,10 @@ interface Insets {
   bottom: number;
   left: number;
 }
+
+interface Color {
+  r: number;
+  g: number;
+  b: number;
+  a?: number;
+}

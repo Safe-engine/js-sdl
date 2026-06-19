@@ -4,24 +4,15 @@ import {
   popClipRect,
   pushClipRect,
 } from "sdl3";
-import type { Color } from "../animation/Tween";
 import { AssetManager, TextureAsset } from "../AssetManager";
 import { ComponentX } from "../core/ComponentX";
 import type { Node } from "../core/Node";
+import { white, zeroInsets } from "../helper/constants";
+import { Vec2 } from "../helper/math";
 import type { InputEvent } from "../Input";
-
-export interface Insets {
-  top: number;
-  right: number;
-  bottom: number;
-  left: number;
-}
 
 export type LayoutDirection = "none" | "horizontal" | "vertical";
 export type LayoutAlignment = "start" | "center" | "end" | "stretch";
-
-const zeroInsets = (): Insets => ({ top: 0, right: 0, bottom: 0, left: 0 });
-const white = (): Color => ({ r: 255, g: 255, b: 255, a: 255 });
 
 export class UIElement<Props = unknown> extends ComponentX<Props> {
   width = 100;
@@ -220,9 +211,9 @@ export class NineSlice extends UIElement {
     const sourceW = splitSize(source.width, this.border.left, this.border.right);
     const sourceH = splitSize(source.height, this.border.top, this.border.bottom);
     const sourceX = [source.x, source.x + sourceW[0],
-      source.x + source.width - sourceW[2]];
+    source.x + source.width - sourceW[2]];
     const sourceY = [source.y, source.y + sourceH[0],
-      source.y + source.height - sourceH[2]];
+    source.y + source.height - sourceH[2]];
     const destW = splitSize(rect.width, sourceW[0], sourceW[2]);
     const destH = splitSize(rect.height, sourceH[0], sourceH[2]);
     let dy = rect.y;
@@ -291,7 +282,7 @@ export class ProgressBar extends UIElement<ProgressBarProps> {
   texturePath = "";
   fillType = 0;
   fillRange: number | null = null;
-  fillCenter: Vec2 = { x: 0.5, y: 0.5 };
+  fillCenter = Vec2(0.5, 0.5);
   private texture: TextureAsset | null = null;
   private loadedPath = "";
 

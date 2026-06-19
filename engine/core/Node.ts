@@ -1,4 +1,3 @@
-import { Color } from "../animation/Tween";
 import { ComponentX } from "./ComponentX";
 
 type Constructor<T = any> = new (...args: any[]) => T;

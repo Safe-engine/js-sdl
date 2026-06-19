@@ -5,7 +5,6 @@ export {
   TweenSequence
 } from "./animation/Tween";
 export type {
-  Color,
   EasingFunction,
   TweenOptions,
   TweenValues
@@ -32,12 +31,9 @@ export {
 } from "./Audio";
 export type { PlayOptions, SoundOptions } from "./Audio";
 export {
-  BoxCollider, circleCircle, CircleCollider,
-  Collider,
-  CollideSystem,
-  CollisionType,
-  Contact, polygonCircle, PolygonCollider, polygonPolygon,
-  rectIntersectsRect,
+  BoxCollider, CircleCollider,
+  Collider, CollideSystem,
+  CollisionType, Contact, PolygonCollider,
   testCollision
 } from "./collider";
 export type {
@@ -53,7 +49,7 @@ export { Node } from "./core/Node";
 export { Scene } from "./core/Scene";
 export type { Orientation } from "./core/Scene";
 export { Engine } from "./Engine";
-export * from './hepler/assets-load';
+export * from './helper/assets-load';
 export { InputEvent, InputSystem } from "./Input";
 export type { InputEventType } from "./Input";
 export { Localization } from "./Localization";
@@ -78,8 +74,6 @@ export type {
 export { Sprite } from "./components/Sprite";
 export { TiledMap } from "./components/TiledMap";
 export type { TiledMapProps } from "./components/TiledMap";
-export { Widget } from "./components/Widget";
-export type { WidgetProps } from "./components/Widget";
 export {
   NineSlice,
   Panel,
@@ -92,8 +86,12 @@ export {
 } from "./components/UI";
 export type {
   LayoutAlignment,
-  LayoutDirection, ProgressBarProps, Insets as UIInsets
+  LayoutDirection, ProgressBarProps
 } from "./components/UI";
+export { Widget } from "./components/Widget";
+export type { WidgetProps } from "./components/Widget";
+export * from './helper/Intersection';
+export * from './helper/math';
 export {
   box, BoxShape,
   ChainShape, circle, CircleShape, edge, EdgeShape,
@@ -111,3 +109,4 @@ export type {
 } from "./physics";
 export { Spine, SpineSkeleton } from "./spine";
 export type { SpineData, SpineSkeletonProps } from "./spine";
+

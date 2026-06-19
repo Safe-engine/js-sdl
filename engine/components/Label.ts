@@ -1,5 +1,4 @@
 import { drawTextureRotated } from "sdl3";
-import type { Color } from "../animation/Tween";
 import {
   AssetManager,
   FontAsset,

@@ -18,9 +18,6 @@ import { drawTextureQuad, drawTextureRegionRotated, loadTextFile } from "sdl3";
 import { AssetManager, type TextureAsset } from "../AssetManager";
 import { ComponentX } from "../core/ComponentX";
 
-export type Integer = number;
-export type Float = number;
-
 export interface DragonBonesData {
   atlas: string;
   skeleton: string;
