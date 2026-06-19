@@ -1669,6 +1669,27 @@ static JSValue js_consoleLog(
     return JS_UNDEFINED;
 }
 
+static JSValue js_consoleAssert(
+    JSContext *ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst *argv)
+{
+    if (argc > 0 && JS_ToBool(ctx, argv[0])) {
+        return JS_UNDEFINED;
+    }
+
+    printf("Assertion failed");
+    for (int i = 1; i < argc; i++) {
+        const char *str = JS_ToCString(ctx, argv[i]);
+        printf("%s%s", i == 1 ? ": " : " ", str ? str : "undefined");
+        JS_FreeCString(ctx, str);
+    }
+    printf("\n");
+    fflush(stdout);
+    return JS_UNDEFINED;
+}
+
 int js_init_console(JSContext *ctx)
 {
     JSValue global = JS_GetGlobalObject(ctx);
@@ -1681,6 +1702,8 @@ int js_init_console(JSContext *ctx)
         JS_NewCFunction(ctx, js_consoleLog, "warn", 1));
     JS_SetPropertyStr(ctx, console, "error",
         JS_NewCFunction(ctx, js_consoleLog, "error", 1));
+    JS_SetPropertyStr(ctx, console, "assert",
+        JS_NewCFunction(ctx, js_consoleAssert, "assert", 1));
     JS_SetPropertyStr(ctx, global, "console", console);
     JS_FreeValue(ctx, global);
     return 0;

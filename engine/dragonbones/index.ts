@@ -1,18 +1,18 @@
 import {
-    Armature,
-    BaseFactory,
-    BaseObject,
-    DragonBones as DragonBonesRuntime,
-    EventObject,
-    Slot,
-    TextureAtlasData,
-    TextureData,
-    type Animation,
-    type BuildArmaturePackage,
-    type EventStringType,
-    type IArmatureProxy,
-    type Matrix,
-    type SlotData,
+  Armature,
+  BaseFactory,
+  BaseObject,
+  DragonBones as DragonBonesRuntime,
+  EventObject,
+  Slot,
+  TextureAtlasData,
+  TextureData,
+  type Animation,
+  type BuildArmaturePackage,
+  type EventStringType,
+  type IArmatureProxy,
+  type Matrix,
+  type SlotData,
 } from "dragonbones-es";
 import { drawTextureRegionRotated, loadTextFile } from "sdl3";
 import { AssetManager, type TextureAsset } from "../AssetManager";
@@ -96,7 +96,7 @@ class SdlArmatureDisplay implements IArmatureProxy {
     this._armature = null;
   }
 
-  dbUpdate(): void {}
+  dbUpdate(): void { }
 
   dispose(disposeProxy: boolean): void {
     if (!disposeProxy) return;
@@ -148,12 +148,12 @@ class SdlSlot extends Slot {
     return "[class SdlSlot]";
   }
 
-  protected _initDisplay(_value: SdlDisplay, _isRetain: boolean): void {}
-  protected _disposeDisplay(_value: SdlDisplay, _isRelease: boolean): void {}
-  protected _onUpdateDisplay(): void {}
-  protected _addDisplay(): void {}
-  protected _replaceDisplay(_value: SdlDisplay): void {}
-  protected _removeDisplay(): void {}
+  protected _initDisplay(_value: SdlDisplay, _isRetain: boolean): void { }
+  protected _disposeDisplay(_value: SdlDisplay, _isRelease: boolean): void { }
+  protected _onUpdateDisplay(): void { }
+  protected _addDisplay(): void { }
+  protected _replaceDisplay(_value: SdlDisplay): void { }
+  protected _removeDisplay(): void { }
 
   protected _updateZOrder(): void {
     this.currentDisplay().zOrder = (this as any)._zOrder;
@@ -163,7 +163,7 @@ class SdlSlot extends Slot {
     this.currentDisplay().visible = (this as any)._visible;
   }
 
-  protected _updateBlendMode(): void {}
+  protected _updateBlendMode(): void { }
 
   protected _updateColor(): void {
     const display = this.currentDisplay();
@@ -274,12 +274,11 @@ class SdlFactory extends BaseFactory {
   }
 
   parseData(skeleton: any, atlas: any, texture: TextureAsset, key: string): void {
-    const dragonBonesData = (this as any)._dataParser.parseDragonBonesData(skeleton, 1);
+    const dragonBonesData = this.parseDragonBonesData(skeleton, key, 1);
     if (!dragonBonesData) {
       throw new Error(`Failed to parse DragonBones skeleton: ${key}`);
     }
 
-    this.addDragonBonesData(dragonBonesData, key);
     this.parseTextureAtlasData(atlas, texture, key);
   }
 
@@ -297,7 +296,7 @@ export class DragonBones extends ComponentX<DragonBonesProps> {
   private animationEnded = false;
 
   onStart(): void {
-    void this.reload().catch((error) => {
+    this.reload().catch((error) => {
       console.error("DragonBones reload failed", error);
     });
   }
