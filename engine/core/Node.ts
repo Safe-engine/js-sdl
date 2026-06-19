@@ -83,10 +83,9 @@ export class Node {
     return this;
   }
 
-  setScale(sx: number, sy: number): this {
+  set scale(sx: number) {
     this.scaleX = sx;
-    this.scaleY = sy;
-    return this;
+    this.scaleY = sx;
   }
 
   addComponent<T extends ComponentX>(c: ComponentInput<T>, data?: ConstructorParameters<Constructor<T>>[0]): T {

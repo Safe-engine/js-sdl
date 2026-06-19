@@ -2,6 +2,7 @@ import {
   Button,
   Label,
   Scene,
+  SpineSkeleton,
   Sprite
 } from "../engine";
 import { instantiate, loadScene } from "../engine/core/instantiate";
@@ -10,6 +11,7 @@ import {
   db_mecha_1004d_show,
   lilita_one_regularFont,
   sf_button,
+  sp_spineboy_pma,
 } from "./assets";
 import { GameScene } from "./GameScene";
 
@@ -44,6 +46,12 @@ export class HomeScene extends Scene {
     this.root.addChild(dragonBonesComp1.node);
     this.db = dragonBonesComp1;
     dragonBonesComp1.node.x = 460;
-    dragonBonesComp1.node.y = 1240;
+    dragonBonesComp1.node.y = 540;
+    dragonBonesComp1.node.scale = .3;
+    const spine1 = instantiate(SpineSkeleton, { data: sp_spineboy_pma, animation: "idle", onAnimationComplete: this.onAnimationComplete.bind(this) });
+    this.root.addChild(spine1.node);
+    spine1.node.x = 260;
+    spine1.node.y = 840;
+    spine1.node.scale = .3;
   }
 }

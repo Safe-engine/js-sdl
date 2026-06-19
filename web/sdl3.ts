@@ -737,6 +737,64 @@ export function drawTextureRegionRotated(
   );
 }
 
+export function drawTextureQuad(
+  id: number,
+  x0: number,
+  y0: number,
+  u0: number,
+  v0: number,
+  x1: number,
+  y1: number,
+  u1: number,
+  v1: number,
+  x2: number,
+  y2: number,
+  u2: number,
+  v2: number,
+  x3: number,
+  y3: number,
+  u3: number,
+  v3: number,
+  red = 255,
+  green = 255,
+  blue = 255,
+  alpha = 255,
+): void {
+  const asset = textures.get(id);
+  if (!asset?.texture || !program || !positionBuffer || !uvBuffer) return;
+  const context = requireGl();
+  const positions = new Float32Array([
+    x0, y0, x1, y1, x2, y2,
+    x2, y2, x1, y1, x3, y3,
+  ]);
+  const uvs = new Float32Array([
+    u0, v0, u1, v1, u2, v2,
+    u2, v2, u1, v1, u3, v3,
+  ]);
+
+  context.useProgram(program);
+  context.uniform2f(resolutionLocation, logicalWidth, logicalHeight);
+  context.uniform1i(samplerLocation, 0);
+  context.uniform4f(
+    colorLocation,
+    Math.max(0, Math.min(255, red)) / 255,
+    Math.max(0, Math.min(255, green)) / 255,
+    Math.max(0, Math.min(255, blue)) / 255,
+    Math.max(0, Math.min(255, alpha)) / 255,
+  );
+  context.activeTexture(context.TEXTURE0);
+  context.bindTexture(context.TEXTURE_2D, asset.texture);
+  context.bindBuffer(context.ARRAY_BUFFER, positionBuffer);
+  context.bufferData(context.ARRAY_BUFFER, positions, context.STREAM_DRAW);
+  context.enableVertexAttribArray(positionLocation);
+  context.vertexAttribPointer(positionLocation, 2, context.FLOAT, false, 0, 0);
+  context.bindBuffer(context.ARRAY_BUFFER, uvBuffer);
+  context.bufferData(context.ARRAY_BUFFER, uvs, context.STREAM_DRAW);
+  context.enableVertexAttribArray(uvLocation);
+  context.vertexAttribPointer(uvLocation, 2, context.FLOAT, false, 0, 0);
+  context.drawArrays(context.TRIANGLES, 0, 6);
+}
+
 export function drawRect(
   x: number,
   y: number,

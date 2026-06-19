@@ -1245,6 +1245,46 @@ static JSValue js_drawTextureRegionRotated(
     return JS_UNDEFINED;
 }
 
+/* --- Binding: drawTextureQuad(id, x0, y0, u0, v0, ... x3, y3, u3, v3, red, green, blue, alpha) --- */
+static JSValue js_drawTextureQuad(
+    JSContext *ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst *argv)
+{
+    int id;
+    double values[16];
+    double red = 255, green = 255, blue = 255, alpha = 255;
+    JS_ToInt32(ctx, &id, argv[0]);
+    for (int i = 0; i < 16; i++) {
+        JS_ToFloat64(ctx, &values[i], argv[i + 1]);
+    }
+    if (argc > 17) JS_ToFloat64(ctx, &red, argv[17]);
+    if (argc > 18) JS_ToFloat64(ctx, &green, argv[18]);
+    if (argc > 19) JS_ToFloat64(ctx, &blue, argv[19]);
+    if (argc > 20) JS_ToFloat64(ctx, &alpha, argv[20]);
+
+    if (!valid_texture_id(id)) return JS_UNDEFINED;
+    SDL_FColor color = {
+        (float)(SDL_clamp(red, 0, 255) / 255.0),
+        (float)(SDL_clamp(green, 0, 255) / 255.0),
+        (float)(SDL_clamp(blue, 0, 255) / 255.0),
+        (float)(SDL_clamp(alpha, 0, 255) / 255.0),
+    };
+    SDL_Vertex vertices[4];
+    for (int i = 0; i < 4; i++) {
+        int offset = i * 4;
+        vertices[i].position.x = (float)values[offset];
+        vertices[i].position.y = (float)values[offset + 1];
+        vertices[i].color = color;
+        vertices[i].tex_coord.x = (float)values[offset + 2];
+        vertices[i].tex_coord.y = (float)values[offset + 3];
+    }
+    int indices[6] = { 0, 1, 2, 2, 1, 3 };
+    SDL_RenderGeometry(g_renderer, g_textures[id].texture, vertices, 4, indices, 6);
+    return JS_UNDEFINED;
+}
+
 static JSValue js_drawRect(
     JSContext *ctx,
     JSValueConst this_val,
@@ -1611,6 +1651,7 @@ static const JSCFunctionListEntry funcs[] =
     JS_CFUNC_DEF("drawTexture",             3, js_drawTexture),
     JS_CFUNC_DEF("drawTextureRotated",     14, js_drawTextureRotated),
     JS_CFUNC_DEF("drawTextureRegionRotated", 18, js_drawTextureRegionRotated),
+    JS_CFUNC_DEF("drawTextureQuad",        21, js_drawTextureQuad),
     JS_CFUNC_DEF("drawRect",                8, js_drawRect),
     JS_CFUNC_DEF("drawLine",                8, js_drawLine),
     JS_CFUNC_DEF("drawPoint",               6, js_drawPoint),

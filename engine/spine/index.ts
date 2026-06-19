@@ -2,17 +2,19 @@ import {
     AnimationState,
     AnimationStateData,
     AtlasAttachmentLoader,
+    MeshAttachment,
     Physics,
     RegionAttachment,
     Skeleton,
     SkeletonJson,
     Texture,
     TextureAtlas,
+    type TextureRegion,
     TextureFilter,
     TextureWrap,
     type TrackEntry,
 } from "@esotericsoftware/spine-core";
-import { drawTextureRegionRotated, loadTextFile } from "sdl3";
+import { drawTextureQuad, loadTextFile } from "sdl3";
 import { AssetManager, type TextureAsset } from "../AssetManager";
 import { ComponentX } from "../core/ComponentX";
 
@@ -77,26 +79,38 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
   onRender(): void {
     if (!this.node?.visible || !this.skeleton) return;
 
-    const drawOrder = this.skeleton.drawOrder.appliedPose;
+    const drawOrder = this.skeleton.drawOrder;
     for (let i = 0; i < drawOrder.length; i++) {
       const slot = drawOrder[i];
-      const attachment = slot.appliedPose.attachment;
-      if (!(attachment instanceof RegionAttachment) || !slot.bone.active) continue;
+      const attachment = slot.getAttachment();
+      if (!slot.bone.active) continue;
 
-      const pose = slot.appliedPose;
-      const sequenceIndex = attachment.sequence.resolveIndex(pose);
-      const region = attachment.sequence.regions[sequenceIndex];
-      const texture = region?.texture as SdlSpineTexture | null | undefined;
-      if (!region || !texture) continue;
-
-      attachment.computeWorldVertices(
-        slot,
-        attachment.getOffsets(pose),
-        this.worldVertices,
-        0,
-        2,
-      );
-      this.renderRegion(attachment, slot, region, texture.asset);
+      if (attachment instanceof RegionAttachment) {
+        attachment.computeWorldVertices(
+          slot,
+          this.worldVertices,
+          0,
+          2,
+        );
+        const region = attachment.region as TextureRegion | null;
+        const texture = region?.texture as SdlSpineTexture | null | undefined;
+        if (!region || !texture) continue;
+        this.renderRegion(attachment, slot, texture.asset);
+      } else if (attachment instanceof MeshAttachment) {
+        const vertices = this.ensureWorldVertices(attachment.worldVerticesLength);
+        attachment.computeWorldVertices(
+          slot,
+          0,
+          attachment.worldVerticesLength,
+          vertices,
+          0,
+          2,
+        );
+        const region = attachment.region as TextureRegion | null;
+        const texture = region?.texture as SdlSpineTexture | null | undefined;
+        if (!region || !texture) continue;
+        this.renderMesh(attachment, slot, texture.asset);
+      }
     }
   }
 
@@ -125,8 +139,8 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
     const skeletonData = parser.readSkeletonData(loaded.skeleton);
 
     this.skeleton = new Skeleton(skeletonData);
-    if (this.props.skin) this.skeleton.setSkin(this.props.skin);
-    this.skeleton.setupPose();
+    if (this.props.skin) this.skeleton.setSkinByName(this.props.skin);
+    this.skeleton.setToSetupPose();
 
     this.state = new AnimationState(new AnimationStateData(skeletonData));
     this.state.addListener({
@@ -152,20 +166,17 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
   private renderRegion(
     attachment: RegionAttachment,
     slot: any,
-    region: any,
     texture: TextureAsset,
   ): void {
     const vertices = this.worldVertices;
+    const uvs = attachment.uvs;
+    const bottomRight = transformPoint(this, vertices[0], vertices[1]);
+    const bottomLeft = transformPoint(this, vertices[2], vertices[3]);
     const topLeft = transformPoint(this, vertices[4], vertices[5]);
     const topRight = transformPoint(this, vertices[6], vertices[7]);
-    const bottomLeft = transformPoint(this, vertices[2], vertices[3]);
-    const width = Math.hypot(topRight.x - topLeft.x, topRight.y - topLeft.y);
-    const height = Math.hypot(bottomLeft.x - topLeft.x, bottomLeft.y - topLeft.y);
-    if (width <= 0 || height <= 0) return;
 
-    const angle = Math.atan2(topRight.y - topLeft.y, topRight.x - topLeft.x) * 180 / Math.PI;
     const skeletonColor = this.skeleton?.color;
-    const slotColor = slot.appliedPose.color;
+    const slotColor = slot.color;
     const attachmentColor = attachment.color;
     const red = 255 * (skeletonColor?.r ?? 1) * slotColor.r * attachmentColor.r;
     const green = 255 * (skeletonColor?.g ?? 1) * slotColor.g * attachmentColor.g;
@@ -176,26 +187,73 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
       attachmentColor.a *
       (this.node?.opacity ?? 1);
 
-    drawTextureRegionRotated(
+    drawTextureQuad(
       texture.id,
-      region.x,
-      region.y,
-      region.width,
-      region.height,
       topLeft.x,
       topLeft.y,
-      width,
-      height,
-      angle,
-      0,
-      0,
-      false,
-      false,
+      uvs[4],
+      uvs[5],
+      topRight.x,
+      topRight.y,
+      uvs[6],
+      uvs[7],
+      bottomLeft.x,
+      bottomLeft.y,
+      uvs[2],
+      uvs[3],
+      bottomRight.x,
+      bottomRight.y,
+      uvs[0],
+      uvs[1],
       red,
       green,
       blue,
       alpha,
     );
+  }
+
+  private renderMesh(
+    attachment: MeshAttachment,
+    slot: any,
+    texture: TextureAsset,
+  ): void {
+    const vertices = this.worldVertices;
+    const uvs = attachment.uvs;
+    const color = this.multiplyColors(slot.color, attachment.color);
+    const triangles = attachment.triangles;
+
+    for (let i = 0; i < triangles.length; i += 3) {
+      const i0 = triangles[i] * 2;
+      const i1 = triangles[i + 1] * 2;
+      const i2 = triangles[i + 2] * 2;
+      const p0 = transformPoint(this, vertices[i0], vertices[i0 + 1]);
+      const p1 = transformPoint(this, vertices[i1], vertices[i1 + 1]);
+      const p2 = transformPoint(this, vertices[i2], vertices[i2 + 1]);
+
+      drawTextureQuad(
+        texture.id,
+        p0.x,
+        p0.y,
+        uvs[i0],
+        uvs[i0 + 1],
+        p1.x,
+        p1.y,
+        uvs[i1],
+        uvs[i1 + 1],
+        p2.x,
+        p2.y,
+        uvs[i2],
+        uvs[i2 + 1],
+        p2.x,
+        p2.y,
+        uvs[i2],
+        uvs[i2 + 1],
+        color.red,
+        color.green,
+        color.blue,
+        color.alpha,
+      );
+    }
   }
 
   private disposeSkeleton(): void {
@@ -209,6 +267,30 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
     }
     this.textures = [];
     this.loadedKey = "";
+  }
+
+  private ensureWorldVertices(length: number): Float32Array {
+    if (this.worldVertices.length < length) {
+      this.worldVertices = new Float32Array(length);
+    }
+    return this.worldVertices;
+  }
+
+  private multiplyColors(
+    slotColor: { r: number; g: number; b: number; a: number },
+    attachmentColor: { r: number; g: number; b: number; a: number },
+  ): { red: number; green: number; blue: number; alpha: number } {
+    const skeletonColor = this.skeleton?.color;
+    return {
+      red: 255 * (skeletonColor?.r ?? 1) * slotColor.r * attachmentColor.r,
+      green: 255 * (skeletonColor?.g ?? 1) * slotColor.g * attachmentColor.g,
+      blue: 255 * (skeletonColor?.b ?? 1) * slotColor.b * attachmentColor.b,
+      alpha: 255 *
+        (skeletonColor?.a ?? 1) *
+        slotColor.a *
+        attachmentColor.a *
+        (this.node?.opacity ?? 1),
+    };
   }
 }
 

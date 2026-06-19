@@ -32,11 +32,11 @@
   },
   "devDependencies": {
     "@types/bun": "^1.3.14",
-    "typescript": "^5.7.0",
-    "vite": "^6.3.0"
+    "typescript": "^5.9.3",
+    "vite": "^6.4.3"
   },
   "dependencies": {
-    "@esotericsoftware/spine-core": "^4.3.7",
+    "@esotericsoftware/spine-core": "4.2.118",
     "dragonbones-es": "^1.0.0",
     "planck": "^1.5.0",
     "safex-sync-res": "^1.4.2",

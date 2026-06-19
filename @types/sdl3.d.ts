@@ -90,6 +90,16 @@ declare module "sdl3" {
     red?: number, green?: number, blue?: number, alpha?: number,
   ): void;
 
+  /** Draw a textured quad using logical coordinates and normalized UVs. */
+  export function drawTextureQuad(
+    id: number,
+    x0: number, y0: number, u0: number, v0: number,
+    x1: number, y1: number, u1: number, v1: number,
+    x2: number, y2: number, u2: number, v2: number,
+    x3: number, y3: number, u3: number, v3: number,
+    red?: number, green?: number, blue?: number, alpha?: number,
+  ): void;
+
   /** Draw a filled rectangle in logical coordinates. */
   export function drawRect(
     x: number, y: number, width: number, height: number,
