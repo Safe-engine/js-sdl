@@ -332,6 +332,7 @@ import {
   Toggle,
   UIContainer,
   UIElement,
+  Widget,
 } from "./engine";
 
 Localization.add("en", { status: "Energy: {value}%" });
@@ -362,7 +363,17 @@ const toggleNode = panel.node!.addChild(new Node("sound"));
 const toggle = toggleNode.addComponent(Toggle);
 toggle.setSize(72, 36);
 toggle.onChange = (enabled) => console.log("Sound", enabled);
+
+const topBar = new Node("top-bar");
+topBar.width = 320;
+topBar.height = 72;
+topBar.addComponent(Widget, { top: 16, left: 16, right: 16 });
 ```
+
+`Widget` pins a node to the current safe-area border, so HUD controls stay
+inside phone notches/system bars and resize with any window size. Supplying
+both sides on an axis stretches the node on that axis; supplying one side keeps
+the node's existing size and pins it to that border.
 
 Anchor values are normalized to the parent UI element. Equal minimum and
 maximum anchors pin an element to a point; different values stretch it between

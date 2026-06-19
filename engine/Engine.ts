@@ -22,7 +22,7 @@ import { Tween } from "./animation/Tween";
 import { Audio } from "./Audio";
 import { setSceneActivator } from "./core/instantiate";
 import { Orientation, Scene } from "./core/Scene";
-import { Viewport } from "./Viewport";
+import { ActiveViewport } from "./Viewport";
 
 const ORIENTATIONS: Orientation[] = [
   "unknown",
@@ -33,7 +33,7 @@ const ORIENTATIONS: Orientation[] = [
 ];
 
 class EngineImpl {
-  readonly viewport = new Viewport();
+  readonly viewport = ActiveViewport;
   private _currentScene: Scene | null = null;
   private _initialized = false;
   private _ready = false;

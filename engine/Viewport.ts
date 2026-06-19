@@ -84,6 +84,8 @@ export class Viewport {
   }
 }
 
+export const ActiveViewport = new Viewport();
+
 function setRect(
   rect: Rect,
   x: number,

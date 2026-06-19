@@ -78,6 +78,8 @@ export type {
 export { Sprite } from "./components/Sprite";
 export { TiledMap } from "./components/TiledMap";
 export type { TiledMapProps } from "./components/TiledMap";
+export { Widget } from "./components/Widget";
+export type { WidgetProps } from "./components/Widget";
 export {
   NineSlice,
   Panel,
@@ -109,4 +111,3 @@ export type {
 } from "./physics";
 export { Spine, SpineSkeleton } from "./spine";
 export type { SpineData, SpineSkeletonProps } from "./spine";
-
