@@ -69,21 +69,6 @@ export type {
   ViewportMetrics
 } from "./Viewport";
 // Components
-export {
-  box, BoxShape,
-  ChainShape, circle, CircleShape, edge, EdgeShape,
-  PhysicsWorld, polygon, PolygonShape,
-  RigidBody
-} from "#engine/physics";
-export type {
-  BodyType,
-  ContactValue,
-  PhysicsDebugDrawOptions,
-  PhysicsShape,
-  PhysicsShapeDef,
-  PhysicsWorldProps,
-  RigidBodyProps
-} from "#engine/physics";
 export { Button } from "./components/Button";
 export { Label } from "./components/Label";
 export type {
@@ -107,5 +92,21 @@ export type {
   LayoutAlignment,
   LayoutDirection, ProgressBarProps, Insets as UIInsets
 } from "./components/UI";
+export {
+  box, BoxShape,
+  ChainShape, circle, CircleShape, edge, EdgeShape,
+  PhysicsWorld, polygon, PolygonShape,
+  RigidBody
+} from "./physics";
+export type {
+  BodyType,
+  ContactValue,
+  PhysicsDebugDrawOptions,
+  PhysicsShape,
+  PhysicsShapeDef,
+  PhysicsWorldProps,
+  RigidBodyProps
+} from "./physics";
 export { Spine, SpineSkeleton } from "./spine";
 export type { SpineData, SpineSkeletonProps } from "./spine";
+

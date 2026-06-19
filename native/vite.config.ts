@@ -50,11 +50,6 @@ function runSdl3jsPlugin() {
 // Vite lib-mode produces a single ESM bundle compatible with QuickJS-NG.
 // Native modules are external — resolved at runtime by the C host.
 export default defineConfig({
-  resolve: {
-    alias: {
-      "#engine/physics": path.resolve(__dirname, "../engine/physics/Box2d.ts"),
-    },
-  },
   build: {
     lib: {
       entry: path.resolve(__dirname, "../src/main.ts"),

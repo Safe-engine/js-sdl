@@ -8,11 +8,6 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "paths": {
-      "#engine/physics": [
-        "./engine/physics/Box2d.ts"
-      ]
-    },
     "rootDir": "./engine",
     "outDir": "lib",
     "declaration": true,

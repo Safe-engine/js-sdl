@@ -1,11 +1,19 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, mock, test } from "bun:test";
 import { Node } from "../engine/core/Node";
-import {
+
+mock.module("sdl3", () => ({
+  drawCircle: () => {},
+  drawLine: () => {},
+  drawPoint: () => {},
+  drawPolyline: () => {},
+}));
+
+const {
   PhysicsWorld,
   RigidBody,
   box,
   circle,
-} from "../engine/physics/Planck";
+} = await import("../engine/physics");
 
 function start(root: Node): void {
   root._startTree();
