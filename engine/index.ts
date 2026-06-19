@@ -91,6 +91,8 @@ export type {
   VerticalTextAlignment
 } from "./components/Label";
 export { Sprite } from "./components/Sprite";
+export { TiledMap } from "./components/TiledMap";
+export type { TiledMapProps } from "./components/TiledMap";
 export {
   NineSlice,
   Panel,
@@ -107,4 +109,3 @@ export type {
 } from "./components/UI";
 export { Spine, SpineSkeleton } from "./spine";
 export type { SpineData, SpineSkeletonProps } from "./spine";
-

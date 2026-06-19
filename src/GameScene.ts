@@ -5,10 +5,12 @@ import {
   loadScene,
   PhysicsWorld,
   Scene,
-  Sprite
+  Sprite,
+  TiledMap
 } from "../engine";
 import {
   lilita_one_regularFont,
+  map_1_json,
   sf_button,
 } from "./assets";
 import { Bullet } from "./Bullet";
@@ -68,6 +70,13 @@ export class GameScene extends Scene {
   };
 
   __view() {
+    const mapComp1 = instantiate(TiledMap, { mapFile: map_1_json });
+    this.root.addChild(mapComp1.node);
+    mapComp1.node.x = 0;
+    mapComp1.node.y = 0;
+    mapComp1.node.anchorX = 0;
+    mapComp1.node.anchorY = 0;
+    mapComp1.node.scale = 0.55;
     const physicsWorldComp1 = instantiate(PhysicsWorld, { debugDraw: { enabled: true, alpha: 190 } });
     this.root.addChild(physicsWorldComp1.node);
     const playerComp1 = instantiate(Player, {});
