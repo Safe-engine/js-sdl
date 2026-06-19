@@ -14,7 +14,7 @@ import {
   type Matrix,
   type SlotData,
 } from "dragonbones-es";
-import { drawTextureRegionRotated, loadTextFile } from "sdl3";
+import { drawTextureQuad, drawTextureRegionRotated, loadTextFile } from "sdl3";
 import { AssetManager, type TextureAsset } from "../AssetManager";
 import { ComponentX } from "../core/ComponentX";
 
@@ -73,6 +73,10 @@ class SdlTextureData extends TextureData {
 class SdlDisplay {
   textureData: SdlTextureData | null = null;
   matrix: Matrix | null = null;
+  meshVertices: Float32Array | null = null;
+  meshUVs: Float32Array | null = null;
+  meshTriangles: Int16Array | null = null;
+  meshInArmatureSpace = false;
   pivotX = 0;
   pivotY = 0;
   visible = true;
@@ -177,10 +181,13 @@ class SdlSlot extends Slot {
   protected _updateFrame(): void {
     const display = this.currentDisplay();
     display.textureData = ((this as any)._textureData ?? null) as SdlTextureData | null;
+    this.updateMeshData(display, false);
   }
 
   protected _updateMesh(): void {
-    this._updateFrame();
+    const display = this.currentDisplay();
+    display.textureData = ((this as any)._textureData ?? null) as SdlTextureData | null;
+    this.updateMeshData(display, true);
   }
 
   protected _updateTransform(): void {
@@ -201,9 +208,15 @@ class SdlSlot extends Slot {
     const display = this.currentDisplay();
     const textureData = display.textureData;
     const texture = (textureData?.parent as SdlTextureAtlasData | undefined)?.texture;
-    if (!display.visible || !textureData || !texture || !display.matrix) return;
+    if (!display.visible || !textureData || !texture) return;
 
     const region = textureData.region;
+    if (display.meshVertices && display.meshUVs && display.meshTriangles) {
+      this.renderMesh(root, display, texture.id);
+      return;
+    }
+    if (!display.matrix) return;
+
     const sourceWidth = textureData.rotated ? region.height : region.width;
     const sourceHeight = textureData.rotated ? region.width : region.height;
     const matrix = composeMatrix(root, display.matrix);
@@ -239,6 +252,147 @@ class SdlSlot extends Slot {
 
   private currentDisplay(): SdlDisplay {
     return (((this as any)._display ?? (this as any)._rawDisplay) as SdlDisplay);
+  }
+
+  private updateMeshData(display: SdlDisplay, updateVertices: boolean): void {
+    const geometry = (this as any)._geometryData;
+    const textureData = display.textureData;
+    if (!geometry || !textureData) {
+      display.meshVertices = null;
+      display.meshUVs = null;
+      display.meshTriangles = null;
+      display.meshInArmatureSpace = false;
+      return;
+    }
+
+    const intArray = geometry.data.intArray as Int16Array;
+    const floatArray = geometry.data.floatArray as Float32Array;
+    const vertexCount = intArray[geometry.offset];
+    const triangleCount = intArray[geometry.offset + 1];
+    const floatOffset = intArray[geometry.offset + 2];
+    const indexOffset = geometry.offset + 4;
+    const vertexLength = vertexCount * 2;
+    const triangleLength = triangleCount * 3;
+
+    if (!display.meshVertices || display.meshVertices.length !== vertexLength) {
+      display.meshVertices = new Float32Array(vertexLength);
+    }
+    if (!display.meshUVs || display.meshUVs.length !== vertexLength) {
+      display.meshUVs = new Float32Array(vertexLength);
+    }
+    this.copyMeshUVs(display.meshUVs, floatArray, floatOffset + vertexLength, vertexCount, textureData);
+    if (!display.meshTriangles || display.meshTriangles.length !== triangleLength) {
+      display.meshTriangles = new Int16Array(triangleLength);
+      for (let i = 0; i < triangleLength; i++) {
+        display.meshTriangles[i] = intArray[indexOffset + i];
+      }
+    }
+
+    if (!updateVertices) return;
+
+    const deformVertices = ((this as any)._displayFrame?.deformVertices ?? []) as number[];
+    const weight = geometry.weight;
+    display.meshInArmatureSpace = weight !== null;
+
+    if (weight) {
+      const weightOffset = weight.offset;
+      const weightFloatOffset = intArray[weightOffset + 1];
+      let boneIndexOffset = weightOffset + 2 + weight.bones.length;
+      let weightedVertexOffset = weightFloatOffset;
+      let deformOffset = 0;
+
+      for (let i = 0; i < vertexLength; i += 2) {
+        const boneCount = intArray[boneIndexOffset++];
+        let x = 0;
+        let y = 0;
+
+        for (let j = 0; j < boneCount; j++) {
+          const boneIndex = intArray[boneIndexOffset++];
+          const bone = (this as any)._geometryBones[boneIndex];
+          const matrix = bone?.globalTransformMatrix;
+          const weightValue = floatArray[weightedVertexOffset++];
+          const vx = floatArray[weightedVertexOffset++] + (deformVertices[deformOffset++] ?? 0);
+          const vy = floatArray[weightedVertexOffset++] + (deformVertices[deformOffset++] ?? 0);
+          if (!matrix) continue;
+
+          x += (matrix.a * vx + matrix.c * vy + matrix.tx) * weightValue;
+          y += (matrix.b * vx + matrix.d * vy + matrix.ty) * weightValue;
+        }
+
+        display.meshVertices[i] = x;
+        display.meshVertices[i + 1] = y;
+      }
+    } else {
+      for (let i = 0; i < vertexLength; i++) {
+        display.meshVertices[i] = floatArray[floatOffset + i] + (deformVertices[i] ?? 0);
+      }
+    }
+  }
+
+  private copyMeshUVs(
+    target: Float32Array,
+    floatArray: Float32Array,
+    uvOffset: number,
+    vertexCount: number,
+    textureData: SdlTextureData,
+  ): void {
+    const atlas = textureData.parent as SdlTextureAtlasData | null;
+    const texture = atlas?.texture;
+    const region = textureData.region;
+    const width = texture?.width || 1;
+    const height = texture?.height || 1;
+
+    for (let i = 0; i < vertexCount; i++) {
+      const source = uvOffset + i * 2;
+      const targetIndex = i * 2;
+      target[targetIndex] = (region.x + floatArray[source] * region.width) / width;
+      target[targetIndex + 1] = (region.y + floatArray[source + 1] * region.height) / height;
+    }
+  }
+
+  private renderMesh(root: DragonBones, display: SdlDisplay, textureId: number): void {
+    const vertices = display.meshVertices;
+    const uvs = display.meshUVs;
+    const triangles = display.meshTriangles;
+    if (!vertices || !uvs || !triangles) return;
+
+    const matrix = display.meshInArmatureSpace
+      ? composeRootMatrix(root)
+      : (display.matrix ? composeMatrix(root, display.matrix) : null);
+    if (!matrix) return;
+
+    for (let i = 0; i < triangles.length; i += 3) {
+      const i0 = triangles[i] * 2;
+      const i1 = triangles[i + 1] * 2;
+      const i2 = triangles[i + 2] * 2;
+      const p0 = transformPoint(matrix, vertices[i0], vertices[i0 + 1]);
+      const p1 = transformPoint(matrix, vertices[i1], vertices[i1 + 1]);
+      const p2 = transformPoint(matrix, vertices[i2], vertices[i2 + 1]);
+
+      drawTextureQuad(
+        textureId,
+        p0.x,
+        p0.y,
+        uvs[i0],
+        uvs[i0 + 1],
+        p1.x,
+        p1.y,
+        uvs[i1],
+        uvs[i1 + 1],
+        p2.x,
+        p2.y,
+        uvs[i2],
+        uvs[i2 + 1],
+        p2.x,
+        p2.y,
+        uvs[i2],
+        uvs[i2 + 1],
+        display.red,
+        display.green,
+        display.blue,
+        root.node.opacity * display.alpha * 255,
+      );
+    }
   }
 }
 
@@ -357,7 +511,7 @@ export class DragonBones extends ComponentX<DragonBonesProps> {
     this.completedLoops = 0;
     this.animationEnded = false;
     this.armature.animation.timeScale = this.props.timeScale ?? 1;
-    this.armature.animation.play(animation ?? null, playTimes ?? -1);
+    this.armature.animation.play(animation ?? null, playTimes ?? 0);
   }
 
   private bindAnimationEvents(): void {
@@ -449,6 +603,19 @@ function loadJson(path: string): Promise<any> {
 }
 
 function composeMatrix(root: DragonBones, local: Matrix): Matrix {
+  const rootMatrix = composeRootMatrix(root);
+
+  return {
+    a: rootMatrix.a * local.a + rootMatrix.c * local.b,
+    b: rootMatrix.b * local.a + rootMatrix.d * local.b,
+    c: rootMatrix.a * local.c + rootMatrix.c * local.d,
+    d: rootMatrix.b * local.c + rootMatrix.d * local.d,
+    tx: rootMatrix.tx + rootMatrix.a * local.tx + rootMatrix.c * local.ty,
+    ty: rootMatrix.ty + rootMatrix.b * local.tx + rootMatrix.d * local.ty,
+  } as Matrix;
+}
+
+function composeRootMatrix(root: DragonBones): Matrix {
   const node = root.node;
   const radians = node.worldRotation * Math.PI / 180;
   const cos = Math.cos(radians);
@@ -458,12 +625,12 @@ function composeMatrix(root: DragonBones, local: Matrix): Matrix {
   const nc = -sin * node.worldScaleY;
   const nd = cos * node.worldScaleY;
 
+  return { a: na, b: nb, c: nc, d: nd, tx: node.worldX, ty: node.worldY } as Matrix;
+}
+
+function transformPoint(matrix: Matrix, x: number, y: number): { x: number; y: number } {
   return {
-    a: na * local.a + nc * local.b,
-    b: nb * local.a + nd * local.b,
-    c: na * local.c + nc * local.d,
-    d: nb * local.c + nd * local.d,
-    tx: node.worldX + na * local.tx + nc * local.ty,
-    ty: node.worldY + nb * local.tx + nd * local.ty,
-  } as Matrix;
+    x: matrix.a * x + matrix.c * y + matrix.tx,
+    y: matrix.b * x + matrix.d * y + matrix.ty,
+  };
 }
