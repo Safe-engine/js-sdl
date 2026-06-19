@@ -345,25 +345,11 @@ export function sdlTsxTransform() {
           parseJSX(range, name, children, attributes);
         });
         const end = jsxBlocks[0].parentRange[1];
-        // if (listMethods.includes('start')) {
-        //     ms.appendRight(end, `\n${classVar}.start();`);
-        // }
         if (!/import\s*{[^}]*\binstantiate\b[^}]*}\s*from\s*["']/.test(code))
             ms.prepend(`import { instantiate } from '${sourceFramework}'\n`);
         if (!isScene)
           ms.appendRight(end, `\n    return ${classVar}`);
-        // console.log('Program', currentClassName, output)
       }
-      // if (listComponentX.length && sourceFramework) {
-      //     if (!/import {([\s\S]*?)registerSystem([\s\S]*?)} from ["']@safe-engine/.test(code))
-      //         ms.prepend(`import { registerSystem } from '@safe-engine/${sourceFramework}'\n`);
-      //     const registerCode = listComponentX
-      //         .map((name) => {
-      //         return `\nregisterSystem(${name})`;
-      //     })
-      //         .join('');
-      //     ms.append(registerCode);
-      // }
       else {
         return;
       }

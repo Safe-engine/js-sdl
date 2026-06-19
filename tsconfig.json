@@ -19,7 +19,7 @@
     "isolatedModules": true
   },
   "exclude": [
-    "scripts/vite-plugin-sdl-tsx.ts",
+    "web/vite-plugin-sdl-tsx.ts",
     "@types/package.d.ts",
     "src",
     "web"

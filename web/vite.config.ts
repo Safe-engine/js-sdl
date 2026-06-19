@@ -1,6 +1,6 @@
 import path from "node:path";
 import { defineConfig } from "vite";
-import { safexTransform } from 'vite-plugin-safex-transform';
+import { sdlTsxTransform } from './vite-plugin-sdl-tsx';
 
 export default defineConfig({
   root: __dirname,
@@ -12,9 +12,9 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: path.resolve(__dirname, "../dist-web"),
+    outDir: path.resolve(__dirname, "../dist"),
     emptyOutDir: true,
     target: "es2020",
   },
-  plugins: [safexTransform()],
+  plugins: [sdlTsxTransform()],
 });

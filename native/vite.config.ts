@@ -1,7 +1,7 @@
 import { spawn } from "child_process";
 import path from "path";
 import { defineConfig } from "vite";
-import { safexTransform } from 'vite-plugin-safex-transform';
+import { sdlTsxTransform } from '../web/vite-plugin-sdl-tsx';
 
 function runSdl3jsPlugin() {
   let child: ReturnType<typeof spawn> | null = null;
@@ -63,5 +63,5 @@ export default defineConfig({
       external: ["sdl3", "box2d"],
     },
   },
-  plugins: [safexTransform(), runSdl3jsPlugin()],
+  plugins: [sdlTsxTransform(), runSdl3jsPlugin()],
 });
