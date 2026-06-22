@@ -303,6 +303,7 @@ export class ProgressBar extends UIElement<ProgressBarProps> {
     if (this.texturePath === path) return this;
     this.releaseTexture();
     this.texturePath = path;
+    this.ensureTexture();
     return this;
   }
 
@@ -376,12 +377,18 @@ export class ProgressBar extends UIElement<ProgressBarProps> {
     this.releaseTexture();
     this.texture = AssetManager.acquireTexture(this.texturePath);
     this.loadedPath = this.texturePath;
+    this.applyNaturalSize(this.texture.width, this.texture.height);
   }
 
   private releaseTexture(): void {
     this.texture?.release();
     this.texture = null;
     this.loadedPath = "";
+  }
+
+  private applyNaturalSize(width: number, height: number): void {
+    if (width > 0 && this.node.width === 64) this.node.width = width;
+    if (height > 0 && this.node.height === 64) this.node.height = height;
   }
 }
 

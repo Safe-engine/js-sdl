@@ -8,6 +8,9 @@ import { ComponentX } from "../core/ComponentX";
 import { Node } from "../core/Node";
 import { Localization } from "../Localization";
 
+const DEFAULT_NODE_WIDTH = 64;
+const DEFAULT_NODE_HEIGHT = 64;
+
 export type TextAlignment = "left" | "center" | "right";
 export type VerticalTextAlignment = "top" | "middle" | "bottom";
 
@@ -23,6 +26,7 @@ interface LabelCompProps {
 }
 export class Label extends ComponentX<LabelCompProps> {
   static defaultFont: string
+  static defaultSize: Integer = 36
   text = "";
   localizationKey = "";
   localizationValues: Readonly<Record<string, string | number>> = {};
@@ -40,12 +44,14 @@ export class Label extends ComponentX<LabelCompProps> {
   private loadedSignature = "";
   private loadedFontKey = "";
   private localizationRevision = -1;
+  private autoWidth = 0;
+  private autoHeight = 0;
 
   onAwake(): void {
     if (this.props.string !== undefined) {
       this.setText(this.props.string);
     }
-    this.fontSize = this.props.size ?? 36;
+    this.fontSize = this.props.size ?? Label.defaultSize;
     this.setFont(this.props.font || Label.defaultFont, this.fontSize);
     this.align = this.props.align ?? "left";
     this.verticalAlign = this.props.verticalAlign ?? "top";
@@ -180,10 +186,11 @@ export class Label extends ComponentX<LabelCompProps> {
       this.loadedFontKey = fontKey;
     }
 
-    const signature = `${resolvedText}\0${this.node.width}\0${this.fontSize}`;
+    const wrapWidth = this.isAutoWidth() ? 0 : this.node.width;
+    const signature = `${resolvedText}\0${wrapWidth}\0${this.fontSize}`;
     if (this.loadedSignature === signature && this.lineTextures.length > 0) return;
     this.releaseText();
-    this.lines = wrapText(resolvedText, this.node.width, (value) => {
+    this.lines = wrapText(resolvedText, wrapWidth, (value) => {
       const texture = AssetManager.acquireText(this.font!, value || " ");
       const width = texture.width;
       texture.release();
@@ -192,8 +199,39 @@ export class Label extends ComponentX<LabelCompProps> {
     this.lineTextures = this.lines.map((line) =>
       AssetManager.acquireText(this.font!, line || " ")
     );
+    this.applyNaturalSize();
     this.loadedSignature = signature;
     this.localizationRevision = Localization.revision;
+  }
+
+  private applyNaturalSize(): void {
+    const width = this.lineTextures.reduce(
+      (maxWidth, texture) => Math.max(maxWidth, texture.width), 0);
+    const lineAdvance = this.fontSize * this.lineHeight;
+    const height = this.lineTextures.length === 0 ? 0 :
+      this.lineTextures.length === 1
+        ? this.lineTextures[0].height
+        : (this.lineTextures.length - 1) * lineAdvance +
+        this.lineTextures[this.lineTextures.length - 1].height;
+
+    if (width > 0 && this.isAutoWidth()) {
+      this.node.width = width;
+      this.autoWidth = width;
+    }
+    if (height > 0 && this.isAutoHeight()) {
+      this.node.height = height;
+      this.autoHeight = height;
+    }
+  }
+
+  private isAutoWidth(): boolean {
+    return this.node.width === DEFAULT_NODE_WIDTH ||
+      (this.autoWidth > 0 && this.node.width === this.autoWidth);
+  }
+
+  private isAutoHeight(): boolean {
+    return this.node.height === DEFAULT_NODE_HEIGHT ||
+      (this.autoHeight > 0 && this.node.height === this.autoHeight);
   }
 
   private releaseText(): void {

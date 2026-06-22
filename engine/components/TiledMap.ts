@@ -41,6 +41,10 @@ interface TiledTileset {
   imagewidth: number;
   margin?: number;
   spacing?: number;
+  tileoffset?: {
+    x?: number;
+    y?: number;
+  };
   tilecount: number;
   tileheight: number;
   tilewidth: number;
@@ -183,12 +187,13 @@ export class TiledMap extends ComponentX<TiledMapProps> {
         const row = Math.floor(index / layer.width);
         const source = this.getTileSource(tileset.data, gid - tileset.firstgid);
         const position = this.getTilePosition(column + (layer.x ?? 0), row + (layer.y ?? 0));
+        const offset = tileset.data.tileoffset;
 
         tiles.push({
           source,
           texture: tileset.texture,
-          x: position.x,
-          y: position.y,
+          x: position.x + (offset?.x ?? 0),
+          y: position.y + this.map.tileheight - source.height + (offset?.y ?? 0),
           opacity,
           flipX: Boolean(rawGid & FLIPPED_HORIZONTALLY_FLAG),
           flipY: Boolean(rawGid & FLIPPED_VERTICALLY_FLAG),
@@ -218,14 +223,14 @@ export class TiledMap extends ComponentX<TiledMapProps> {
       const staggered = isStaggeredIndex(row, map.staggerindex);
       return {
         x: column * map.tilewidth + (staggered ? map.tilewidth / 2 : 0),
-        y: row * map.tileheight,
+        y: row * map.tileheight / 2,
       };
     }
 
     if (map.orientation === "staggered" && map.staggeraxis === "x") {
       const staggered = isStaggeredIndex(column, map.staggerindex);
       return {
-        x: column * map.tilewidth,
+        x: column * map.tilewidth / 2,
         y: row * map.tileheight + (staggered ? map.tileheight / 2 : 0),
       };
     }
@@ -246,22 +251,34 @@ export class TiledMap extends ComponentX<TiledMapProps> {
 
   private getMapPixelWidth(): number {
     if (!this.map) return this.node.width;
+    const widestTile = Math.max(
+      this.map.tilewidth,
+      ...this.map.tilesets.map((tileset) => tileset.tilewidth),
+    );
+    const overhang = Math.max(0, widestTile - this.map.tilewidth);
+    if (this.map.orientation === "staggered" && this.map.staggeraxis === "x") {
+      return (this.map.width + 1) * this.map.tilewidth / 2 + overhang;
+    }
     const staggerOffset = this.map.orientation === "staggered" && this.map.staggeraxis === "y"
       ? this.map.tilewidth / 2
       : 0;
-    return this.map.width * this.map.tilewidth + staggerOffset;
+    return this.map.width * this.map.tilewidth + staggerOffset + overhang;
   }
 
   private getMapPixelHeight(): number {
     if (!this.map) return this.node.height;
-    const staggerOffset = this.map.orientation === "staggered" && this.map.staggeraxis === "x"
-      ? this.map.tileheight / 2
-      : 0;
     const tallestTile = Math.max(
       this.map.tileheight,
       ...this.map.tilesets.map((tileset) => tileset.tileheight),
     );
-    return this.map.height * this.map.tileheight + staggerOffset + Math.max(0, tallestTile - this.map.tileheight);
+    const overhang = Math.max(0, tallestTile - this.map.tileheight);
+    if (this.map.orientation === "staggered" && this.map.staggeraxis === "y") {
+      return (this.map.height + 1) * this.map.tileheight / 2 + overhang;
+    }
+    const staggerOffset = this.map.orientation === "staggered" && this.map.staggeraxis === "x"
+      ? this.map.tileheight / 2
+      : 0;
+    return this.map.height * this.map.tileheight + staggerOffset + overhang;
   }
 
   private fitDefaultNodeSize(): void {

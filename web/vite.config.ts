@@ -16,5 +16,6 @@ export default defineConfig({
     emptyOutDir: true,
     target: "es2020",
   },
+   server: { port: 6428 },
   plugins: [sdlTsxTransform()],
 });

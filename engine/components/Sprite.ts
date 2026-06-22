@@ -9,6 +9,9 @@ import {
 } from "../AssetManager";
 import { ComponentX } from "../core/ComponentX";
 
+const DEFAULT_NODE_WIDTH = 64;
+const DEFAULT_NODE_HEIGHT = 64;
+
 interface SpriteProps {
   spriteFrame: string
   // type?: SpriteTypes
@@ -40,6 +43,7 @@ export class Sprite extends ComponentX<SpriteProps> {
     this.releaseTexture();
     this.atlas = null;
     this.texturePath = path;
+    this.ensureTexture();
     return this;
   }
 
@@ -107,6 +111,9 @@ export class Sprite extends ComponentX<SpriteProps> {
       this.texture = AssetManager.acquireTexture(this.atlas.texture.key);
       this.loadedAtlas = this.atlas;
       this.textureId = this.texture.id;
+      const frame = this.getFrame();
+      this.applyNaturalSize(frame?.width ?? this.texture.width,
+        frame?.height ?? this.texture.height);
       return;
     }
     if (!this.texturePath) {
@@ -118,10 +125,20 @@ export class Sprite extends ComponentX<SpriteProps> {
     this.texture = AssetManager.acquireTexture(this.texturePath);
     this.loadedPath = this.texturePath;
     this.textureId = this.texture.id;
+    this.applyNaturalSize(this.texture.width, this.texture.height);
   }
 
   private getFrame(): TextureRegion | null {
     return this.atlas?.getFrame(this.frameName) ?? null;
+  }
+
+  private applyNaturalSize(width: number, height: number): void {
+    if (width > 0 && this.node.width === DEFAULT_NODE_WIDTH) {
+      this.node.width = width;
+    }
+    if (height > 0 && this.node.height === DEFAULT_NODE_HEIGHT) {
+      this.node.height = height;
+    }
   }
 
   private releaseTexture(): void {

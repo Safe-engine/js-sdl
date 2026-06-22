@@ -36,8 +36,8 @@ export class HomeScene extends Scene {
     this.root.addChild(spriteComp1.node);
     spriteComp1.node.x = 360;
     spriteComp1.node.y = 640;
-    spriteComp1.node.width = 220;
-    spriteComp1.node.height = 68;
+    // spriteComp1.node.width = 220;
+    // spriteComp1.node.height = 68;
     const buttonComp1 = instantiate(Button, { onPress: this.onClick });
     spriteComp1.node.resolveComponent(buttonComp1);
     const labelComp1 = instantiate(Label, { string: "PLAY", font: lilita_one_regularFont, size: 32, align: "center", verticalAlign: "middle" });
