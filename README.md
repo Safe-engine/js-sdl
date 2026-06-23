@@ -283,7 +283,7 @@ for a sharp drawing buffer without changing game coordinates.
 const { logicalWidth, logicalHeight, safeArea, safeInsets } = Engine.viewport;
 
 // Place interactive UI inside the notch/system-bar-safe logical rectangle.
-hud.transform.setPosition(
+hud.node.setPosition(
   safeArea.x + 24,
   safeArea.y + 24,
 );
@@ -405,7 +405,7 @@ can be animated directly.
 import { Easing, Tween } from "./engine";
 
 Tween.to(
-  player.transform,
+  player.node,
   { x: 600, y: 240, rotation: 360, scaleX: 1.5, scaleY: 1.5 },
   0.8,
   {

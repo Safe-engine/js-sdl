@@ -8,7 +8,6 @@ import { AssetManager, TextureAsset } from "../AssetManager";
 import { ComponentX } from "../core/ComponentX";
 import type { Node } from "../core/Node";
 import { white, zeroInsets } from "../helper/constants";
-import { Vec2 } from "../helper/math";
 import type { InputEvent } from "../Input";
 
 export type LayoutDirection = "none" | "horizontal" | "vertical";
@@ -63,14 +62,14 @@ export class UIElement<Props = unknown> extends ComponentX<Props> {
 
     const maxX = this.anchorMaxX ?? this.anchorMinX;
     const maxY = this.anchorMaxY ?? this.anchorMinY;
-    const parentTransform = parent.node!.transform;
+    const parentTransform = parent.node;
     const originX = -parentTransform.anchorX * parent.width;
     const originY = -parentTransform.anchorY * parent.height;
     const left = originX + parent.width * this.anchorMinX + this.offsetLeft;
     const top = originY + parent.height * this.anchorMinY + this.offsetTop;
     const right = originX + parent.width * maxX - this.offsetRight;
     const bottom = originY + parent.height * maxY - this.offsetBottom;
-    const transform = this.node.transform;
+    const transform = this.node;
 
     if (maxX !== this.anchorMinX) this.width = right - left;
     if (maxY !== this.anchorMinY) this.height = bottom - top;
@@ -84,7 +83,7 @@ export class UIElement<Props = unknown> extends ComponentX<Props> {
   }
 
   protected worldRect(): { x: number; y: number; width: number; height: number } {
-    const t = this.node!.transform;
+    const t = this.node;
     const width = this.width * Math.abs(t.worldScaleX);
     const height = this.height * Math.abs(t.worldScaleY);
     return {
@@ -116,8 +115,8 @@ export class UIContainer extends UIElement {
   layoutChildren(): void {
     if (!this.node) return;
     const horizontal = this.direction === "horizontal";
-    const originX = -this.node.transform.anchorX * this.width;
-    const originY = -this.node.transform.anchorY * this.height;
+    const originX = -this.node.anchorX * this.width;
+    const originY = -this.node.anchorY * this.height;
     const items = this.node.children
       .map((node) => ({ node, element: findUIElement(node) }))
       .filter((item): item is { node: Node; element: UIElement } => !!item.element);
@@ -159,7 +158,7 @@ export class UIContainer extends UIElement {
         else element.width = crossAvailable;
       }
 
-      const t = node.transform;
+      const t = node;
       if (horizontal) {
         t.x = originX + cursor + element.width * t.anchorX;
         t.y = originY + cross + element.height * t.anchorY;
@@ -263,135 +262,6 @@ export class UIImage extends NineSlice {
   border: Insets = zeroInsets();
 }
 
-export interface ProgressBarProps {
-  spriteFrame: string;
-  fillType?: number;
-  fillRange?: number;
-  fillCenter?: Vec2;
-  isReverse?: boolean;
-}
-
-export class ProgressBar extends UIElement<ProgressBarProps> {
-  value = 0;
-  min = 0;
-  max = 1;
-  backgroundColor: Color = { r: 51, g: 65, b: 85, a: 255 };
-  fillColor: Color = { r: 34, g: 197, b: 94, a: 255 };
-  vertical = false;
-  reverse = false;
-  texturePath = "";
-  fillType = 0;
-  fillRange: number | null = null;
-  fillCenter = Vec2(0.5, 0.5);
-  private texture: TextureAsset | null = null;
-  private loadedPath = "";
-
-  onAwake(): void {
-    if (this.props.spriteFrame) this.setTexture(this.props.spriteFrame);
-    if (this.props.fillType !== undefined) this.setFillType(this.props.fillType);
-    if (this.props.fillRange !== undefined) this.setFillRange(this.props.fillRange);
-    if (this.props.fillCenter) this.fillCenter = this.props.fillCenter;
-    if (this.props.isReverse !== undefined) this.reverse = this.props.isReverse;
-  }
-
-  setValue(value: number): this {
-    this.value = Math.max(this.min, Math.min(this.max, value));
-    return this;
-  }
-
-  setTexture(path: string): this {
-    if (this.texturePath === path) return this;
-    this.releaseTexture();
-    this.texturePath = path;
-    this.ensureTexture();
-    return this;
-  }
-
-  setFillType(fillType: number): this {
-    this.fillType = fillType;
-    this.vertical = fillType === 1;
-    return this;
-  }
-
-  setFillRange(fillRange: number): this {
-    this.fillRange = Math.max(0, Math.min(1, fillRange));
-    this.setValue(this.min + (this.max - this.min) * this.fillRange);
-    return this;
-  }
-
-  onRender(): void {
-    const rect = this.worldRect();
-    drawRect(rect.x, rect.y, rect.width, rect.height,
-      this.backgroundColor.r, this.backgroundColor.g, this.backgroundColor.b,
-      this.backgroundColor.a ?? 255);
-    const range = this.max - this.min;
-    const valueRatio = range <= 0 ? 0 :
-      Math.max(0, Math.min(1, (this.value - this.min) / range));
-    const ratio = this.fillRange ?? valueRatio;
-    const width = this.vertical ? rect.width : rect.width * ratio;
-    const height = this.vertical ? rect.height * ratio : rect.height;
-    const x = this.reverse && !this.vertical ? rect.x + rect.width - width : rect.x;
-    const y = this.reverse && this.vertical ? rect.y + rect.height - height : rect.y;
-
-    this.ensureTexture();
-    if (!this.texture) {
-      drawRect(x, y, width, height,
-        this.fillColor.r, this.fillColor.g, this.fillColor.b,
-        this.fillColor.a ?? 255);
-      return;
-    }
-
-    if (width <= 0 || height <= 0) return;
-
-    const sourceWidth = this.vertical ? this.texture.width : this.texture.width * ratio;
-    const sourceHeight = this.vertical ? this.texture.height * ratio : this.texture.height;
-    const sourceX = this.reverse && !this.vertical
-      ? this.texture.width - sourceWidth
-      : 0;
-    const sourceY = this.reverse && this.vertical
-      ? this.texture.height - sourceHeight
-      : 0;
-    drawTextureRegionRotated(
-      this.texture.id,
-      sourceX, sourceY, sourceWidth, sourceHeight,
-      x, y, width, height,
-      this.node.worldRotation,
-      this.fillCenter.x * width,
-      this.fillCenter.y * height,
-      false, false,
-      this.fillColor.r, this.fillColor.g, this.fillColor.b,
-      this.fillColor.a ?? 255,
-    );
-  }
-
-  onDestroy(): void {
-    this.releaseTexture();
-  }
-
-  private ensureTexture(): void {
-    if (!this.texturePath) {
-      this.releaseTexture();
-      return;
-    }
-    if (this.texture && this.loadedPath === this.texturePath) return;
-    this.releaseTexture();
-    this.texture = AssetManager.acquireTexture(this.texturePath);
-    this.loadedPath = this.texturePath;
-    this.applyNaturalSize(this.texture.width, this.texture.height);
-  }
-
-  private releaseTexture(): void {
-    this.texture?.release();
-    this.texture = null;
-    this.loadedPath = "";
-  }
-
-  private applyNaturalSize(width: number, height: number): void {
-    if (width > 0 && this.node.width === 64) this.node.width = width;
-    if (height > 0 && this.node.height === 64) this.node.height = height;
-  }
-}
-
 export class Toggle extends UIElement {
   checked = false;
   disabled = false;
@@ -453,9 +323,9 @@ export class ScrollView extends UIContainer {
     this.clampScroll();
     const content = this.node?.children[0];
     if (content) {
-      content.transform.x = -this.node!.transform.anchorX * this.width -
+      content.x = -this.node!.anchorX * this.width -
         this.scrollX;
-      content.transform.y = -this.node!.transform.anchorY * this.height -
+      content.y = -this.node!.anchorY * this.height -
         this.scrollY;
     }
   }

@@ -28,10 +28,6 @@ export class Node {
     this.name = name;
   }
 
-  get transform(): this {
-    return this;
-  }
-
   get worldX(): number {
     const pt = this._getParentTransform();
     if (!pt) return this.x;

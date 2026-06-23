@@ -71,13 +71,13 @@ export type {
   TextAlignment,
   VerticalTextAlignment
 } from "./components/Label";
+export { ProgressBar } from "./components/ProgressBar";
 export { Sprite } from "./components/Sprite";
 export { TiledMap } from "./components/TiledMap";
 export type { TiledMapProps } from "./components/TiledMap";
 export {
   NineSlice,
   Panel,
-  ProgressBar,
   ScrollView,
   Toggle,
   UIContainer,
@@ -86,7 +86,7 @@ export {
 } from "./components/UI";
 export type {
   LayoutAlignment,
-  LayoutDirection, ProgressBarProps
+  LayoutDirection
 } from "./components/UI";
 export { Widget } from "./components/Widget";
 export type { WidgetProps } from "./components/Widget";
@@ -109,3 +109,4 @@ export type {
 } from "./physics";
 export { Spine, SpineSkeleton } from "./spine";
 export type { SpineData, SpineSkeletonProps } from "./spine";
+

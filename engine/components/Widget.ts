@@ -37,7 +37,7 @@ export class Widget extends ComponentX<WidgetProps> {
     if (!this.node) return;
 
     const safeArea = ActiveViewport.safeArea;
-    const transform = this.node.transform;
+    const transform = this.node;
     const hasLeft = this.left !== null;
     const hasRight = this.right !== null;
     const hasTop = this.top !== null;
