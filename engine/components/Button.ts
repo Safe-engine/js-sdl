@@ -1,7 +1,7 @@
 import { ComponentX } from "../core/ComponentX";
 import { InputEvent } from "../Input";
 
-interface ButtonCompProps {
+interface ButtonProps {
   // spriteFrame: string
   selectedImage?: string
   disableImage?: string
@@ -9,7 +9,7 @@ interface ButtonCompProps {
   capInsets?: [number, number, number, number]
   onPress?: (target?: Button) => void
 }
-export class Button extends ComponentX<ButtonCompProps> {
+export class Button extends ComponentX<ButtonProps> {
   inputEnabled = true;
   consumeInput = true;
 

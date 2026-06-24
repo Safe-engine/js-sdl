@@ -1,7 +1,7 @@
-import { ComponentX } from "./core/ComponentX";
-import { Node } from "./core/Node";
+import { ComponentX } from './core/ComponentX';
+import { Node } from './core/Node';
 
-export type InputEventType = "start" | "move" | "end";
+export type InputEventType = 'start' | 'move' | 'end';
 
 export class InputEvent {
   readonly type: InputEventType;
@@ -30,8 +30,8 @@ export class InputEvent {
 }
 
 interface InputCandidate {
-  component: ComponentX;
-  renderOrder: number;
+  component: ComponentX
+  renderOrder: number
 }
 
 export class InputSystem {
@@ -44,7 +44,7 @@ export class InputSystem {
     this.captured = [];
     if (candidates.length === 0) return false;
 
-    const event = new InputEvent("start", x, y, candidates[0].component);
+    const event = new InputEvent('start', x, y, candidates[0].component);
     for (const candidate of candidates) {
       const component = candidate.component;
       event.currentTarget = component;
@@ -56,11 +56,11 @@ export class InputSystem {
   }
 
   dispatchMove(x: number, y: number): boolean {
-    return this.dispatchCaptured("move", x, y);
+    return this.dispatchCaptured('move', x, y);
   }
 
   dispatchEnd(x: number, y: number): boolean {
-    const stopped = this.dispatchCaptured("end", x, y);
+    const stopped = this.dispatchCaptured('end', x, y);
     this.captured = [];
     return stopped;
   }
@@ -70,11 +70,11 @@ export class InputSystem {
   }
 
   private dispatchCaptured(
-    type: Exclude<InputEventType, "start">,
+    type: Exclude<InputEventType, 'start'>,
     x: number,
     y: number,
   ): boolean {
-    const captured = this.captured.filter((component) =>
+    const captured = this.captured.filter(component =>
       component.inputEnabled && this.isActive(component.node)
     );
     if (captured.length === 0) return false;
@@ -82,7 +82,7 @@ export class InputSystem {
     const event = new InputEvent(type, x, y, captured[0]);
     for (const component of captured) {
       event.currentTarget = component;
-      if (type === "move") {
+      if (type === 'move') {
         component.onPointerMove(event);
       } else {
         component.onPointerEnd(event);
@@ -113,8 +113,8 @@ export class InputSystem {
 
     visit(this.root);
     candidates.sort((a, b) =>
-      b.component.inputPriority - a.component.inputPriority ||
-      b.renderOrder - a.renderOrder
+      b.component.inputPriority - a.component.inputPriority
+      || b.renderOrder - a.renderOrder
     );
     return candidates;
   }

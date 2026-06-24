@@ -1,15 +1,15 @@
 import {
-  instantiate,
-  Label,
-  loadAll,
-  loadScene,
-  Panel,
-  ProgressBar,
-  Scene
+    instantiate,
+    Label,
+    loadAll,
+    loadScene,
+    Panel,
+    ProgressBar,
+    Scene
 } from "../engine";
 import * as allAssets from "./assets";
 import {
-  sf_button
+    sf_button
 } from "./assets";
 import { HomeScene } from "./HomeScene";
 
@@ -72,17 +72,17 @@ export class LoadingScene extends Scene {
     progressBarComp.fillColor = { r: 255, g: 255, b: 255, a: 255 };
     this.progressBar = progressBarComp;
 
-    const percentLabelComp = instantiate(Label, {
+    const percentLabel = instantiate(Label, {
       string: "0%",
       size: 28,
       align: "center",
       verticalAlign: "middle",
     });
-    this.root.addChild(percentLabelComp.node);
-    percentLabelComp.node.x = 360;
-    percentLabelComp.node.y = 700;
-    percentLabelComp.node.width = 160;
-    percentLabelComp.node.height = 40;
-    this.percentLabel = percentLabelComp;
+    this.root.addChild(percentLabel.node);
+    percentLabel.node.x = 360;
+    percentLabel.node.y = 700;
+    percentLabel.node.width = 160;
+    percentLabel.node.height = 40;
+    this.percentLabel = percentLabel;
   }
 }

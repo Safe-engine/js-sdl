@@ -1,5 +1,5 @@
-import type { InputEvent } from "../Input";
-import type { Node } from "./Node";
+import type { InputEvent } from '../Input';
+import type { Node } from './Node';
 export interface BaseComponentProps<T> {
   $ref?: T
   $push?: T[]

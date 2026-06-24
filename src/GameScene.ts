@@ -1,17 +1,17 @@
 import {
-  Button,
-  instantiate,
-  Label,
-  loadScene,
-  PhysicsWorld,
-  Scene,
-  Sprite,
-  TiledMap
+    Button,
+    instantiate,
+    Label,
+    loadScene,
+    PhysicsWorld,
+    Scene,
+    Sprite,
+    TiledMap
 } from "../engine";
 import {
-  lilita_one_regularFont,
-  map_1_json,
-  sf_button,
+    lilita_one_regularFont,
+    map_1_json,
+    sf_button,
 } from "./assets";
 import { Bullet } from "./Bullet";
 import { HomeScene } from "./HomeScene";
@@ -86,24 +86,24 @@ export class GameScene extends Scene {
     playerComp1.node.y = 1040;
     playerComp1.node.anchorX = 0.5;
     playerComp1.node.anchorY = 0.5;
-    const labelComp2 = instantiate(Label, { string: "Tap to shoot", font: lilita_one_regularFont, size: 26 });
-    this.root.addChild(labelComp2.node);
-    labelComp2.node.x = 24;
-    labelComp2.node.y = 24;
-    labelComp2.node.width = 240;
-    labelComp2.node.height = 40;
-    labelComp2.node.anchorX = 0;
-    labelComp2.node.anchorY = 0;
+    const Label2 = instantiate(Label, { string: "Tap to shoot", font: lilita_one_regularFont, size: 26 });
+    this.root.addChild(Label2.node);
+    Label2.node.x = 24;
+    Label2.node.y = 24;
+    Label2.node.width = 240;
+    Label2.node.height = 40;
+    Label2.node.anchorX = 0;
+    Label2.node.anchorY = 0;
     const spriteComp2 = instantiate(Sprite, { spriteFrame: sf_button });
     this.root.addChild(spriteComp2.node);
     spriteComp2.node.x = 360;
     spriteComp2.node.y = 240;
     spriteComp2.node.width = 220;
     spriteComp2.node.height = 68;
-    const buttonComp2 = instantiate(Button, { onPress: this.onClick });
-    spriteComp2.node.resolveComponent(buttonComp2);
-    const labelComp3 = instantiate(Label, { string: "PLAY", font: lilita_one_regularFont, size: 32, align: "center", verticalAlign: "middle" });
-    spriteComp2.node.resolveComponent(labelComp3);
+    const Button2 = instantiate(Button, { onPress: this.onClick });
+    spriteComp2.node.resolveComponent(Button2);
+    const Label3 = instantiate(Label, { string: "PLAY", font: lilita_one_regularFont, size: 32, align: "center", verticalAlign: "middle" });
+    spriteComp2.node.resolveComponent(Label3);
   }
 }
 

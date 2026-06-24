@@ -17,19 +17,19 @@ import {
   onTouchStart,
   onUpdate,
   present,
-} from "sdl3";
-import { Tween } from "./animation/Tween";
-import { Audio } from "./Audio";
-import { setSceneActivator } from "./core/instantiate";
-import { Orientation, Scene } from "./core/Scene";
-import { ActiveViewport } from "./Viewport";
+} from 'sdl3';
+import { Tween } from './animation/Tween';
+import { Audio } from './Audio';
+import { setSceneActivator } from './core/instantiate';
+import { Orientation, Scene } from './core/Scene';
+import { ActiveViewport } from './Viewport';
 
 const ORIENTATIONS: Orientation[] = [
-  "unknown",
-  "landscape",
-  "landscape-flipped",
-  "portrait",
-  "portrait-flipped",
+  'unknown',
+  'landscape',
+  'landscape-flipped',
+  'portrait',
+  'portrait-flipped',
 ];
 
 class EngineImpl {
@@ -125,7 +125,7 @@ class EngineImpl {
 
     onOrientationChange((value: number, width: number, height: number) => {
       this.refreshViewport();
-      const orientation = ORIENTATIONS[value] ?? "unknown";
+      const orientation = ORIENTATIONS[value] ?? 'unknown';
       this._currentScene?.onOrientationChange(orientation, width, height);
     });
 

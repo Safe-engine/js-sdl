@@ -1,6 +1,6 @@
-import { ComponentX, Constructor } from "./ComponentX"
-import { Node } from "./Node"
-import { Scene } from "./Scene"
+import { ComponentX, Constructor } from './ComponentX'
+import { Node } from './Node'
+import { Scene } from './Scene'
 
 export type GetProps<T> = T extends ComponentX<infer P> ? P : never
 type SceneActivator = (scene: Scene) => void

@@ -2,14 +2,14 @@
   "Create class with start and render methods": {
     "prefix": "classsr",
     "body": [
-      "import { ComponentX, NodeRender, SpriteRender } from \"@safe-engine/webgl\"\n",
+      "import { ComponentX, NodeRender, Sprite } from \"@safe-engine/webgl\"\n",
       "export default class ${TM_FILENAME_BASE}  extends ComponentX {",
       "  start() {",
       "    // TODO: implement start logic",
       "  }",
       "",
       "  render() {",
-      "    return <NodeRender ></NodeRender>;",
+      "    <Sprite spriteFrame={$1}></Sprite>;",
       "  }",
       "}"
     ],

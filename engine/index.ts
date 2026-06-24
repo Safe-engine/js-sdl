@@ -90,6 +90,7 @@ export type {
 } from "./components/UI";
 export { Widget } from "./components/Widget";
 export type { WidgetProps } from "./components/Widget";
+export type { BaseComponentProps } from "./core/ComponentX";
 export * from './helper/Intersection';
 export * from './helper/math';
 export {

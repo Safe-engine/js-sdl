@@ -1,8 +1,8 @@
 import { drawTextureRotated } from "sdl3";
 import {
-  AssetManager,
-  FontAsset,
-  TextureAsset,
+    AssetManager,
+    FontAsset,
+    TextureAsset,
 } from "../AssetManager";
 import { ComponentX } from "../core/ComponentX";
 import { Node } from "../core/Node";
@@ -14,7 +14,7 @@ const DEFAULT_NODE_HEIGHT = 64;
 export type TextAlignment = "left" | "center" | "right";
 export type VerticalTextAlignment = "top" | "middle" | "bottom";
 
-interface LabelCompProps {
+interface LabelProps {
   font?: string
   string?: string
   size?: number
@@ -24,7 +24,7 @@ interface LabelCompProps {
   // shadow?: [ColorSource, number, Size]
   isAdaptWithSize?: boolean
 }
-export class Label extends ComponentX<LabelCompProps> {
+export class Label extends ComponentX<LabelProps> {
   static defaultFont: string
   static defaultSize: Integer = 36
   text = "";
