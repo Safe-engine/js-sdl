@@ -1,71 +1,71 @@
 import {
   drawTextureRegionRotated,
   loadTextFile,
-} from "sdl3";
-import { AssetManager, TextureAsset } from "../AssetManager";
-import { ComponentX } from "../core/ComponentX";
+} from 'sdl3';
+import { AssetManager, TextureAsset } from '../AssetManager';
+import { ComponentX } from '../core/ComponentX';
 
 export interface TiledMapProps {
   mapFile: string
 }
 
 interface TiledMapData {
-  width: number;
-  height: number;
-  tilewidth: number;
-  tileheight: number;
-  orientation?: string;
-  staggeraxis?: "x" | "y";
-  staggerindex?: "odd" | "even";
-  layers: TiledLayer[];
-  tilesets: TiledTileset[];
+  width: number
+  height: number
+  tilewidth: number
+  tileheight: number
+  orientation?: string
+  staggeraxis?: 'x' | 'y'
+  staggerindex?: 'odd' | 'even'
+  layers: TiledLayer[]
+  tilesets: TiledTileset[]
 }
 
 interface TiledLayer {
-  data?: number[];
-  height: number;
-  name: string;
-  opacity?: number;
-  type: string;
-  visible?: boolean;
-  width: number;
-  x?: number;
-  y?: number;
+  data?: number[]
+  height: number
+  name: string
+  opacity?: number
+  type: string
+  visible?: boolean
+  width: number
+  x?: number
+  y?: number
 }
 
 interface TiledTileset {
-  columns: number;
-  firstgid: number;
-  image: string;
-  imageheight: number;
-  imagewidth: number;
-  margin?: number;
-  spacing?: number;
+  columns: number
+  firstgid: number
+  image: string
+  imageheight: number
+  imagewidth: number
+  margin?: number
+  spacing?: number
   tileoffset?: {
-    x?: number;
-    y?: number;
-  };
-  tilecount: number;
-  tileheight: number;
-  tilewidth: number;
+    x?: number
+    y?: number
+  }
+  tilecount: number
+  tileheight: number
+  tilewidth: number
 }
 
 interface LoadedTileset {
-  data: TiledTileset;
-  firstgid: number;
-  lastgid: number;
-  imagePath: string;
-  texture: TextureAsset;
+  data: TiledTileset
+  firstgid: number
+  lastgid: number
+  imagePath: string
+  texture: TextureAsset
 }
 
 interface TilePlacement {
-  source: TextureRegion;
-  texture: TextureAsset;
-  x: number;
-  y: number;
-  opacity: number;
-  flipX: boolean;
-  flipY: boolean;
+  source: TextureRegion
+  texture: TextureAsset
+  x: number
+  y: number
+  opacity: number
+  flipX: boolean
+  flipY: boolean
 }
 
 const FLIPPED_HORIZONTALLY_FLAG = 0x80000000;
@@ -77,7 +77,7 @@ const DEFAULT_NODE_SIZE = 64;
 const mapCache = new Map<string, Promise<TiledMapData>>();
 
 export class TiledMap extends ComponentX<TiledMapProps> {
-  private loadedMapFile = "";
+  private loadedMapFile = '';
   private map: TiledMapData | null = null;
   private tilesets: LoadedTileset[] = [];
   private tiles: TilePlacement[] = [];
@@ -85,7 +85,7 @@ export class TiledMap extends ComponentX<TiledMapProps> {
 
   onStart(): void {
     void this.reload().catch((error) => {
-      console.error("TiledMap reload failed", error);
+      console.error('TiledMap reload failed', error);
     });
   }
 
@@ -172,7 +172,7 @@ export class TiledMap extends ComponentX<TiledMapProps> {
 
     const tiles: TilePlacement[] = [];
     for (const layer of this.map.layers) {
-      if (layer.type !== "tilelayer" || layer.visible === false || !layer.data) continue;
+      if (layer.type !== 'tilelayer' || layer.visible === false || !layer.data) continue;
 
       const opacity = layer.opacity ?? 1;
       for (let index = 0; index < layer.data.length; index++) {
@@ -216,10 +216,10 @@ export class TiledMap extends ComponentX<TiledMapProps> {
     };
   }
 
-  private getTilePosition(column: number, row: number): { x: number; y: number } {
+  private getTilePosition(column: number, row: number): { x: number, y: number } {
     const map = this.map!;
 
-    if (map.orientation === "staggered" && map.staggeraxis === "y") {
+    if (map.orientation === 'staggered' && map.staggeraxis === 'y') {
       const staggered = isStaggeredIndex(row, map.staggerindex);
       return {
         x: column * map.tilewidth + (staggered ? map.tilewidth / 2 : 0),
@@ -227,7 +227,7 @@ export class TiledMap extends ComponentX<TiledMapProps> {
       };
     }
 
-    if (map.orientation === "staggered" && map.staggeraxis === "x") {
+    if (map.orientation === 'staggered' && map.staggeraxis === 'x') {
       const staggered = isStaggeredIndex(column, map.staggerindex);
       return {
         x: column * map.tilewidth / 2,
@@ -253,13 +253,13 @@ export class TiledMap extends ComponentX<TiledMapProps> {
     if (!this.map) return this.node.width;
     const widestTile = Math.max(
       this.map.tilewidth,
-      ...this.map.tilesets.map((tileset) => tileset.tilewidth),
+      ...this.map.tilesets.map(tileset => tileset.tilewidth),
     );
     const overhang = Math.max(0, widestTile - this.map.tilewidth);
-    if (this.map.orientation === "staggered" && this.map.staggeraxis === "x") {
+    if (this.map.orientation === 'staggered' && this.map.staggeraxis === 'x') {
       return (this.map.width + 1) * this.map.tilewidth / 2 + overhang;
     }
-    const staggerOffset = this.map.orientation === "staggered" && this.map.staggeraxis === "y"
+    const staggerOffset = this.map.orientation === 'staggered' && this.map.staggeraxis === 'y'
       ? this.map.tilewidth / 2
       : 0;
     return this.map.width * this.map.tilewidth + staggerOffset + overhang;
@@ -269,13 +269,13 @@ export class TiledMap extends ComponentX<TiledMapProps> {
     if (!this.map) return this.node.height;
     const tallestTile = Math.max(
       this.map.tileheight,
-      ...this.map.tilesets.map((tileset) => tileset.tileheight),
+      ...this.map.tilesets.map(tileset => tileset.tileheight),
     );
     const overhang = Math.max(0, tallestTile - this.map.tileheight);
-    if (this.map.orientation === "staggered" && this.map.staggeraxis === "y") {
+    if (this.map.orientation === 'staggered' && this.map.staggeraxis === 'y') {
       return (this.map.height + 1) * this.map.tileheight / 2 + overhang;
     }
-    const staggerOffset = this.map.orientation === "staggered" && this.map.staggeraxis === "x"
+    const staggerOffset = this.map.orientation === 'staggered' && this.map.staggeraxis === 'x'
       ? this.map.tileheight / 2
       : 0;
     return this.map.height * this.map.tileheight + staggerOffset + overhang;
@@ -292,25 +292,25 @@ export class TiledMap extends ComponentX<TiledMapProps> {
     this.tilesets = [];
     this.tiles = [];
     this.map = null;
-    this.loadedMapFile = "";
+    this.loadedMapFile = '';
   }
 }
 
-function isStaggeredIndex(value: number, staggerindex: "odd" | "even" = "odd"): boolean {
-  return staggerindex === "odd" ? value % 2 === 1 : value % 2 === 0;
+function isStaggeredIndex(value: number, staggerindex: 'odd' | 'even' = 'odd'): boolean {
+  return staggerindex === 'odd' ? value % 2 === 1 : value % 2 === 0;
 }
 
 async function loadMap(path: string): Promise<TiledMapData> {
   let promise = mapCache.get(path);
   if (!promise) {
-    promise = loadText(path).then((text) => JSON.parse(text) as TiledMapData);
+    promise = loadText(path).then(text => JSON.parse(text) as TiledMapData);
     mapCache.set(path, promise);
   }
   return promise;
 }
 
 function loadText(path: string): Promise<string> {
-  if (typeof fetch === "function") {
+  if (typeof fetch === 'function') {
     return fetch(path).then((response) => {
       if (!response.ok) throw new Error(`Failed to load Tiled map: ${path}`);
       return response.text();
@@ -323,6 +323,6 @@ function loadText(path: string): Promise<string> {
 }
 
 function resolveSiblingPath(path: string, sibling: string): string {
-  const slash = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
+  const slash = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
   return slash >= 0 ? `${path.slice(0, slash + 1)}${sibling}` : sibling;
 }

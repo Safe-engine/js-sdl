@@ -1,31 +1,31 @@
-import * as planck from "planck";
+import * as planck from 'planck';
 
 export type BodyType = 0 | 1 | 2;
 
 export interface Vec2 {
-  x: number;
-  y: number;
+  x: number
+  y: number
 }
 
 export interface BodyTransform extends Vec2 {
-  angle: number;
+  angle: number
 }
 
 export interface ContactEvents {
-  begin: Array<[number, number]>;
-  end: Array<[number, number]>;
+  begin: Array<[number, number]>
+  end: Array<[number, number]>
 }
 
-export type DebugPrimitive =
-  | { type: "line"; x1: number; y1: number; x2: number; y2: number; color: number }
-  | { type: "circle"; x: number; y: number; radius: number; color: number; fill?: boolean }
-  | { type: "polygon"; points: Vec2[]; color: number; fill?: boolean }
-  | { type: "point"; x: number; y: number; size: number; color: number };
+export type DebugPrimitive
+  = | { type: 'line', x1: number, y1: number, x2: number, y2: number, color: number }
+    | { type: 'circle', x: number, y: number, radius: number, color: number, fill?: boolean }
+    | { type: 'polygon', points: Vec2[], color: number, fill?: boolean }
+    | { type: 'point', x: number, y: number, size: number, color: number };
 
 interface WorldState {
-  world: planck.World;
-  begin: Array<[number, number]>;
-  end: Array<[number, number]>;
+  world: planck.World
+  begin: Array<[number, number]>
+  end: Array<[number, number]>
 }
 
 const DEBUG_COLOR = 0x6ee7ff;
@@ -47,11 +47,11 @@ export function createWorld(gravity: Vec2 = { x: 0, y: 9.8 }): number {
     end: [],
   };
 
-  state.world.on("begin-contact", (contact) => {
+  state.world.on('begin-contact', (contact) => {
     const pair = contactPair(contact);
     if (pair) state.begin.push(pair);
   });
-  state.world.on("end-contact", (contact) => {
+  state.world.on('end-contact', (contact) => {
     const pair = contactPair(contact);
     if (pair) state.end.push(pair);
   });
@@ -262,15 +262,15 @@ function createFixture(
 }
 
 function toPlanckBodyType(type: BodyType): planck.BodyType {
-  if (type === 0) return "static";
-  if (type === 1) return "kinematic";
-  return "dynamic";
+  if (type === 0) return 'static';
+  if (type === 1) return 'kinematic';
+  return 'dynamic';
 }
 
 function contactPair(contact: planck.Contact): [number, number] | null {
   const a = contact.getFixtureA().getBody().getUserData();
   const b = contact.getFixtureB().getBody().getUserData();
-  return typeof a === "number" && typeof b === "number" ? [a, b] : null;
+  return typeof a === 'number' && typeof b === 'number' ? [a, b] : null;
 }
 
 function appendFixtureDebug(
@@ -281,11 +281,11 @@ function appendFixtureDebug(
 ): void {
   const shape = fixture.getShape();
   switch (shape.getType()) {
-    case "circle": {
+    case 'circle': {
       const circle = shape as planck.CircleShape;
       const center = planck.Transform.mulVec2(transform, circle.getCenter());
       primitives.push({
-        type: "circle",
+        type: 'circle',
         x: center.x * pixelsPerMeter,
         y: center.y * pixelsPerMeter,
         radius: circle.getRadius() * pixelsPerMeter,
@@ -293,12 +293,12 @@ function appendFixtureDebug(
       });
       break;
     }
-    case "edge": {
+    case 'edge': {
       const edge = shape as planck.EdgeShape;
       const a = planck.Transform.mulVec2(transform, edge.m_vertex1);
       const b = planck.Transform.mulVec2(transform, edge.m_vertex2);
       primitives.push({
-        type: "line",
+        type: 'line',
         x1: a.x * pixelsPerMeter,
         y1: a.y * pixelsPerMeter,
         x2: b.x * pixelsPerMeter,
@@ -307,14 +307,14 @@ function appendFixtureDebug(
       });
       break;
     }
-    case "polygon": {
+    case 'polygon': {
       const polygon = shape as planck.PolygonShape;
       const points: Vec2[] = [];
       for (let i = 0; i < polygon.m_count; i++) {
         const point = planck.Transform.mulVec2(transform, polygon.m_vertices[i]);
         points.push({ x: point.x * pixelsPerMeter, y: point.y * pixelsPerMeter });
       }
-      primitives.push({ type: "polygon", points, color: DEBUG_COLOR });
+      primitives.push({ type: 'polygon', points, color: DEBUG_COLOR });
       break;
     }
   }

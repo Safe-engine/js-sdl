@@ -1,13 +1,13 @@
 import {
   drawTextureRegionRotated,
   drawTextureRotated,
-} from "sdl3";
+} from 'sdl3';
 import {
   AssetManager,
   TextureAsset,
   TextureAtlas,
-} from "../AssetManager";
-import { ComponentX } from "../core/ComponentX";
+} from '../AssetManager';
+import { ComponentX } from '../core/ComponentX';
 
 const DEFAULT_NODE_WIDTH = 64;
 const DEFAULT_NODE_HEIGHT = 64;
@@ -20,12 +20,12 @@ interface SpriteProps {
 }
 
 export class Sprite extends ComponentX<SpriteProps> {
-  texturePath = "";
+  texturePath = '';
   textureId = -1;
   atlas: TextureAtlas | null = null;
-  frameName = "";
+  frameName = '';
   private texture: TextureAsset | null = null;
-  private loadedPath = "";
+  private loadedPath = '';
   private loadedAtlas: TextureAtlas | null = null;
 
   onAwake(): void {
@@ -144,7 +144,7 @@ export class Sprite extends ComponentX<SpriteProps> {
   private releaseTexture(): void {
     this.texture?.release();
     this.texture = null;
-    this.loadedPath = "";
+    this.loadedPath = '';
     this.loadedAtlas = null;
     this.textureId = -1;
   }

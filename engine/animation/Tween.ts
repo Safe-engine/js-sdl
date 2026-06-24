@@ -9,24 +9,24 @@ export type TweenValues<T> = {
 };
 
 export interface TweenOptions {
-  ease?: EasingFunction;
-  delay?: number;
-  onStart?: () => void;
-  onUpdate?: (progress: number) => void;
-  onComplete?: () => void;
-  onStop?: () => void;
+  ease?: EasingFunction
+  delay?: number
+  onStart?: () => void
+  onUpdate?: (progress: number) => void
+  onComplete?: () => void
+  onStop?: () => void
 }
 
 interface TweenTrack {
-  target: Record<string, any>;
-  key: string;
-  from: number;
-  to: number;
+  target: Record<string, any>
+  key: string
+  from: number
+  to: number
 }
 
 interface Animation {
-  update(dt: number): boolean;
-  stop(): void;
+  update(dt: number): boolean
+  stop(): void
 }
 
 const clamp01 = (value: number): number => Math.max(0, Math.min(1, value));
@@ -67,9 +67,9 @@ function collectTracks(
   for (const key of Object.keys(values)) {
     const to = values[key];
     const from = target[key];
-    if (typeof to === "number" && typeof from === "number") {
+    if (typeof to === 'number' && typeof from === 'number') {
       tracks.push({ target, key, from, to });
-    } else if (to && from && typeof to === "object" && typeof from === "object") {
+    } else if (to && from && typeof to === 'object' && typeof from === 'object') {
       collectTracks(from, to, tracks);
     } else {
       throw new TypeError(`Tween property "${key}" must target a number`);
@@ -126,10 +126,10 @@ export class TweenHandle implements Animation {
   }
 }
 
-type SequenceStep =
-  | { type: "tween"; tween: TweenHandle }
-  | { type: "delay"; remaining: number }
-  | { type: "call"; callback: () => void };
+type SequenceStep
+  = | { type: 'tween', tween: TweenHandle }
+    | { type: 'delay', remaining: number }
+    | { type: 'call', callback: () => void };
 
 export class TweenSequence implements Animation {
   private readonly steps: SequenceStep[] = [];
@@ -144,7 +144,7 @@ export class TweenSequence implements Animation {
     options: TweenOptions = {},
   ): this {
     this.steps.push({
-      type: "tween",
+      type: 'tween',
       tween: new TweenHandle(
         target as Record<string, any>,
         values as Record<string, any>,
@@ -156,12 +156,12 @@ export class TweenSequence implements Animation {
   }
 
   delay(seconds: number): this {
-    this.steps.push({ type: "delay", remaining: Math.max(0, seconds) });
+    this.steps.push({ type: 'delay', remaining: Math.max(0, seconds) });
     return this;
   }
 
   call(callback: () => void): this {
-    this.steps.push({ type: "call", callback });
+    this.steps.push({ type: 'call', callback });
     return this;
   }
 
@@ -179,12 +179,12 @@ export class TweenSequence implements Animation {
 
     while (this.index < this.steps.length) {
       const step = this.steps[this.index];
-      if (step.type === "call") {
+      if (step.type === 'call') {
         step.callback();
         this.index++;
         continue;
       }
-      if (step.type === "delay") {
+      if (step.type === 'delay') {
         const consumed = Math.min(step.remaining, remaining);
         step.remaining -= consumed;
         remaining -= consumed;
@@ -204,7 +204,7 @@ export class TweenSequence implements Animation {
   stop(): void {
     if (this.finished) return;
     const step = this.steps[this.index];
-    if (step?.type === "tween") step.tween.stop();
+    if (step?.type === 'tween') step.tween.stop();
     this.finished = true;
   }
 }

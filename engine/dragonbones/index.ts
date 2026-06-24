@@ -13,41 +13,41 @@ import {
   type IArmatureProxy,
   type Matrix,
   type SlotData,
-} from "dragonbones-es";
-import { drawTextureQuad, drawTextureRegionRotated, loadTextFile } from "sdl3";
-import { AssetManager, type TextureAsset } from "../AssetManager";
-import { ComponentX } from "../core/ComponentX";
+} from 'dragonbones-es';
+import { drawTextureQuad, drawTextureRegionRotated, loadTextFile } from 'sdl3';
+import { AssetManager, type TextureAsset } from '../AssetManager';
+import { ComponentX } from '../core/ComponentX';
 
 export interface DragonBonesData {
-  atlas: string;
-  skeleton: string;
-  texture: string;
+  atlas: string
+  skeleton: string
+  texture: string
 }
 
 export interface DragonBonesProps {
-  data: DragonBonesData;
-  skin?: string;
-  animation?: string;
-  playTimes?: Integer;
-  timeScale?: Float;
+  data: DragonBonesData
+  skin?: string
+  animation?: string
+  playTimes?: Integer
+  timeScale?: Float
 
-  onAnimationStart?: (animationName?: string) => void;
-  onAnimationEnd?: (animationName?: string) => void;
-  onAnimationComplete?: (animationName?: string, loopCount?: number) => void;
+  onAnimationStart?: (animationName?: string) => void
+  onAnimationEnd?: (animationName?: string) => void
+  onAnimationComplete?: (animationName?: string, loopCount?: number) => void
 }
 
 interface LoadedDragonBonesData {
-  key: string;
-  skeleton: any;
-  atlas: any;
-  texture: TextureAsset;
+  key: string
+  skeleton: any
+  atlas: any
+  texture: TextureAsset
 }
 
 class SdlTextureAtlasData extends TextureAtlasData {
   texture: TextureAsset | null = null;
 
   static toString(): string {
-    return "[class SdlTextureAtlasData]";
+    return '[class SdlTextureAtlasData]';
   }
 
   createTexture(): TextureData {
@@ -63,7 +63,7 @@ class SdlTextureAtlasData extends TextureAtlasData {
 
 class SdlTextureData extends TextureData {
   static toString(): string {
-    return "[class SdlTextureData]";
+    return '[class SdlTextureData]';
   }
 }
 
@@ -86,7 +86,7 @@ class SdlDisplay {
 
 class SdlArmatureDisplay implements IArmatureProxy {
   private _armature: Armature | null = null;
-  private readonly listeners = new Map<EventStringType, Array<{ listener: Function; thisObject: any }>>();
+  private readonly listeners = new Map<EventStringType, Array<{ listener: Function, thisObject: any }>>();
 
   dbInit(armature: Armature): void {
     this._armature = armature;
@@ -119,7 +119,7 @@ class SdlArmatureDisplay implements IArmatureProxy {
 
   addDBEventListener(type: EventStringType, listener: Function, thisObject: any): void {
     const listeners = this.listeners.get(type) ?? [];
-    if (!listeners.some((item) => item.listener === listener && item.thisObject === thisObject)) {
+    if (!listeners.some(item => item.listener === listener && item.thisObject === thisObject)) {
       listeners.push({ listener, thisObject });
     }
     this.listeners.set(type, listeners);
@@ -130,12 +130,12 @@ class SdlArmatureDisplay implements IArmatureProxy {
     if (!listeners) return;
     this.listeners.set(
       type,
-      listeners.filter((item) => item.listener !== listener || item.thisObject !== thisObject),
+      listeners.filter(item => item.listener !== listener || item.thisObject !== thisObject),
     );
   }
 
   get armature(): Armature {
-    if (!this._armature) throw new Error("DragonBones armature display is not initialized.");
+    if (!this._armature) throw new Error('DragonBones armature display is not initialized.');
     return this._armature;
   }
 
@@ -146,7 +146,7 @@ class SdlArmatureDisplay implements IArmatureProxy {
 
 class SdlSlot extends Slot {
   static toString(): string {
-    return "[class SdlSlot]";
+    return '[class SdlSlot]';
   }
 
   protected _initDisplay(_value: SdlDisplay, _isRetain: boolean): void { }
@@ -441,14 +441,14 @@ class SdlFactory extends BaseFactory {
 export class DragonBones extends ComponentX<DragonBonesProps> {
   private factory: SdlFactory | null = null;
   private armature: Armature | null = null;
-  private loadedKey = "";
+  private loadedKey = '';
   private loadVersion = 0;
   private completedLoops = 0;
   private animationEnded = false;
 
   onStart(): void {
     this.reload().catch((error) => {
-      console.error("DragonBones reload failed", error);
+      console.error('DragonBones reload failed', error);
     });
   }
 
@@ -487,9 +487,9 @@ export class DragonBones extends ComponentX<DragonBonesProps> {
     this.factory = new SdlFactory(new SdlArmatureDisplay());
     this.factory.parseData(loaded.skeleton, loaded.atlas, loaded.texture, loaded.key);
     this.armature = this.factory.buildArmature(
-      this.factory.getDragonBonesData(loaded.key)?.armatureNames[0] ?? "",
+      this.factory.getDragonBonesData(loaded.key)?.armatureNames[0] ?? '',
       loaded.key,
-      this.props.skin ?? "",
+      this.props.skin ?? '',
       loaded.key,
     );
 
@@ -559,7 +559,7 @@ export class DragonBones extends ComponentX<DragonBonesProps> {
       this.factory.removeTextureAtlasData(this.loadedKey, true);
     }
     this.factory = null;
-    this.loadedKey = "";
+    this.loadedKey = '';
   }
 }
 
@@ -582,7 +582,7 @@ async function loadDragonBonesData(data: DragonBonesData): Promise<LoadedDragonB
 function loadJson(path: string): Promise<any> {
   let promise = jsonCache.get(path);
   if (!promise) {
-    if (typeof fetch === "function") {
+    if (typeof fetch === 'function') {
       promise = fetch(path).then((response) => {
         if (!response.ok) throw new Error(`Failed to load DragonBones JSON: ${path}`);
         return response.json();
@@ -625,7 +625,7 @@ function composeRootMatrix(root: DragonBones): Matrix {
   return { a: na, b: nb, c: nc, d: nd, tx: node.worldX, ty: node.worldY } as Matrix;
 }
 
-function transformPoint(matrix: Matrix, x: number, y: number): { x: number; y: number } {
+function transformPoint(matrix: Matrix, x: number, y: number): { x: number, y: number } {
   return {
     x: matrix.a * x + matrix.c * y + matrix.tx,
     y: matrix.b * x + matrix.d * y + matrix.ty,

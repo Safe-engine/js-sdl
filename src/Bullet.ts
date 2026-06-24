@@ -1,5 +1,5 @@
-import { ComponentX, instantiate, Sprite } from "../engine";
-import { sf_bullet } from "./assets";
+import { ComponentX, instantiate, Sprite } from '../engine';
+import { sf_bullet } from './assets';
 
 export class Bullet extends ComponentX {
   speed = 720;

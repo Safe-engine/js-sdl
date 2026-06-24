@@ -1,4 +1,3 @@
-
 export function rectIntersectsRect(a: Rect, b: Rect): boolean {
   return a.x <= b.x + b.width
     && b.x <= a.x + a.width
@@ -52,7 +51,7 @@ function hasSeparatingAxis(a: Vec2[], b: Vec2[]): boolean {
   return false;
 }
 
-function projectPolygon(points: Vec2[], axis: Vec2): { min: number; max: number } {
+function projectPolygon(points: Vec2[], axis: Vec2): { min: number, max: number } {
   let min = dot(points[0], axis);
   let max = min;
   for (let i = 1; i < points.length; i++) {

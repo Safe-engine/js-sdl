@@ -8,27 +8,27 @@ import {
   setAudioVolume,
   stopAudio,
   updateAudio,
-} from "sdl3";
+} from 'sdl3';
 
 export interface PlayOptions {
-  group?: string;
-  loop?: boolean;
-  volume?: number;
-  fadeIn?: number;
+  group?: string
+  loop?: boolean
+  volume?: number
+  fadeIn?: number
 }
 
 export interface SoundOptions {
-  group?: string;
-  maxVoices?: number;
-  volume?: number;
+  group?: string
+  maxVoices?: number
+  volume?: number
 }
 
 interface Fade {
-  from: number;
-  to: number;
-  duration: number;
-  elapsed: number;
-  stopWhenDone: boolean;
+  from: number
+  to: number
+  duration: number
+  elapsed: number
+  stopWhenDone: boolean
 }
 
 function clampVolume(value: number): number {
@@ -85,8 +85,8 @@ export class AudioGroup {
     if (!this.fade) return;
     this.fade.elapsed = Math.min(this.fade.duration, this.fade.elapsed + dt);
     const progress = this.fade.elapsed / this.fade.duration;
-    this._volume = this.fade.from +
-      (this.fade.to - this.fade.from) * progress;
+    this._volume = this.fade.from
+      + (this.fade.to - this.fade.from) * progress;
     if (progress >= 1) this.fade = null;
     this.changed();
   }
@@ -203,8 +203,8 @@ export class AudioHandle {
 
     this.fade.elapsed = Math.min(this.fade.duration, this.fade.elapsed + dt);
     const progress = this.fade.elapsed / this.fade.duration;
-    this._volume = this.fade.from +
-      (this.fade.to - this.fade.from) * progress;
+    this._volume = this.fade.from
+      + (this.fade.to - this.fade.from) * progress;
     this._syncVolume();
     if (progress < 1) return;
 
@@ -255,14 +255,14 @@ export class Sound {
     options: SoundOptions,
     private readonly owner: AudioManager,
   ) {
-    this.group = options.group ?? "sfx";
+    this.group = options.group ?? 'sfx';
     this.maxVoices = Math.max(1, Math.floor(options.maxVoices ?? 4));
     this.volume = clampVolume(options.volume ?? 1);
   }
 
-  play(options: Omit<PlayOptions, "group"> = {}): AudioHandle | null {
+  play(options: Omit<PlayOptions, 'group'> = {}): AudioHandle | null {
     if (this.released) return null;
-    this.voices = this.voices.filter((voice) => voice.playing);
+    this.voices = this.voices.filter(voice => voice.playing);
     if (this.voices.length >= this.maxVoices) {
       this.voices.shift()!.stop();
     }
@@ -296,9 +296,9 @@ export class AudioManager {
   private music: AudioHandle | null = null;
 
   constructor() {
-    this.group("master");
-    this.group("music");
-    this.group("sfx");
+    this.group('master');
+    this.group('music');
+    this.group('sfx');
   }
 
   group(name: string): AudioGroup {
@@ -324,12 +324,12 @@ export class AudioManager {
     return this._playClip(this.load(path), options, true);
   }
 
-  playMusic(path: string, options: Omit<PlayOptions, "group"> = {}):
+  playMusic(path: string, options: Omit<PlayOptions, 'group'> = {}):
     AudioHandle | null {
     this.stopMusic();
     const handle = this.play(path, {
       ...options,
-      group: "music",
+      group: 'music',
       loop: options.loop ?? true,
     });
     this.music = handle;
@@ -370,7 +370,7 @@ export class AudioManager {
     const voiceId = playAudio(
       clip.id,
       options.loop ?? false,
-      initialVolume * this._groupGain(options.group ?? "sfx"),
+      initialVolume * this._groupGain(options.group ?? 'sfx'),
     );
     if (voiceId < 0) {
       if (releaseClipOnStop) clip.release();
@@ -380,7 +380,7 @@ export class AudioManager {
     const handle = new AudioHandle(
       voiceId,
       clip,
-      options.group ?? "sfx",
+      options.group ?? 'sfx',
       options.loop ?? false,
       initialVolume,
       this,
@@ -403,10 +403,10 @@ export class AudioManager {
   }
 
   _groupGain(name: string): number {
-    const master = this.group("master");
+    const master = this.group('master');
     const group = this.group(name);
     if (master.muted || group.muted) return 0;
-    return master.volume * (name === "master" ? 1 : group.volume);
+    return master.volume * (name === 'master' ? 1 : group.volume);
   }
 
   _update(dt: number): void {

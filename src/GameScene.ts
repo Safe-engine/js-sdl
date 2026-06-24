@@ -1,24 +1,24 @@
 import {
-    Button,
-    instantiate,
-    Label,
-    loadScene,
-    PhysicsWorld,
-    Scene,
-    Sprite,
-    TiledMap
-} from "../engine";
+  Button,
+  instantiate,
+  Label,
+  loadScene,
+  PhysicsWorld,
+  Scene,
+  Sprite,
+  TiledMap
+} from '../engine';
 import {
-    lilita_one_regularFont,
-    map_1_json,
-    sf_button,
-} from "./assets";
-import { Bullet } from "./Bullet";
-import { HomeScene } from "./HomeScene";
-import { Player } from "./Player";
+  lilita_one_regularFont,
+  map_1_json,
+  sf_button,
+} from './assets';
+import { Bullet } from './Bullet';
+import { HomeScene } from './HomeScene';
+import { Player } from './Player';
 
 interface BulletState {
-  bullet: Bullet;
+  bullet: Bullet
 }
 
 export class GameScene extends Scene {
@@ -27,7 +27,7 @@ export class GameScene extends Scene {
   private shootCooldown = 0;
 
   onLoad(): void {
-    console.log("GameScene loaded");
+    console.log('GameScene loaded');
   }
 
   onUpdate(dt: number): void {
@@ -65,7 +65,7 @@ export class GameScene extends Scene {
   }
 
   onClick = () => {
-    console.log("clicked button");
+    console.log('clicked button');
     loadScene(HomeScene);
   };
 
@@ -86,7 +86,7 @@ export class GameScene extends Scene {
     playerComp1.node.y = 1040;
     playerComp1.node.anchorX = 0.5;
     playerComp1.node.anchorY = 0.5;
-    const Label2 = instantiate(Label, { string: "Tap to shoot", font: lilita_one_regularFont, size: 26 });
+    const Label2 = instantiate(Label, { string: 'Tap to shoot', font: lilita_one_regularFont, size: 26 });
     this.root.addChild(Label2.node);
     Label2.node.x = 24;
     Label2.node.y = 24;
@@ -102,7 +102,7 @@ export class GameScene extends Scene {
     spriteComp2.node.height = 68;
     const Button2 = instantiate(Button, { onPress: this.onClick });
     spriteComp2.node.resolveComponent(Button2);
-    const Label3 = instantiate(Label, { string: "PLAY", font: lilita_one_regularFont, size: 32, align: "center", verticalAlign: "middle" });
+    const Label3 = instantiate(Label, { string: 'PLAY', font: lilita_one_regularFont, size: 32, align: 'center', verticalAlign: 'middle' });
     spriteComp2.node.resolveComponent(Label3);
   }
 }

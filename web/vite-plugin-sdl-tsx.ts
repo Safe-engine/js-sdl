@@ -2,11 +2,11 @@ import MagicString from 'magic-string';
 import ts from 'typescript';
 
 type TransformState = {
-  sourceFile: ts.SourceFile;
-  ms: MagicString;
-  currentClassName?: string;
-  isScene: boolean;
-  listMethods: string[];
+  sourceFile: ts.SourceFile
+  ms: MagicString
+  currentClassName?: string
+  isScene: boolean
+  listMethods: string[]
 };
 
 function parse(content: string, fileName: string) {
@@ -93,15 +93,12 @@ function attributesToParams(
       const list = val.split('.');
       if (list.length === 2 && listMethods.includes(list[1])) {
         props += `${attName}: ${val}.bind(this),`;
-      }
-      else if (list.length > 2 && list[1] !== 'props' && list[2] !== 'node') {
+      } else if (list.length > 2 && list[1] !== 'props' && list[2] !== 'node') {
         props += `${attName}: ${val}.bind(this.${list[1]}),`;
-      }
-      else {
+      } else {
         props += `${attName}: ${val},`;
       }
-    }
-    else {
+    } else {
       props += `${attName}: ${val},`;
     }
   });
@@ -120,20 +117,17 @@ function collectJsxBlocks(state: TransformState) {
     if (ts.isClassDeclaration(node)) {
       state.currentClassName = node.name?.text;
       const superClass = (node.heritageClauses as any)
-        ?.flatMap((clause) => clause.token === ts.SyntaxKind.ExtendsKeyword ? clause.types : [])
+        ?.flatMap(clause => clause.token === ts.SyntaxKind.ExtendsKeyword ? clause.types : [])
         ?.[0]?.expression;
       state.isScene = superClass?.getText(state.sourceFile) === 'Scene';
-    }
-    else if (ts.isMethodDeclaration(node)) {
+    } else if (ts.isMethodDeclaration(node)) {
       state.listMethods.push(getMethodName(node.name, state.sourceFile));
-    }
-    else if (ts.isJsxElement(node)) {
+    } else if (ts.isJsxElement(node)) {
       if (jsxDepth === 0)
         jsxBlocks.push(node);
       jsxDepth++;
       state.ms.remove(node.closingElement.getStart(state.sourceFile), node.closingElement.end);
-    }
-    else if (ts.isJsxSelfClosingElement(node) && jsxDepth === 0) {
+    } else if (ts.isJsxSelfClosingElement(node) && jsxDepth === 0) {
       jsxBlocks.push(node);
     }
 
@@ -163,10 +157,10 @@ function parseJSX(
   const componentName = tagName.getText(sourceFile);
 
   if (componentName === 'ExtraDataComp') {
-    const keyAttribute = attributes.find((attribute) =>
+    const keyAttribute = attributes.find(attribute =>
       ts.isJsxAttribute(attribute) && attribute.name.getText(sourceFile) === 'key'
     );
-    const valueAttribute = attributes.find((attribute) =>
+    const valueAttribute = attributes.find(attribute =>
       ts.isJsxAttribute(attribute) && attribute.name.getText(sourceFile) === 'value'
     );
     if (!parentVar || !keyAttribute || !valueAttribute || !ts.isJsxAttribute(keyAttribute) || !ts.isJsxAttribute(valueAttribute))
@@ -186,15 +180,13 @@ function parseJSX(
     state.ms.appendLeft(start, createComponentString);
     if (state.isScene) {
       ret += `\nthis.root.addChild(${compVar}.node)`;
-    }
-    else {
+    } else {
       state.ms.appendLeft(start, `\n   const ${classVar} = ${compVar}.addComponent(this)`);
     }
     if (!state.isScene && state.listMethods.includes('onLoad')) {
       ret += `\n${classVar}.onLoad();`;
     }
-  }
-  else {
+  } else {
     ret += createComponentString;
   }
   if (parentVar) {
@@ -208,17 +200,13 @@ function parseJSX(
     const rightValue = `${compVar}`;
     if (attName === '$ref') {
       ret += `\n${refString} = ${rightValue};`;
-    }
-    else if (attName === '$refNode') {
+    } else if (attName === '$refNode') {
       ret += `\n${refString} = ${rightValue}.node;`;
-    }
-    else if (attName === '$push') {
+    } else if (attName === '$push') {
       ret += `\n${refString}.push(${rightValue});`;
-    }
-    else if (attName === '$pushNode') {
+    } else if (attName === '$pushNode') {
       ret += `\n${refString}.push(${rightValue}.node);`;
-    }
-    else if (attName === 'node' && attribute.initializer) {
+    } else if (attName === 'node' && attribute.initializer) {
       ret += parseNodeAttribute(attribute.initializer, compVar, attName, sourceFile);
     }
   });
@@ -246,8 +234,7 @@ function parseChildren(state: TransformState, classVar: string, compVar: string)
     }
     if (ts.isJsxExpression(element) && element.expression) {
       parseJSXExpressionContainer(state, classVar, element.expression, compVar);
-    }
-    else if (ts.isCallExpression(element)) {
+    } else if (ts.isCallExpression(element)) {
       parseJSXExpressionContainer(state, classVar, element, compVar);
     }
   };
@@ -290,20 +277,18 @@ function parseJSXExpressionContainer(
     state.ms.overwrite(start, end, `\n for(let ${indexVar} = ${startIndex}; ${indexVar} < ${loopCount}; ${indexVar}++) {`);
     parseChildren(state, classVar, compVar)(callback.body);
     state.ms.replaceAll('))}', '}}');
-  }
-  else {
+  } else {
     const indexParam = callback.parameters[1];
     const indexVar = getParameterName(indexParam, sourceFile, 'i');
     const loopVar = parseValue(object, sourceFile);
     const itemVar = getParameterName(callback.parameters[0], sourceFile, 'item');
     const startIndex = getParameterInitializer(indexParam, sourceFile);
     if (startIndex !== '0') {
-      state.ms.overwrite(start, end, `\n for(let ${indexVar} = ${startIndex}; ${indexVar} < ${loopVar}.length + ${startIndex}; ${indexVar}++) {` +
-        `\n const ${itemVar} = ${loopVar}[${indexVar} - ${startIndex}]`);
-    }
-    else {
-      state.ms.overwrite(start, end, `\n for(let ${indexVar} = 0; ${indexVar} < ${loopVar}.length; ${indexVar}++) {` +
-        `\n const ${itemVar} = ${loopVar}[${indexVar}]`);
+      state.ms.overwrite(start, end, `\n for(let ${indexVar} = ${startIndex}; ${indexVar} < ${loopVar}.length + ${startIndex}; ${indexVar}++) {`
+      + `\n const ${itemVar} = ${loopVar}[${indexVar} - ${startIndex}]`);
+    } else {
+      state.ms.overwrite(start, end, `\n for(let ${indexVar} = 0; ${indexVar} < ${loopVar}.length; ${indexVar}++) {`
+      + `\n const ${itemVar} = ${loopVar}[${indexVar}]`);
     }
     parseChildren(state, classVar, compVar)(callback.body);
     state.ms.replaceAll('))}', '}}');
@@ -343,8 +328,7 @@ export function sdlTsxTransform() {
             jsxBlock.openingElement.attributes.properties,
             classVar,
           );
-        }
-        else {
+        } else {
           parseJSX(state, jsxBlock, jsxBlock.tagName, [], jsxBlock.attributes.properties, classVar);
         }
       });

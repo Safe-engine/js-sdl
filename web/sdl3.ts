@@ -9,31 +9,31 @@ type OrientationCallback = (
 ) => void;
 
 interface TextureAsset {
-  texture: WebGLTexture | null;
-  width: number;
-  height: number;
-  refs: number;
-  key: string;
-  textFontId?: number;
-  text?: string;
+  texture: WebGLTexture | null
+  width: number
+  height: number
+  refs: number
+  key: string
+  textFontId?: number
+  text?: string
 }
 
 interface FontAsset {
-  family: string;
-  path: string;
-  size: number;
-  refs: number;
-  loaded: boolean;
+  family: string
+  path: string
+  size: number
+  refs: number
+  loaded: boolean
 }
 
 interface AudioAsset {
-  url: string;
-  refs: number;
+  url: string
+  refs: number
 }
 
 interface AudioVoice {
-  element: HTMLAudioElement;
-  ended: boolean;
+  element: HTMLAudioElement
+  ended: boolean
 }
 
 let canvas: HTMLCanvasElement | null = null;
@@ -85,11 +85,11 @@ let terminateCallback: VoidCallback | null = null;
 function compileShader(type: number, source: string): WebGLShader {
   const context = requireGl();
   const shader = context.createShader(type);
-  if (!shader) throw new Error("Unable to create WebGL shader");
+  if (!shader) throw new Error('Unable to create WebGL shader');
   context.shaderSource(shader, source);
   context.compileShader(shader);
   if (!context.getShaderParameter(shader, context.COMPILE_STATUS)) {
-    const message = context.getShaderInfoLog(shader) ?? "Unknown shader error";
+    const message = context.getShaderInfoLog(shader) ?? 'Unknown shader error';
     context.deleteShader(shader);
     throw new Error(message);
   }
@@ -122,27 +122,27 @@ function createProgram(): WebGLProgram {
     }
   `);
   const result = context.createProgram();
-  if (!result) throw new Error("Unable to create WebGL program");
+  if (!result) throw new Error('Unable to create WebGL program');
   context.attachShader(result, vertexShader);
   context.attachShader(result, fragmentShader);
   context.linkProgram(result);
   context.deleteShader(vertexShader);
   context.deleteShader(fragmentShader);
   if (!context.getProgramParameter(result, context.LINK_STATUS)) {
-    throw new Error(context.getProgramInfoLog(result) ?? "WebGL link failed");
+    throw new Error(context.getProgramInfoLog(result) ?? 'WebGL link failed');
   }
   return result;
 }
 
 function requireGl(): WebGLRenderingContext {
-  if (!gl) throw new Error("createWindow() must be called before rendering");
+  if (!gl) throw new Error('createWindow() must be called before rendering');
   return gl;
 }
 
 function assetUrl(path: string): string {
-  const normalized = path.replace(/\\/g, "/").replace(/^\.?\//, "");
-  const publicPath = normalized.startsWith("res/")
-    ? normalized.slice("res/".length)
+  const normalized = path.replace(/\\/g, '/').replace(/^\.?\//, '');
+  const publicPath = normalized.startsWith('res/')
+    ? normalized.slice('res/'.length)
     : normalized;
   return `${import.meta.env.BASE_URL}${publicPath}`;
 }
@@ -185,8 +185,8 @@ export function playAudio(
   const voice: AudioVoice = { element, ended: false };
   element.loop = loop;
   element.volume = Math.max(0, Math.min(1, volume));
-  element.preload = "auto";
-  element.addEventListener("ended", () => {
+  element.preload = 'auto';
+  element.addEventListener('ended', () => {
     voice.ended = true;
   }, { once: true });
   audioVoices.set(voiceId, voice);
@@ -200,7 +200,7 @@ export function stopAudio(voiceId: number): void {
   const voice = audioVoices.get(voiceId);
   if (!voice) return;
   voice.element.pause();
-  voice.element.removeAttribute("src");
+  voice.element.removeAttribute('src');
   voice.element.load();
   voice.ended = true;
   audioVoices.delete(voiceId);
@@ -274,10 +274,10 @@ function safeAreaInsets(): [number, number, number, number] {
   const value = (name: string) =>
     Number.parseFloat(style.getPropertyValue(name)) || 0;
   return [
-    value("--safe-area-inset-top"),
-    value("--safe-area-inset-right"),
-    value("--safe-area-inset-bottom"),
-    value("--safe-area-inset-left"),
+    value('--safe-area-inset-top'),
+    value('--safe-area-inset-right'),
+    value('--safe-area-inset-bottom'),
+    value('--safe-area-inset-left'),
   ];
 }
 
@@ -339,10 +339,10 @@ export function getViewportMetrics(): [
 
 function orientationValue(): number {
   const type = screen.orientation?.type;
-  if (type === "landscape-primary") return 1;
-  if (type === "landscape-secondary") return 2;
-  if (type === "portrait-primary") return 3;
-  if (type === "portrait-secondary") return 4;
+  if (type === 'landscape-primary') return 1;
+  if (type === 'landscape-secondary') return 2;
+  if (type === 'portrait-primary') return 3;
+  if (type === 'portrait-secondary') return 4;
   return window.innerWidth >= window.innerHeight ? 1 : 3;
 }
 
@@ -372,32 +372,32 @@ export function createWindow(title: string, width: number, height: number): void
   logicalWidth = width;
   logicalHeight = height;
 
-  canvas = document.querySelector<HTMLCanvasElement>("#sdl-canvas");
+  canvas = document.querySelector<HTMLCanvasElement>('#sdl-canvas');
   if (!canvas) {
-    canvas = document.createElement("canvas");
-    canvas.id = "sdl-canvas";
+    canvas = document.createElement('canvas');
+    canvas.id = 'sdl-canvas';
     document.body.appendChild(canvas);
   }
   canvas.width = width;
   canvas.height = height;
   canvas.style.aspectRatio = `${width} / ${height}`;
-  canvas.style.touchAction = "none";
+  canvas.style.touchAction = 'none';
 
-  gl = canvas.getContext("webgl", {
+  gl = canvas.getContext('webgl', {
     alpha: false,
     antialias: true,
     premultipliedAlpha: true,
   });
-  if (!gl) throw new Error("WebGL is not supported by this browser");
+  if (!gl) throw new Error('WebGL is not supported by this browser');
 
   program = createProgram();
   positionBuffer = gl.createBuffer();
   uvBuffer = gl.createBuffer();
-  positionLocation = gl.getAttribLocation(program, "a_position");
-  uvLocation = gl.getAttribLocation(program, "a_uv");
-  resolutionLocation = gl.getUniformLocation(program, "u_resolution");
-  samplerLocation = gl.getUniformLocation(program, "u_texture");
-  colorLocation = gl.getUniformLocation(program, "u_color");
+  positionLocation = gl.getAttribLocation(program, 'a_position');
+  uvLocation = gl.getAttribLocation(program, 'a_uv');
+  resolutionLocation = gl.getUniformLocation(program, 'u_resolution');
+  samplerLocation = gl.getUniformLocation(program, 'u_texture');
+  colorLocation = gl.getUniformLocation(program, 'u_color');
   whiteTexture = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, whiteTexture);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
@@ -423,12 +423,12 @@ export function createWindow(title: string, width: number, height: number): void
   });
   resizeObserver.observe(canvas);
 
-  canvas.addEventListener("pointerdown", (event) => {
+  canvas.addEventListener('pointerdown', (event) => {
     pointerDown = true;
     canvas?.setPointerCapture(event.pointerId);
     touchStartCallback?.(...pointerPosition(event));
   });
-  canvas.addEventListener("pointermove", (event) => {
+  canvas.addEventListener('pointermove', (event) => {
     if (pointerDown) touchMoveCallback?.(...pointerPosition(event));
   });
   const endPointer = (event: PointerEvent) => {
@@ -436,9 +436,9 @@ export function createWindow(title: string, width: number, height: number): void
     pointerDown = false;
     touchEndCallback?.(...pointerPosition(event));
   };
-  canvas.addEventListener("pointerup", endPointer);
-  canvas.addEventListener("pointercancel", endPointer);
-  window.addEventListener("resize", emitOrientation);
+  canvas.addEventListener('pointerup', endPointer);
+  canvas.addEventListener('pointercancel', endPointer);
+  window.addEventListener('resize', emitOrientation);
 }
 
 export function loadTexture(path: string): number {
@@ -461,7 +461,7 @@ export function loadTexture(path: string): number {
   textureIds.set(path, id);
 
   const image = new Image();
-  image.decoding = "async";
+  image.decoding = 'async';
   image.onload = () => {
     if (textures.get(id) === asset) {
       uploadSource(asset, image, image.naturalWidth, image.naturalHeight);
@@ -473,7 +473,7 @@ export function loadTexture(path: string): number {
 }
 
 export function loadTextFile(_path: string): string | null {
-  throw new Error("loadTextFile is only available in the native SDL runtime.");
+  throw new Error('loadTextFile is only available in the native SDL runtime.');
 }
 
 export function loadFont(path: string, ptsize: number): number {
@@ -502,26 +502,26 @@ export function loadFont(path: string, ptsize: number): number {
 }
 
 function renderTextSurface(font: FontAsset, text: string): HTMLCanvasElement | null {
-  const surface = document.createElement("canvas");
-  const context = surface.getContext("2d");
+  const surface = document.createElement('canvas');
+  const context = surface.getContext('2d');
   if (!context) return null;
 
   context.font = `${font.size}px "${font.family}", sans-serif`;
   const metrics = context.measureText(text);
-  const ascent = metrics.fontBoundingBoxAscent ??
-    metrics.actualBoundingBoxAscent ??
-    font.size * 0.8;
-  const descent = metrics.fontBoundingBoxDescent ??
-    metrics.actualBoundingBoxDescent ??
-    font.size * 0.2;
+  const ascent = metrics.fontBoundingBoxAscent
+    ?? metrics.actualBoundingBoxAscent
+    ?? font.size * 0.8;
+  const descent = metrics.fontBoundingBoxDescent
+    ?? metrics.actualBoundingBoxDescent
+    ?? font.size * 0.2;
   const width = Math.max(1, Math.ceil(metrics.width));
   const height = Math.max(1, Math.ceil(ascent + descent));
 
   surface.width = width;
   surface.height = height;
   context.font = `${font.size}px "${font.family}", sans-serif`;
-  context.fillStyle = "rgb(220, 220, 220)";
-  context.textBaseline = "alphabetic";
+  context.fillStyle = 'rgb(220, 220, 220)';
+  context.textBaseline = 'alphabetic';
   context.fillText(text, 0, Math.ceil(ascent));
   return surface;
 }
@@ -813,7 +813,7 @@ export function drawRect(
     width: 1,
     height: 1,
     refs: 1,
-    key: "__white",
+    key: '__white',
   });
   draw(id, 0, 0, 1, 1, x, y, width, height, 0, 0, 0, false, false,
     red, green, blue, alpha);
@@ -821,8 +821,8 @@ export function drawRect(
 }
 
 export interface DrawPoint {
-  x: number;
-  y: number;
+  x: number
+  y: number
 }
 
 export function drawLine(
@@ -844,7 +844,7 @@ export function drawLine(
     width: 1,
     height: 1,
     refs: 1,
-    key: "__white",
+    key: '__white',
   });
   draw(id, 0, 0, 1, 1, x1, y1 - 0.5, length, 1, angle, 0, 0, false, false,
     red, green, blue, alpha);
@@ -1007,8 +1007,8 @@ export function onTerminate(callback: VoidCallback): void {
   terminateCallback = callback;
 }
 
-if (typeof document !== "undefined") {
-  document.addEventListener("visibilitychange", () => {
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       pauseCallback?.();
       interruptionCallback?.(true);
@@ -1022,9 +1022,9 @@ if (typeof document !== "undefined") {
   });
 }
 
-if (typeof window !== "undefined") {
-  window.addEventListener("orientationchange", emitOrientation);
-  window.addEventListener("pagehide", () => terminateCallback?.());
+if (typeof window !== 'undefined') {
+  window.addEventListener('orientationchange', emitOrientation);
+  window.addEventListener('pagehide', () => terminateCallback?.());
 }
 
 // Browsers do not expose an equivalent low-memory event.

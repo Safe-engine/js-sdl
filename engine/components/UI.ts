@@ -3,15 +3,15 @@ import {
   drawTextureRegionRotated,
   popClipRect,
   pushClipRect,
-} from "sdl3";
-import { AssetManager, TextureAsset } from "../AssetManager";
-import { ComponentX } from "../core/ComponentX";
-import type { Node } from "../core/Node";
-import { white, zeroInsets } from "../helper/constants";
-import type { InputEvent } from "../Input";
+} from 'sdl3';
+import { AssetManager, TextureAsset } from '../AssetManager';
+import { ComponentX } from '../core/ComponentX';
+import type { Node } from '../core/Node';
+import { white, zeroInsets } from '../helper/constants';
+import type { InputEvent } from '../Input';
 
-export type LayoutDirection = "none" | "horizontal" | "vertical";
-export type LayoutAlignment = "start" | "center" | "end" | "stretch";
+export type LayoutDirection = 'none' | 'horizontal' | 'vertical';
+export type LayoutAlignment = 'start' | 'center' | 'end' | 'stretch';
 
 export class UIElement<Props = unknown> extends ComponentX<Props> {
   width = 100;
@@ -82,7 +82,7 @@ export class UIElement<Props = unknown> extends ComponentX<Props> {
     this.height = Math.max(this.minHeight, Math.min(this.maxHeight, this.height));
   }
 
-  protected worldRect(): { x: number; y: number; width: number; height: number } {
+  protected worldRect(): { x: number, y: number, width: number, height: number } {
     const t = this.node;
     const width = this.width * Math.abs(t.worldScaleX);
     const height = this.height * Math.abs(t.worldScaleY);
@@ -96,30 +96,30 @@ export class UIElement<Props = unknown> extends ComponentX<Props> {
 
   protected containsPoint(x: number, y: number): boolean {
     const rect = this.worldRect();
-    return x >= rect.x && x <= rect.x + rect.width &&
-      y >= rect.y && y <= rect.y + rect.height;
+    return x >= rect.x && x <= rect.x + rect.width
+      && y >= rect.y && y <= rect.y + rect.height;
   }
 }
 
 export class UIContainer extends UIElement {
-  direction: LayoutDirection = "none";
+  direction: LayoutDirection = 'none';
   gap = 0;
   padding: Insets = zeroInsets();
-  align: LayoutAlignment = "start";
+  align: LayoutAlignment = 'start';
 
   onUpdate(dt: number): void {
     super.onUpdate(dt);
-    if (this.direction !== "none") this.layoutChildren();
+    if (this.direction !== 'none') this.layoutChildren();
   }
 
   layoutChildren(): void {
     if (!this.node) return;
-    const horizontal = this.direction === "horizontal";
+    const horizontal = this.direction === 'horizontal';
     const originX = -this.node.anchorX * this.width;
     const originY = -this.node.anchorY * this.height;
     const items = this.node.children
-      .map((node) => ({ node, element: findUIElement(node) }))
-      .filter((item): item is { node: Node; element: UIElement } => !!item.element);
+      .map(node => ({ node, element: findUIElement(node) }))
+      .filter((item): item is { node: Node, element: UIElement } => !!item.element);
     if (items.length === 0) return;
 
     const mainSize = horizontal ? this.width : this.height;
@@ -147,13 +147,13 @@ export class UIContainer extends UIElement {
 
       const crossStart = horizontal ? this.padding.top : this.padding.left;
       const crossEnd = horizontal ? this.padding.bottom : this.padding.right;
-      const crossAvailable = (horizontal ? this.height : this.width) -
-        crossStart - crossEnd;
+      const crossAvailable = (horizontal ? this.height : this.width)
+        - crossStart - crossEnd;
       const crossSize = horizontal ? element.height : element.width;
       let cross = crossStart;
-      if (this.align === "center") cross += (crossAvailable - crossSize) * 0.5;
-      if (this.align === "end") cross += crossAvailable - crossSize;
-      if (this.align === "stretch") {
+      if (this.align === 'center') cross += (crossAvailable - crossSize) * 0.5;
+      if (this.align === 'end') cross += crossAvailable - crossSize;
+      if (this.align === 'stretch') {
         if (horizontal) element.height = crossAvailable;
         else element.width = crossAvailable;
       }
@@ -185,13 +185,13 @@ export class Panel extends UIContainer {
 }
 
 export class NineSlice extends UIElement {
-  texturePath = "";
+  texturePath = '';
   region: TextureRegion | null = null;
   border: Insets = { top: 12, right: 12, bottom: 12, left: 12 };
   color: Color = white();
   opacity = 1;
   private texture: TextureAsset | null = null;
-  private loadedPath = "";
+  private loadedPath = '';
 
   setTexture(path: string, region: TextureRegion | null = null): this {
     if (path !== this.texturePath) this.releaseTexture();
@@ -210,17 +210,17 @@ export class NineSlice extends UIElement {
     const sourceW = splitSize(source.width, this.border.left, this.border.right);
     const sourceH = splitSize(source.height, this.border.top, this.border.bottom);
     const sourceX = [source.x, source.x + sourceW[0],
-    source.x + source.width - sourceW[2]];
+      source.x + source.width - sourceW[2]];
     const sourceY = [source.y, source.y + sourceH[0],
-    source.y + source.height - sourceH[2]];
+      source.y + source.height - sourceH[2]];
     const destW = splitSize(rect.width, sourceW[0], sourceW[2]);
     const destH = splitSize(rect.height, sourceH[0], sourceH[2]);
     let dy = rect.y;
     for (let row = 0; row < 3; row++) {
       let dx = rect.x;
       for (let column = 0; column < 3; column++) {
-        if (sourceW[column] > 0 && sourceH[row] > 0 &&
-          destW[column] > 0 && destH[row] > 0) {
+        if (sourceW[column] > 0 && sourceH[row] > 0
+          && destW[column] > 0 && destH[row] > 0) {
           drawTextureRegionRotated(
             this.texture.id,
             sourceX[column], sourceY[row], sourceW[column], sourceH[row],
@@ -254,7 +254,7 @@ export class NineSlice extends UIElement {
   private releaseTexture(): void {
     this.texture?.release();
     this.texture = null;
-    this.loadedPath = "";
+    this.loadedPath = '';
   }
 }
 
@@ -323,10 +323,10 @@ export class ScrollView extends UIContainer {
     this.clampScroll();
     const content = this.node?.children[0];
     if (content) {
-      content.x = -this.node!.anchorX * this.width -
-        this.scrollX;
-      content.y = -this.node!.anchorY * this.height -
-        this.scrollY;
+      content.x = -this.node!.anchorX * this.width
+        - this.scrollX;
+      content.y = -this.node!.anchorY * this.height
+        - this.scrollY;
     }
   }
 
@@ -356,9 +356,9 @@ export class ScrollView extends UIContainer {
   }
 
   onPointerMove(event: InputEvent): void {
-    this.dragged = this.dragged ||
-      Math.abs(event.x - this.dragX) > 4 ||
-      Math.abs(event.y - this.dragY) > 4;
+    this.dragged = this.dragged
+      || Math.abs(event.x - this.dragX) > 4
+      || Math.abs(event.y - this.dragY) > 4;
     if (this.horizontal) this.scrollX = this.startScrollX - (event.x - this.dragX);
     if (this.vertical) this.scrollY = this.startScrollY - (event.y - this.dragY);
     this.clampScroll();
@@ -393,7 +393,7 @@ function findUIElement(node: Node | null): UIElement | null {
 }
 
 function splitSize(total: number, leading: number, trailing: number):
-  [number, number, number] {
+[number, number, number] {
   const edgeTotal = leading + trailing;
   if (edgeTotal <= total) return [leading, total - edgeTotal, trailing];
   if (edgeTotal <= 0) return [0, total, 0];

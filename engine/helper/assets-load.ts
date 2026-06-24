@@ -1,10 +1,10 @@
-import { loadTextFile } from "sdl3";
-import { AssetGroup, AssetManager } from "../AssetManager";
+import { loadTextFile } from 'sdl3';
+import { AssetGroup, AssetManager } from '../AssetManager';
 
 type DragonBonesAsset = {
-  atlas?: string;
-  skeleton?: string;
-  texture?: string;
+  atlas?: string
+  skeleton?: string
+  texture?: string
 };
 
 const loadedAssetGroups = new WeakMap<object, AssetGroup>();
@@ -44,7 +44,7 @@ export async function loadAll(assets: any, cb?: (progress: number) => void) {
     report();
   }
 
-  if (assets && typeof assets === "object") {
+  if (assets && typeof assets === 'object') {
     loadedAssetGroups.set(assets, group);
   }
 
@@ -52,7 +52,7 @@ export async function loadAll(assets: any, cb?: (progress: number) => void) {
 }
 
 export function unloadAll(assets: any) {
-  if (!assets || typeof assets !== "object") return;
+  if (!assets || typeof assets !== 'object') return;
   loadedAssetGroups.get(assets)?.unload();
   loadedAssetGroups.delete(assets);
 }
@@ -63,10 +63,10 @@ function collectAssets(
   fontAssets: Set<string>,
   textAssets: Set<string>,
 ): void {
-  if (!assets || typeof assets !== "object") return;
+  if (!assets || typeof assets !== 'object') return;
 
   for (const value of Object.values(assets)) {
-    if (typeof value === "string") {
+    if (typeof value === 'string') {
       collectAssetPath(value, textureAssets, fontAssets, textAssets);
       continue;
     }
@@ -99,15 +99,15 @@ function collectAssetPath(
 }
 
 function isDragonBonesAsset(value: unknown): value is DragonBonesAsset {
-  if (!value || typeof value !== "object") return false;
+  if (!value || typeof value !== 'object') return false;
   const data = value as DragonBonesAsset;
-  return typeof data.texture === "string" ||
-    typeof data.atlas === "string" ||
-    typeof data.skeleton === "string";
+  return typeof data.texture === 'string'
+    || typeof data.atlas === 'string'
+    || typeof data.skeleton === 'string';
 }
 
 async function loadTextAsset(path: string): Promise<string> {
-  if (typeof fetch === "function") {
+  if (typeof fetch === 'function') {
     const response = await fetch(path);
     if (!response.ok) throw new Error(`Failed to load text asset: ${path}`);
     return response.text();

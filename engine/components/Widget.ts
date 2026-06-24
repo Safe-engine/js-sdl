@@ -1,11 +1,11 @@
-import { ComponentX } from "../core/ComponentX";
-import { ActiveViewport } from "../Viewport";
+import { ComponentX } from '../core/ComponentX';
+import { ActiveViewport } from '../Viewport';
 
 export interface WidgetProps {
-  top?: Integer;
-  right?: Integer;
-  bottom?: Integer;
-  left?: Integer;
+  top?: Integer
+  right?: Integer
+  bottom?: Integer
+  left?: Integer
 }
 
 export class Widget extends ComponentX<WidgetProps> {
@@ -53,15 +53,15 @@ export class Widget extends ComponentX<WidgetProps> {
     if (hasLeft) {
       transform.x = safeArea.x + this.left! + this.node.width * transform.anchorX;
     } else if (hasRight) {
-      transform.x = safeArea.x + safeArea.width - this.right! -
-        this.node.width * (1 - transform.anchorX);
+      transform.x = safeArea.x + safeArea.width - this.right!
+        - this.node.width * (1 - transform.anchorX);
     }
 
     if (hasTop) {
       transform.y = safeArea.y + this.top! + this.node.height * transform.anchorY;
     } else if (hasBottom) {
-      transform.y = safeArea.y + safeArea.height - this.bottom! -
-        this.node.height * (1 - transform.anchorY);
+      transform.y = safeArea.y + safeArea.height - this.bottom!
+        - this.node.height * (1 - transform.anchorY);
     }
   }
 }

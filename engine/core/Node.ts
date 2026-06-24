@@ -1,4 +1,4 @@
-import { ComponentX } from "./ComponentX";
+import { ComponentX } from './ComponentX';
 
 type Constructor<T = any> = new (...args: any[]) => T;
 type ComponentInput<T extends ComponentX> = Constructor<T> | T;
@@ -84,9 +84,9 @@ export class Node {
   }
 
   addComponent<T extends ComponentX>(c: ComponentInput<T>, data?: ConstructorParameters<Constructor<T>>[0]): T {
-    const component = typeof c === "function" ? new c(data) : c;
+    const component = typeof c === 'function' ? new c(data) : c;
     if (component.node && component.node !== this) {
-      component.node.components = component.node.components.filter((item) => item !== component);
+      component.node.components = component.node.components.filter(item => item !== component);
     }
     component.node = this;
     if (!this.components.includes(component)) {

@@ -6,18 +6,18 @@ import {
   loadTexture,
   releaseFont,
   releaseTexture,
-} from "sdl3";
+} from 'sdl3';
 
 interface TextureRecord {
-  id: number;
-  width: number;
-  height: number;
-  refs: number;
+  id: number
+  width: number
+  height: number
+  refs: number
 }
 
 interface FontRecord {
-  id: number;
-  refs: number;
+  id: number
+  refs: number
 }
 
 export class TextureAsset {
@@ -90,19 +90,19 @@ export class SpriteSheet extends TextureAtlas {
     frameWidth: number,
     frameHeight: number,
     options: {
-      columns?: number;
-      rows?: number;
-      margin?: number;
-      spacing?: number;
-      names?: string[];
+      columns?: number
+      rows?: number
+      margin?: number
+      spacing?: number
+      names?: string[]
     } = {},
   ): SpriteSheet {
     const margin = options.margin ?? 0;
     const spacing = options.spacing ?? 0;
-    const columns = options.columns ??
-      Math.floor((texture.width - margin * 2 + spacing) / (frameWidth + spacing));
-    const rows = options.rows ??
-      Math.floor((texture.height - margin * 2 + spacing) / (frameHeight + spacing));
+    const columns = options.columns
+      ?? Math.floor((texture.width - margin * 2 + spacing) / (frameWidth + spacing));
+    const rows = options.rows
+      ?? Math.floor((texture.height - margin * 2 + spacing) / (frameHeight + spacing));
     const frames: Record<string, TextureRegion> = {};
 
     for (let row = 0; row < rows; row++) {
@@ -122,21 +122,21 @@ export class SpriteSheet extends TextureAtlas {
   }
 }
 
-export type PreloadRequest =
-  | { type: "texture"; key: string; path: string }
-  | { type: "font"; key: string; path: string; size: number }
-  | {
-      type: "atlas";
-      key: string;
-      path: string;
-      frames: Readonly<Record<string, TextureRegion>>;
+export type PreloadRequest
+  = | { type: 'texture', key: string, path: string }
+    | { type: 'font', key: string, path: string, size: number }
+    | {
+      type: 'atlas'
+      key: string
+      path: string
+      frames: Readonly<Record<string, TextureRegion>>
     };
 
 export interface PreloadProgress {
-  loaded: number;
-  total: number;
-  progress: number;
-  key: string;
+  loaded: number
+  total: number
+  progress: number
+  key: string
 }
 
 export class AssetGroup {
@@ -144,12 +144,12 @@ export class AssetGroup {
   private assets = new Map<string, TextureAsset | FontAsset | TextureAtlas>();
 
   addTexture(key: string, path: string = key): this {
-    this.requests.push({ type: "texture", key, path });
+    this.requests.push({ type: 'texture', key, path });
     return this;
   }
 
   addFont(key: string, path: string, size: number): this {
-    this.requests.push({ type: "font", key, path, size });
+    this.requests.push({ type: 'font', key, path, size });
     return this;
   }
 
@@ -158,7 +158,7 @@ export class AssetGroup {
     path: string,
     frames: Readonly<Record<string, TextureRegion>>,
   ): this {
-    this.requests.push({ type: "atlas", key, path, frames });
+    this.requests.push({ type: 'atlas', key, path, frames });
     return this;
   }
 
@@ -171,9 +171,9 @@ export class AssetGroup {
         await Promise.resolve();
         const request = this.requests[i];
         let asset: TextureAsset | FontAsset | TextureAtlas;
-        if (request.type === "font") {
+        if (request.type === 'font') {
           asset = AssetManager.acquireFont(request.path, request.size);
-        } else if (request.type === "atlas") {
+        } else if (request.type === 'atlas') {
           asset = AssetManager.acquireAtlas(request.path, request.frames);
         } else {
           asset = AssetManager.acquireTexture(request.path);
@@ -193,7 +193,7 @@ export class AssetGroup {
     }
 
     if (total === 0) {
-      onProgress?.({ loaded: 0, total: 0, progress: 1, key: "" });
+      onProgress?.({ loaded: 0, total: 0, progress: 1, key: '' });
     }
     return this;
   }

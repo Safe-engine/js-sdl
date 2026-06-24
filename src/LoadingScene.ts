@@ -1,17 +1,17 @@
 import {
-    instantiate,
-    Label,
-    loadAll,
-    loadScene,
-    Panel,
-    ProgressBar,
-    Scene
-} from "../engine";
-import * as allAssets from "./assets";
+  instantiate,
+  Label,
+  loadAll,
+  loadScene,
+  Panel,
+  ProgressBar,
+  Scene
+} from '../engine';
+import * as allAssets from './assets';
 import {
-    sf_button
-} from "./assets";
-import { HomeScene } from "./HomeScene";
+  sf_button
+} from './assets';
+import { HomeScene } from './HomeScene';
 
 export class LoadingScene extends Scene {
   private progressBar: ProgressBar | null = null;
@@ -27,14 +27,14 @@ export class LoadingScene extends Scene {
   async load(): Promise<void> {
     try {
       await loadAll(allAssets, (progress) => {
-        this.progressBar?.setFillRange(progress);
+        this.progressBar?.setValue(progress);
         this.percentLabel?.setText(`${Math.round(progress * 100)}%`);
-        console.info("LoadingScene load assets", progress);
+        console.info('LoadingScene load assets', progress);
       });
       loadScene(HomeScene);
     } catch (error) {
-      console.error("LoadingScene failed to load assets", error);
-      this.percentLabel?.setText("LOAD FAILED");
+      console.error('LoadingScene failed to load assets', error);
+      this.percentLabel?.setText('LOAD FAILED');
     }
   }
 
@@ -48,10 +48,10 @@ export class LoadingScene extends Scene {
     backgroundComp.color = { r: 15, g: 23, b: 42, a: 255 };
 
     const titleComp = instantiate(Label, {
-      string: "LOADING",
+      string: 'LOADING',
       size: 36,
-      align: "center",
-      verticalAlign: "middle",
+      align: 'center',
+      verticalAlign: 'middle',
     });
     this.root.addChild(titleComp.node);
     titleComp.node.x = 360;
@@ -68,15 +68,13 @@ export class LoadingScene extends Scene {
     progressBarComp.node.y = 640;
     progressBarComp.node.width = 480;
     progressBarComp.node.height = 34;
-    progressBarComp.backgroundColor = { r: 30, g: 41, b: 59, a: 255 };
-    progressBarComp.fillColor = { r: 255, g: 255, b: 255, a: 255 };
     this.progressBar = progressBarComp;
 
     const percentLabel = instantiate(Label, {
-      string: "0%",
+      string: '0%',
       size: 28,
-      align: "center",
-      verticalAlign: "middle",
+      align: 'center',
+      verticalAlign: 'middle',
     });
     this.root.addChild(percentLabel.node);
     percentLabel.node.x = 360;

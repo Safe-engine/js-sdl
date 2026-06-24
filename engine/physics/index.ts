@@ -11,12 +11,12 @@ export {
   edge,
   findPhysicsWorld,
   polygon,
-} from "./PhysicsComponent";
+} from './PhysicsComponent';
 export type {
   PhysicsDebugDrawOptions,
   PhysicsShapeDef,
   PhysicsWorldProps,
-} from "./PhysicsComponent";
+} from './PhysicsComponent';
 export {
   BoxShape,
   ChainShape,
@@ -26,10 +26,10 @@ export {
   PolygonShape,
   RigidBody,
   Vec2,
-} from "./PhysicsWorld";
+} from './PhysicsWorld';
 export type {
   BodyType,
   ContactValue,
   PhysicsShape,
   RigidBodyProps,
-} from "./PhysicsWorld";
+} from './PhysicsWorld';

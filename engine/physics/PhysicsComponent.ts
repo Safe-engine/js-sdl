@@ -1,22 +1,21 @@
-import { ComponentX, type Constructor } from "../core/ComponentX";
-import type { Node } from "../core/Node";
+import { ComponentX, type Constructor } from '../core/ComponentX';
+import type { Node } from '../core/Node';
 
-export type BodyType = "static" | "kinematic" | "dynamic" | 0 | 1 | 2;
+export type BodyType = 'static' | 'kinematic' | 'dynamic' | 0 | 1 | 2;
 export type ContactCallback<TRigidBody, TContactValue = unknown> = (
   other: TRigidBody,
   contact?: TContactValue,
 ) => void;
 
-
 export interface PhysicsShapeDef {
-  kind: "box" | "circle" | "polygon" | "edge";
-  width?: Float;
-  height?: Float;
-  radius?: Float;
-  x?: Float;
-  y?: Float;
-  angle?: Float;
-  points?: Vec2[];
+  kind: 'box' | 'circle' | 'polygon' | 'edge'
+  width?: Float
+  height?: Float
+  radius?: Float
+  x?: Float
+  y?: Float
+  angle?: Float
+  points?: Vec2[]
 }
 
 export interface RigidBodyProps<
@@ -25,34 +24,34 @@ export interface RigidBodyProps<
   TContactValue = unknown,
   TBodyType = BodyType,
 > {
-  type?: TBodyType;
-  density?: Float;
-  restitution?: Float;
-  friction?: Float;
-  gravityScale?: Float;
-  isSensor?: boolean;
-  tag?: number;
-  onBeginContact?: (other: TRigidBody) => void;
-  onEndContact?: (other: TRigidBody) => void;
-  onPreSolve?: ContactCallback<TRigidBody, TContactValue>;
-  onPostSolve?: ContactCallback<TRigidBody, TContactValue>;
-  shapes: TShape | TShape[];
+  type?: TBodyType
+  density?: Float
+  restitution?: Float
+  friction?: Float
+  gravityScale?: Float
+  isSensor?: boolean
+  tag?: number
+  onBeginContact?: (other: TRigidBody) => void
+  onEndContact?: (other: TRigidBody) => void
+  onPreSolve?: ContactCallback<TRigidBody, TContactValue>
+  onPostSolve?: ContactCallback<TRigidBody, TContactValue>
+  shapes: TShape | TShape[]
 }
 
 export interface PhysicsWorldProps {
-  gravity?: Vec2;
-  pixelsPerMeter?: Float;
-  velocityIterations?: number;
-  positionIterations?: number;
-  fixedTimeStep?: Float;
-  maxSubSteps?: number;
-  debugDraw?: boolean | PhysicsDebugDrawOptions;
+  gravity?: Vec2
+  pixelsPerMeter?: Float
+  velocityIterations?: number
+  positionIterations?: number
+  fixedTimeStep?: Float
+  maxSubSteps?: number
+  debugDraw?: boolean | PhysicsDebugDrawOptions
 }
 
 export interface PhysicsDebugDrawOptions {
-  enabled?: boolean;
-  alpha?: number;
-  color?: number;
+  enabled?: boolean
+  alpha?: number
+  color?: number
 }
 
 export const DEFAULT_PIXELS_PER_METER = 32;
@@ -64,26 +63,26 @@ type PhysicsWorldConstructor<T extends PhysicsWorldComponent = PhysicsWorldCompo
 const activePhysicsWorlds = new WeakMap<PhysicsWorldConstructor, PhysicsWorldComponent>();
 
 export function box(width: Float, height: Float, x = 0, y = 0, angle = 0): PhysicsShapeDef {
-  return { kind: "box", width, height, x, y, angle };
+  return { kind: 'box', width, height, x, y, angle };
 }
 
 export function circle(radius: Float, x = 0, y = 0): PhysicsShapeDef {
-  return { kind: "circle", radius, x, y };
+  return { kind: 'circle', radius, x, y };
 }
 
 export function polygon(points: Vec2[]): PhysicsShapeDef {
-  return { kind: "polygon", points };
+  return { kind: 'polygon', points };
 }
 
 export function edge(a: Vec2, b: Vec2): PhysicsShapeDef {
-  return { kind: "edge", points: [a, b] };
+  return { kind: 'edge', points: [a, b] };
 }
 
 export function asArray<T>(value: T | T[]): T[] {
   return Array.isArray(value) ? value : [value];
 }
 
-export function debugColor(hex: number, alpha: number): { r: number; g: number; b: number; a: number } {
+export function debugColor(hex: number, alpha: number): { r: number, g: number, b: number, a: number } {
   return {
     r: (hex >> 16) & 0xff,
     g: (hex >> 8) & 0xff,
@@ -139,17 +138,17 @@ export abstract class PhysicsWorldComponent<
 
   protected get debugDrawEnabled(): boolean {
     const debugDraw = this.props.debugDraw;
-    return typeof debugDraw === "boolean" ? debugDraw : debugDraw?.enabled ?? false;
+    return typeof debugDraw === 'boolean' ? debugDraw : debugDraw?.enabled ?? false;
   }
 
   protected get debugDrawAlpha(): number {
     const debugDraw = this.props.debugDraw;
-    return typeof debugDraw === "object" ? debugDraw.alpha ?? 180 : 180;
+    return typeof debugDraw === 'object' ? debugDraw.alpha ?? 180 : 180;
   }
 
   protected get debugDrawColor(): number {
     const debugDraw = this.props.debugDraw;
-    return typeof debugDraw === "object" ? debugDraw.color ?? 0x6ee7ff : 0x6ee7ff;
+    return typeof debugDraw === 'object' ? debugDraw.color ?? 0x6ee7ff : 0x6ee7ff;
   }
 
   abstract createBody(rigidBody: any): any;
@@ -197,7 +196,7 @@ export abstract class PhysicsRigidBodyComponent<
     if (this.body !== null) return;
     this.world = findPhysicsWorld(this.node, this.getWorldConstructor());
     if (!this.world) {
-      throw new Error("RigidBody requires a PhysicsWorld component on this node or an ancestor.");
+      throw new Error('RigidBody requires a PhysicsWorld component on this node or an ancestor.');
     }
     this.body = this.world.createBody(this) as TBody;
   }

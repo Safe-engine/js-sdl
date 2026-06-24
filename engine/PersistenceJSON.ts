@@ -1,37 +1,37 @@
 export interface LocalStorage {
-  getItem(key: string): string | null;
-  setItem(key: string, value: string): void;
-  removeItem(key: string): void;
+  getItem(key: string): string | null
+  setItem(key: string, value: string): void
+  removeItem(key: string): void
 }
 
 export type PersistenceMigration = (data: unknown) => unknown;
 
 export interface PersistenceJSONOptions<T> {
-  version: number;
-  defaults: () => T;
-  migrations?: Readonly<Record<number, PersistenceMigration>>;
-  storage?: LocalStorage;
+  version: number
+  defaults: () => T
+  migrations?: Readonly<Record<number, PersistenceMigration>>
+  storage?: LocalStorage
 }
 
 interface SaveFile {
-  version: number;
-  data: unknown;
+  version: number
+  data: unknown
 }
 
 function defaultStorage(): LocalStorage {
   const storage = (globalThis as { localStorage?: LocalStorage }).localStorage;
   if (!storage) {
     throw new Error(
-      "localStorage is unavailable; pass a LocalStorage implementation",
+      'localStorage is unavailable; pass a LocalStorage implementation',
     );
   }
   return storage;
 }
 
 function isSaveFile(value: unknown): value is SaveFile {
-  if (!value || typeof value !== "object") return false;
+  if (!value || typeof value !== 'object') return false;
   const version = (value as SaveFile).version;
-  return Number.isInteger(version) && version >= 1 && "data" in value;
+  return Number.isInteger(version) && version >= 1 && 'data' in value;
 }
 
 /**
@@ -47,9 +47,9 @@ export class PersistenceJSON<T> {
     readonly key: string,
     private readonly options: PersistenceJSONOptions<T>,
   ) {
-    if (!key) throw new Error("Persistence key must not be empty");
+    if (!key) throw new Error('Persistence key must not be empty');
     if (!Number.isInteger(options.version) || options.version < 1) {
-      throw new Error("Persistence version must be a positive integer");
+      throw new Error('Persistence version must be a positive integer');
     }
 
     this.storage = options.storage ?? defaultStorage();

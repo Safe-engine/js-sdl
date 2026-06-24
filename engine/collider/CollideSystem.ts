@@ -1,13 +1,13 @@
-import { ComponentX } from "../core/ComponentX";
-import { Node } from "../core/Node";
+import { ComponentX } from '../core/ComponentX';
+import { Node } from '../core/Node';
 import {
   Collider,
   CollisionType,
   Contact,
-} from "./CollideComponent";
+} from './CollideComponent';
 
 export interface CollideSystemProps {
-  debug?: boolean;
+  debug?: boolean
 }
 
 export class CollideSystem extends ComponentX<CollideSystemProps> {

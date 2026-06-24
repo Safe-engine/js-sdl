@@ -1,26 +1,26 @@
-import { ComponentX, type BaseComponentProps } from "../core/ComponentX";
-import { circleCircle, polygonCircle, polygonPolygon, rectIntersectsRect } from "../helper/Intersection";
-import { Rect, Vec2 } from "../helper/math";
+import { ComponentX, type BaseComponentProps } from '../core/ComponentX';
+import { circleCircle, polygonCircle, polygonPolygon, rectIntersectsRect } from '../helper/Intersection';
+import { Rect, Vec2 } from '../helper/math';
 export interface ColliderProps extends BaseComponentProps<Collider> {
-  tag?: number;
-  offset?: [number, number];
-  enabled?: boolean;
-  onCollisionEnter?: (other: Collider) => void;
-  onCollisionStay?: (other: Collider) => void;
-  onCollisionExit?: (other: Collider) => void;
+  tag?: number
+  offset?: [number, number]
+  enabled?: boolean
+  onCollisionEnter?: (other: Collider) => void
+  onCollisionStay?: (other: Collider) => void
+  onCollisionExit?: (other: Collider) => void
 }
 
 export interface BoxColliderProps extends ColliderProps {
-  width?: number;
-  height?: number;
+  width?: number
+  height?: number
 }
 
 export interface CircleColliderProps extends ColliderProps {
-  radius: number;
+  radius: number
 }
 
 export interface PolygonColliderProps extends ColliderProps {
-  points: Array<Vec2 | [number, number]>;
+  points: Array<Vec2 | [number, number]>
 }
 
 export enum CollisionType {
@@ -155,7 +155,7 @@ export class CircleCollider extends Collider<CircleColliderProps> {
 
 export class PolygonCollider extends Collider<PolygonColliderProps> {
   get points(): Vec2[] {
-    return this.props.points.map((point) => Array.isArray(point)
+    return this.props.points.map(point => Array.isArray(point)
       ? { x: point[0], y: point[1] }
       : { x: point.x, y: point.y });
   }

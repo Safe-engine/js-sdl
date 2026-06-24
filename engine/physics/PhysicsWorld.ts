@@ -1,11 +1,11 @@
-import { Body, BodyType, BoxShape, CircleShape, Contact, ContactImpulse, EdgeShape, Fixture, Manifold, PolygonShape, Shape, Transform, TransformValue, Vec2, World } from "planck";
+import { Body, BodyType, BoxShape, CircleShape, Contact, ContactImpulse, EdgeShape, Fixture, Manifold, PolygonShape, Shape, Transform, TransformValue, Vec2, World } from 'planck';
 import {
   drawCircle,
   drawLine,
   drawPoint,
   drawPolyline,
   type DrawPoint,
-} from "sdl3";
+} from 'sdl3';
 import {
   DEG_TO_RAD,
   PhysicsRigidBodyComponent,
@@ -21,7 +21,7 @@ import {
   type PhysicsDebugDrawOptions,
   type PhysicsShapeDef,
   type PhysicsWorldProps,
-} from "./PhysicsComponent";
+} from './PhysicsComponent';
 
 export type { BodyType, PhysicsDebugDrawOptions, PhysicsShapeDef, PhysicsWorldProps };
 export type ContactValue = Contact | Manifold | ContactImpulse;
@@ -29,7 +29,7 @@ export type PhysicsShape = Shape | PhysicsShapeDef;
 export type RigidBodyProps = BaseRigidBodyProps<RigidBody, PhysicsShape, ContactValue, BodyType>;
 
 interface BodyUserData {
-  rigidBody: RigidBody;
+  rigidBody: RigidBody
 }
 
 export { BoxShape, CircleShape, EdgeShape, PolygonShape, Vec2, box, circle, edge, polygon };
@@ -60,7 +60,7 @@ export class PhysicsWorld extends PhysicsWorldComponent<PhysicsWorldProps> {
   createBody(rigidBody: RigidBody): Body {
     const node = rigidBody.node!;
     const body = this.world.createBody({
-      type: rigidBody.props.type ?? "dynamic",
+      type: rigidBody.props.type ?? 'dynamic',
       position: this.toWorldPoint(node.worldX, node.worldY),
       angle: node.worldRotation * DEG_TO_RAD,
       gravityScale: rigidBody.props.gravityScale,
@@ -100,16 +100,16 @@ export class PhysicsWorld extends PhysicsWorldComponent<PhysicsWorldProps> {
   }
 
   private installContactListeners(): void {
-    this.world.on("begin-contact", (contact) => {
+    this.world.on('begin-contact', (contact) => {
       dispatchContact(contact, (body, other) => body.props.onBeginContact?.(other));
     });
-    this.world.on("end-contact", (contact) => {
+    this.world.on('end-contact', (contact) => {
       dispatchContact(contact, (body, other) => body.props.onEndContact?.(other));
     });
-    this.world.on("pre-solve", (contact, oldManifold) => {
+    this.world.on('pre-solve', (contact, oldManifold) => {
       dispatchContact(contact, (body, other) => body.props.onPreSolve?.(other, oldManifold));
     });
-    this.world.on("post-solve", (contact, impulse) => {
+    this.world.on('post-solve', (contact, impulse) => {
       dispatchContact(contact, (body, other) => body.props.onPostSolve?.(other, impulse));
     });
   }
@@ -162,24 +162,24 @@ function toPlanckShape(shape: PhysicsShape, pixelsPerMeter: number): Shape {
   if (shape instanceof Shape) return shape;
 
   switch (shape.kind) {
-    case "box":
+    case 'box':
       return new BoxShape(
         (shape.width ?? 0) / pixelsPerMeter / 2,
         (shape.height ?? 0) / pixelsPerMeter / 2,
         new Vec2((shape.x ?? 0) / pixelsPerMeter, (shape.y ?? 0) / pixelsPerMeter),
         (shape.angle ?? 0) * DEG_TO_RAD,
       );
-    case "circle":
+    case 'circle':
       return new CircleShape(
         new Vec2((shape.x ?? 0) / pixelsPerMeter, (shape.y ?? 0) / pixelsPerMeter),
         (shape.radius ?? 0) / pixelsPerMeter,
       );
-    case "polygon":
-      return new PolygonShape((shape.points ?? []).map((p) => ({
+    case 'polygon':
+      return new PolygonShape((shape.points ?? []).map(p => ({
         x: p.x / pixelsPerMeter,
         y: p.y / pixelsPerMeter,
       })));
-    case "edge": {
+    case 'edge': {
       const [a, b] = shape.points ?? [];
       return new EdgeShape(
         new Vec2((a?.x ?? 0) / pixelsPerMeter, (a?.y ?? 0) / pixelsPerMeter),
@@ -208,11 +208,11 @@ function drawFixtureDebug(
   fixture: Fixture,
   transform: TransformValue,
   pixelsPerMeter: number,
-  color: { r: number; g: number; b: number; a: number },
+  color: { r: number, g: number, b: number, a: number },
 ): void {
   const shape = fixture.getShape();
   switch (shape.getType()) {
-    case "circle": {
+    case 'circle': {
       const circleShape = shape as CircleShape;
       const center = toDebugPoint(
         Transform.mulVec2(transform, circleShape.getCenter()),
@@ -230,14 +230,14 @@ function drawFixtureDebug(
       drawPoint(center.x, center.y, color.r, color.g, color.b, color.a);
       break;
     }
-    case "edge": {
+    case 'edge': {
       const edgeShape = shape as EdgeShape;
       const a = toDebugPoint(Transform.mulVec2(transform, edgeShape.m_vertex1), pixelsPerMeter);
       const b = toDebugPoint(Transform.mulVec2(transform, edgeShape.m_vertex2), pixelsPerMeter);
       drawLine(a.x, a.y, b.x, b.y, color.r, color.g, color.b, color.a);
       break;
     }
-    case "polygon": {
+    case 'polygon': {
       const polygonShape = shape as PolygonShape;
       const points: DrawPoint[] = [];
       for (let i = 0; i < polygonShape.m_count; i++) {

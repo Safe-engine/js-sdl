@@ -1,22 +1,22 @@
 import {
-    AnimationState,
-    AnimationStateData,
-    AtlasAttachmentLoader,
-    MeshAttachment,
-    Physics,
-    RegionAttachment,
-    Skeleton,
-    SkeletonJson,
-    Texture,
-    TextureAtlas,
-    type TextureRegion,
-    TextureFilter,
-    TextureWrap,
-    type TrackEntry,
-} from "@esotericsoftware/spine-core";
-import { drawTextureQuad, loadTextFile } from "sdl3";
-import { AssetManager, type TextureAsset } from "../AssetManager";
-import { ComponentX } from "../core/ComponentX";
+  AnimationState,
+  AnimationStateData,
+  AtlasAttachmentLoader,
+  MeshAttachment,
+  Physics,
+  RegionAttachment,
+  Skeleton,
+  SkeletonJson,
+  Texture,
+  TextureAtlas,
+  type TextureRegion,
+  TextureFilter,
+  TextureWrap,
+  type TrackEntry,
+} from '@esotericsoftware/spine-core';
+import { drawTextureQuad, loadTextFile } from 'sdl3';
+import { AssetManager, type TextureAsset } from '../AssetManager';
+import { ComponentX } from '../core/ComponentX';
 
 export interface SpineData {
   atlas: string
@@ -34,10 +34,10 @@ export interface SpineSkeletonProps {
 }
 
 interface LoadedSpineData {
-  key: string;
-  atlas: TextureAtlas;
-  skeleton: any;
-  textures: SdlSpineTexture[];
+  key: string
+  atlas: TextureAtlas
+  skeleton: any
+  textures: SdlSpineTexture[]
 }
 
 class SdlSpineTexture extends Texture {
@@ -57,13 +57,13 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
   private skeleton: Skeleton | null = null;
   private state: AnimationState | null = null;
   private textures: SdlSpineTexture[] = [];
-  private loadedKey = "";
+  private loadedKey = '';
   private loadVersion = 0;
   private worldVertices = new Float32Array(8);
 
   onStart(): void {
     void this.reload().catch((error) => {
-      console.error("Spine reload failed", error);
+      console.error('Spine reload failed', error);
     });
   }
 
@@ -181,11 +181,11 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
     const red = 255 * (skeletonColor?.r ?? 1) * slotColor.r * attachmentColor.r;
     const green = 255 * (skeletonColor?.g ?? 1) * slotColor.g * attachmentColor.g;
     const blue = 255 * (skeletonColor?.b ?? 1) * slotColor.b * attachmentColor.b;
-    const alpha = 255 *
-      (skeletonColor?.a ?? 1) *
-      slotColor.a *
-      attachmentColor.a *
-      (this.node?.opacity ?? 1);
+    const alpha = 255
+      * (skeletonColor?.a ?? 1)
+      * slotColor.a
+      * attachmentColor.a
+      * (this.node?.opacity ?? 1);
 
     drawTextureQuad(
       texture.id,
@@ -266,7 +266,7 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
       for (const texture of this.textures) texture.dispose();
     }
     this.textures = [];
-    this.loadedKey = "";
+    this.loadedKey = '';
   }
 
   private ensureWorldVertices(length: number): Float32Array {
@@ -277,19 +277,19 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
   }
 
   private multiplyColors(
-    slotColor: { r: number; g: number; b: number; a: number },
-    attachmentColor: { r: number; g: number; b: number; a: number },
-  ): { red: number; green: number; blue: number; alpha: number } {
+    slotColor: { r: number, g: number, b: number, a: number },
+    attachmentColor: { r: number, g: number, b: number, a: number },
+  ): { red: number, green: number, blue: number, alpha: number } {
     const skeletonColor = this.skeleton?.color;
     return {
       red: 255 * (skeletonColor?.r ?? 1) * slotColor.r * attachmentColor.r,
       green: 255 * (skeletonColor?.g ?? 1) * slotColor.g * attachmentColor.g,
       blue: 255 * (skeletonColor?.b ?? 1) * slotColor.b * attachmentColor.b,
-      alpha: 255 *
-        (skeletonColor?.a ?? 1) *
-        slotColor.a *
-        attachmentColor.a *
-        (this.node?.opacity ?? 1),
+      alpha: 255
+        * (skeletonColor?.a ?? 1)
+        * slotColor.a
+        * attachmentColor.a
+        * (this.node?.opacity ?? 1),
     };
   }
 }
@@ -311,7 +311,7 @@ async function loadSpineData(data: SpineData): Promise<LoadedSpineData> {
   });
 
   return {
-    key: `${data.skeleton}\0${data.atlas}\0${data.texture ?? ""}`,
+    key: `${data.skeleton}\0${data.atlas}\0${data.texture ?? ''}`,
     atlas,
     skeleton,
     textures,
@@ -321,7 +321,7 @@ async function loadSpineData(data: SpineData): Promise<LoadedSpineData> {
 function loadJson(path: string): Promise<any> {
   let promise = jsonCache.get(path);
   if (!promise) {
-    promise = loadText(path).then((text) => JSON.parse(text));
+    promise = loadText(path).then(text => JSON.parse(text));
     jsonCache.set(path, promise);
   }
   return promise;
@@ -330,7 +330,7 @@ function loadJson(path: string): Promise<any> {
 function loadText(path: string): Promise<string> {
   let promise = textCache.get(path);
   if (!promise) {
-    if (typeof fetch === "function") {
+    if (typeof fetch === 'function') {
       promise = fetch(path).then((response) => {
         if (!response.ok) throw new Error(`Failed to load Spine file: ${path}`);
         return response.text();
@@ -346,13 +346,13 @@ function loadText(path: string): Promise<string> {
 }
 
 function resolveSiblingPath(path: string, sibling: string): string {
-  const slash = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
+  const slash = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
   return slash >= 0 ? `${path.slice(0, slash + 1)}${sibling}` : sibling;
 }
 
 export { SpineSkeleton as Spine };
 
-function transformPoint(root: SpineSkeleton, x: number, y: number): { x: number; y: number } {
+function transformPoint(root: SpineSkeleton, x: number, y: number): { x: number, y: number } {
   const node = root.node;
   if (!node) return { x, y };
 

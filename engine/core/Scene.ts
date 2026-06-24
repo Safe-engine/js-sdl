@@ -1,12 +1,12 @@
-import { InputSystem } from "../Input";
-import { Node } from "./Node";
+import { InputSystem } from '../Input';
+import { Node } from './Node';
 
-export type Orientation =
-  | "unknown"
-  | "landscape"
-  | "landscape-flipped"
-  | "portrait"
-  | "portrait-flipped";
+export type Orientation
+  = | 'unknown'
+    | 'landscape'
+    | 'landscape-flipped'
+    | 'portrait'
+    | 'portrait-flipped';
 
 export class Scene {
   readonly name: string;
@@ -15,9 +15,9 @@ export class Scene {
   private _started = false;
   __view?(): void;
 
-  constructor(name: string = "Scene") {
+  constructor(name = 'Scene') {
     this.name = name;
-    this.root = new Node("root");
+    this.root = new Node('root');
     this.input = new InputSystem(this.root);
   }
 

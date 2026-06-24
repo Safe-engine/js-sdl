@@ -13,6 +13,7 @@
   },
   "type": "module",
   "scripts": {
+    "fix": "eslint ./engine --fix",
     "test:ts": "bun test tests",
     "test:native": "cmake -S . -B build && cmake --build build --target js_sdl3_native_tests --parallel && ctest --test-dir build --output-on-failure",
     "sync-res": "bun ./node_modules/safex-sync-res/src/index.ts",
@@ -35,6 +36,7 @@
     "@eslint/js": "^10.0.1",
     "@stylistic/eslint-plugin": "^5.10.0",
     "eslint": "^10.5.0",
+    "typescript-eslint": "^8.62.0",
     "typescript": "^5.9.3",
     "vite": "^6.4.3"
   },

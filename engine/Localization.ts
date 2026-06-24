@@ -2,8 +2,8 @@ export type TranslationTable = Readonly<Record<string, string>>;
 
 export class Localization {
   private static tables = new Map<string, TranslationTable>();
-  private static currentLocale = "en";
-  private static fallbackLocale = "en";
+  private static currentLocale = 'en';
+  private static fallbackLocale = 'en';
   private static revisionValue = 0;
 
   static get locale(): string {
@@ -30,9 +30,9 @@ export class Localization {
     key: string,
     values: Readonly<Record<string, string | number>> = {},
   ): string {
-    const template = this.tables.get(this.currentLocale)?.[key] ??
-      this.tables.get(this.fallbackLocale)?.[key] ??
-      key;
+    const template = this.tables.get(this.currentLocale)?.[key]
+      ?? this.tables.get(this.fallbackLocale)?.[key]
+      ?? key;
     return template.replace(/\{(\w+)\}/g, (match, name: string) =>
       values[name] === undefined ? match : String(values[name])
     );

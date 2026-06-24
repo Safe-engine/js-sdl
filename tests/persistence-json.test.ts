@@ -1,8 +1,8 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from 'bun:test';
 import {
   LocalStorage,
   PersistenceJSON,
-} from "../engine/PersistenceJSON";
+} from '../engine/PersistenceJSON';
 
 class MemoryStorage implements LocalStorage {
   readonly values = new Map<string, string>();
@@ -22,13 +22,13 @@ class MemoryStorage implements LocalStorage {
 
 interface PlayerSave {
   settings: {
-    musicVolume: number;
-    soundVolume: number;
-  };
+    musicVolume: number
+    soundVolume: number
+  }
   progress: {
-    unlockedLevel: number;
-    highScores: Record<string, number>;
-  };
+    unlockedLevel: number
+    highScores: Record<string, number>
+  }
 }
 
 const defaults = (): PlayerSave => ({
@@ -36,10 +36,10 @@ const defaults = (): PlayerSave => ({
   progress: { unlockedLevel: 1, highScores: {} },
 });
 
-describe("PersistenceJSON", () => {
-  test("returns fresh defaults when no save exists", () => {
+describe('PersistenceJSON', () => {
+  test('returns fresh defaults when no save exists', () => {
     const storage = new MemoryStorage();
-    const persistence = new PersistenceJSON("player", {
+    const persistence = new PersistenceJSON('player', {
       version: 1,
       defaults,
       storage,
@@ -52,9 +52,9 @@ describe("PersistenceJSON", () => {
     expect(persistence.exists()).toBe(false);
   });
 
-  test("saves, loads, and removes settings and progress", () => {
+  test('saves, loads, and removes settings and progress', () => {
     const storage = new MemoryStorage();
-    const persistence = new PersistenceJSON("player", {
+    const persistence = new PersistenceJSON('player', {
       version: 1,
       defaults,
       storage,
@@ -67,7 +67,7 @@ describe("PersistenceJSON", () => {
 
     expect(persistence.exists()).toBe(true);
     expect(persistence.load()).toEqual(player);
-    expect(JSON.parse(storage.getItem("player")!)).toEqual({
+    expect(JSON.parse(storage.getItem('player')!)).toEqual({
       version: 1,
       data: player,
     });
@@ -76,9 +76,9 @@ describe("PersistenceJSON", () => {
     expect(persistence.exists()).toBe(false);
   });
 
-  test("runs migrations in order and rewrites the upgraded save", () => {
+  test('runs migrations in order and rewrites the upgraded save', () => {
     const storage = new MemoryStorage();
-    storage.setItem("player", JSON.stringify({
+    storage.setItem('player', JSON.stringify({
       version: 1,
       data: {
         settings: { volume: 0.25 },
@@ -86,7 +86,7 @@ describe("PersistenceJSON", () => {
       },
     }));
 
-    const persistence = new PersistenceJSON<PlayerSave>("player", {
+    const persistence = new PersistenceJSON<PlayerSave>('player', {
       version: 3,
       defaults,
       storage,
@@ -109,24 +109,24 @@ describe("PersistenceJSON", () => {
       settings: { musicVolume: 0.25, soundVolume: 0.25 },
       progress: { unlockedLevel: 2, highScores: {} },
     });
-    expect(JSON.parse(storage.getItem("player")!).version).toBe(3);
+    expect(JSON.parse(storage.getItem('player')!).version).toBe(3);
   });
 
-  test("rejects corrupt, newer, and unmigratable saves", () => {
+  test('rejects corrupt, newer, and unmigratable saves', () => {
     const storage = new MemoryStorage();
-    const persistence = new PersistenceJSON("player", {
+    const persistence = new PersistenceJSON('player', {
       version: 2,
       defaults,
       storage,
     });
 
-    storage.setItem("player", "{");
-    expect(() => persistence.load()).toThrow("invalid JSON");
+    storage.setItem('player', '{');
+    expect(() => persistence.load()).toThrow('invalid JSON');
 
-    storage.setItem("player", JSON.stringify({ version: 3, data: {} }));
-    expect(() => persistence.load()).toThrow("newer version 3");
+    storage.setItem('player', JSON.stringify({ version: 3, data: {} }));
+    expect(() => persistence.load()).toThrow('newer version 3');
 
-    storage.setItem("player", JSON.stringify({ version: 1, data: {} }));
-    expect(() => persistence.load()).toThrow("missing migration 1 -> 2");
+    storage.setItem('player', JSON.stringify({ version: 1, data: {} }));
+    expect(() => persistence.load()).toThrow('missing migration 1 -> 2');
   });
 });

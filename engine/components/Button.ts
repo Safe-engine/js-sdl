@@ -1,5 +1,5 @@
-import { ComponentX } from "../core/ComponentX";
-import { InputEvent } from "../Input";
+import { ComponentX } from '../core/ComponentX';
+import { InputEvent } from '../Input';
 
 interface ButtonProps {
   // spriteFrame: string
@@ -64,10 +64,10 @@ export class Button extends ComponentX<ButtonProps> {
     const top = -node.anchorY * node.height;
 
     return (
-      localX >= left &&
-      localX <= left + node.width &&
-      localY >= top &&
-      localY <= top + node.height
+      localX >= left
+      && localX <= left + node.width
+      && localY >= top
+      && localY <= top + node.height
     );
   }
 }

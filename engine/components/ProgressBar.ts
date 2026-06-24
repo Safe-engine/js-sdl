@@ -1,13 +1,13 @@
-import { drawRect, drawTextureRegionRotated } from "sdl3";
-import { AssetManager, TextureAsset } from "../AssetManager";
-import { UIElement } from "./UI";
+import { drawRect, drawTextureRegionRotated } from 'sdl3';
+import { AssetManager, TextureAsset } from '../AssetManager';
+import { UIElement } from './UI';
 
 export interface ProgressBarProps {
-  spriteFrame: string;
-  fillType?: number;
-  fillRange?: number;
-  fillCenter?: Vec2;
-  isReverse?: boolean;
+  spriteFrame: string
+  fillType?: number
+  fillRange?: number
+  fillCenter?: Vec2
+  isReverse?: boolean
 }
 
 export class ProgressBar extends UIElement<ProgressBarProps> {
@@ -15,7 +15,7 @@ export class ProgressBar extends UIElement<ProgressBarProps> {
   max = 1;
   vertical = false;
   private texture: TextureAsset | null = null;
-  private loadedPath = "";
+  private loadedPath = '';
 
   setValue(value: number): this {
     this.props.fillRange = Math.max(this.min, Math.min(this.max, value));
@@ -40,8 +40,9 @@ export class ProgressBar extends UIElement<ProgressBarProps> {
     const rect = this.worldRect();
     const range = this.max - this.min;
     const { fillRange = 0, isReverse, fillCenter = { x: 0, y: 0 } } = this.props;
-    const valueRatio = range <= 0 ? 0 :
-      Math.max(0, Math.min(1, (fillRange - this.min) / range));
+    const valueRatio = range <= 0
+      ? 0
+      : Math.max(0, Math.min(1, (fillRange - this.min) / range));
     const ratio = fillRange ?? valueRatio;
     const width = this.vertical ? rect.width : rect.width * ratio;
     const height = this.vertical ? rect.height * ratio : rect.height;
@@ -98,7 +99,7 @@ export class ProgressBar extends UIElement<ProgressBarProps> {
   private releaseTexture(): void {
     this.texture?.release();
     this.texture = null;
-    this.loadedPath = "";
+    this.loadedPath = '';
   }
 
   private applyNaturalSize(width: number, height: number): void {
