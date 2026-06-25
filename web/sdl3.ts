@@ -515,6 +515,10 @@ export function loadTextFile(_path: string): string | null {
   throw new Error('loadTextFile is only available in the native SDL runtime.')
 }
 
+export function loadBinaryFile(_path: string): ArrayBuffer | null {
+  throw new Error('loadBinaryFile is only available in the native SDL runtime.')
+}
+
 export function loadFont(path: string, ptsize: number): number {
   const key = `${path}\0${ptsize}`
   const existingId = fontIds.get(key)

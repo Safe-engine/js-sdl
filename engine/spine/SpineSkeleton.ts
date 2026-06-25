@@ -6,6 +6,7 @@ import {
   Physics,
   RegionAttachment,
   Skeleton,
+  SkeletonBinary,
   SkeletonJson,
   type TextureRegion,
   type TrackEntry,
@@ -104,7 +105,9 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
 
     Skeleton.yDown = true
     const loader = new AtlasAttachmentLoader(loaded.atlas)
-    const parser = new SkeletonJson(loader)
+    const parser = loaded.skeleton instanceof ArrayBuffer
+      ? new SkeletonBinary(loader)
+      : new SkeletonJson(loader)
     const skeletonData = parser.readSkeletonData(loaded.skeleton)
 
     this.skeleton = new Skeleton(skeletonData)

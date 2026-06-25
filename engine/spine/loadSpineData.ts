@@ -1,6 +1,11 @@
 import { TextureAtlas } from '@esotericsoftware/spine-core'
-import { loadTextFile } from 'sdl3'
 import { AssetManager } from '../AssetManager'
+import {
+  isSpineBinaryPath,
+  loadBinaryAsset,
+  loadJsonAsset,
+  loadTextAsset,
+} from '../helper/resource-load'
 import { SdlSpineTexture } from './SdlSpineTexture'
 import type { SpineData } from './types'
 
@@ -11,13 +16,12 @@ export interface LoadedSpineData {
   textures: SdlSpineTexture[]
 }
 
-const textCache = new Map<string, Promise<string>>()
-const jsonCache = new Map<string, Promise<any>>()
-
 export async function loadSpineData(data: SpineData): Promise<LoadedSpineData> {
   const [atlasText, skeleton] = await Promise.all([
-    loadText(data.atlas),
-    loadJson(data.skeleton),
+    loadTextAsset(data.atlas, 'Spine atlas'),
+    isSpineBinaryPath(data.skeleton)
+      ? loadBinaryAsset(data.skeleton, 'Spine skeleton')
+      : loadJsonAsset(data.skeleton, 'Spine skeleton'),
   ])
   const atlas = new TextureAtlas(atlasText)
   const textures = atlas.pages.map((page) => {
@@ -33,33 +37,6 @@ export async function loadSpineData(data: SpineData): Promise<LoadedSpineData> {
     skeleton,
     textures,
   }
-}
-
-function loadJson(path: string): Promise<any> {
-  let promise = jsonCache.get(path)
-  if (!promise) {
-    promise = loadText(path).then(text => JSON.parse(text))
-    jsonCache.set(path, promise)
-  }
-  return promise
-}
-
-function loadText(path: string): Promise<string> {
-  let promise = textCache.get(path)
-  if (!promise) {
-    if (typeof fetch === 'function') {
-      promise = fetch(path).then((response) => {
-        if (!response.ok) throw new Error(`Failed to load Spine file: ${path}`)
-        return response.text()
-      })
-    } else {
-      const text = loadTextFile(path)
-      if (text === null) throw new Error(`Failed to load Spine file: ${path}`)
-      promise = Promise.resolve(text)
-    }
-    textCache.set(path, promise)
-  }
-  return promise
 }
 
 function resolveSiblingPath(path: string, sibling: string): string {

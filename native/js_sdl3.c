@@ -394,6 +394,24 @@ static JSValue js_getViewportMetrics(
     return result;
 }
 
+static void *load_file_contents(const char *path, size_t *length)
+{
+    char *resolved_path = resolve_resource_path(path);
+    void *contents = resolved_path
+        ? SDL_LoadFile(resolved_path, length)
+        : NULL;
+    if (!contents && resolved_path && strcmp(resolved_path, path) != 0) {
+        contents = SDL_LoadFile(path, length);
+    }
+    char *prefixed_path = resource_prefixed_path(path);
+    if (!contents && prefixed_path) {
+        contents = SDL_LoadFile(prefixed_path, length);
+    }
+    free(prefixed_path);
+    free(resolved_path);
+    return contents;
+}
+
 /* --- Binding: loadTextFile(path) -> string|null --- */
 static JSValue js_loadTextFile(
     JSContext *ctx,
@@ -407,25 +425,35 @@ static JSValue js_loadTextFile(
     const char *path = JS_ToCString(ctx, argv[0]);
     if (!path) return JS_EXCEPTION;
 
-    char *resolved_path = resolve_resource_path(path);
     size_t length = 0;
-    void *contents = resolved_path
-        ? SDL_LoadFile(resolved_path, &length)
-        : NULL;
-    if (!contents && resolved_path && strcmp(resolved_path, path) != 0) {
-        contents = SDL_LoadFile(path, &length);
-    }
-    char *prefixed_path = resource_prefixed_path(path);
-    if (!contents && prefixed_path) {
-        contents = SDL_LoadFile(prefixed_path, &length);
-    }
-    free(prefixed_path);
-
-    free(resolved_path);
+    void *contents = load_file_contents(path, &length);
     JS_FreeCString(ctx, path);
 
     if (!contents) return JS_NULL;
     JSValue result = JS_NewStringLen(ctx, contents, length);
+    SDL_free(contents);
+    return result;
+}
+
+/* --- Binding: loadBinaryFile(path) -> ArrayBuffer|null --- */
+static JSValue js_loadBinaryFile(
+    JSContext *ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst *argv)
+{
+    (void)this_val;
+    if (argc < 1) return JS_NULL;
+
+    const char *path = JS_ToCString(ctx, argv[0]);
+    if (!path) return JS_EXCEPTION;
+
+    size_t length = 0;
+    void *contents = load_file_contents(path, &length);
+    JS_FreeCString(ctx, path);
+
+    if (!contents) return JS_NULL;
+    JSValue result = JS_NewArrayBufferCopy(ctx, contents, length);
     SDL_free(contents);
     return result;
 }
@@ -1711,6 +1739,7 @@ static const JSCFunctionListEntry funcs[] =
     JS_CFUNC_DEF("createWindow",            3, js_createWindow),
     JS_CFUNC_DEF("getViewportMetrics",      0, js_getViewportMetrics),
     JS_CFUNC_DEF("loadTextFile",            1, js_loadTextFile),
+    JS_CFUNC_DEF("loadBinaryFile",          1, js_loadBinaryFile),
     JS_CFUNC_DEF("loadTexture",             1, js_loadTexture),
     JS_CFUNC_DEF("loadFont",                2, js_loadFont),
     JS_CFUNC_DEF("loadTextTexture",         2, js_loadTextTexture),

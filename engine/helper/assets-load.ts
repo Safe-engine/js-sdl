@@ -1,6 +1,6 @@
-import { loadTextFile } from 'sdl3'
 import { AssetGroup, AssetManager } from '../AssetManager'
 import { spriteFrameCache } from '../SpriteFrameCache'
+import { isBinaryAssetPath, loadBinaryAsset, loadTextAsset } from './resource-load'
 
 type DragonBonesAsset = {
   atlas?: string
@@ -21,10 +21,11 @@ export async function loadAll(assets: any, cb?: (progress: number) => void) {
 
   const group = AssetManager.createGroup()
   const textAssets = new Set<string>()
+  const binaryAssets = new Set<string>()
   const textureAssets = new Set<string>()
   const fontAssets = new Set<string>()
 
-  collectAssets(assets, textureAssets, fontAssets, textAssets)
+  collectAssets(assets, textureAssets, fontAssets, textAssets, binaryAssets)
 
   for (const texturePath of textureAssets) {
     group.addTexture(texturePath, texturePath)
@@ -36,7 +37,7 @@ export async function loadAll(assets: any, cb?: (progress: number) => void) {
   }
 
   const groupTotal = textureAssets.size + fontAssets.size
-  const total = groupTotal + textAssets.size
+  const total = groupTotal + textAssets.size + binaryAssets.size
   let loaded = 0
   const report = () => cb?.(total === 0 ? 1 : loaded / total)
 
@@ -48,6 +49,12 @@ export async function loadAll(assets: any, cb?: (progress: number) => void) {
 
   for (const path of textAssets) {
     await loadTextAsset(path)
+    loaded++
+    report()
+  }
+
+  for (const path of binaryAssets) {
+    await loadBinaryAsset(path)
     loaded++
     report()
   }
@@ -77,12 +84,13 @@ function collectAssets(
   textureAssets: Set<string>,
   fontAssets: Set<string>,
   textAssets: Set<string>,
+  binaryAssets: Set<string>,
 ): void {
   if (!assets || typeof assets !== 'object') return
 
   for (const value of Object.values(assets)) {
     if (typeof value === 'string') {
-      collectAssetPath(value, textureAssets, fontAssets, textAssets)
+      collectAssetPath(value, textureAssets, fontAssets, textAssets, binaryAssets)
       continue
     }
 
@@ -94,8 +102,12 @@ function collectAssets(
 
     if (isDragonBonesAsset(value)) {
       if (value.texture) textureAssets.add(value.texture)
-      if (value.atlas) textAssets.add(value.atlas)
-      if (value.skeleton) textAssets.add(value.skeleton)
+      if (value.atlas) {
+        collectAssetPath(value.atlas, textureAssets, fontAssets, textAssets, binaryAssets)
+      }
+      if (value.skeleton) {
+        collectAssetPath(value.skeleton, textureAssets, fontAssets, textAssets, binaryAssets)
+      }
     }
   }
 }
@@ -105,6 +117,7 @@ function collectAssetPath(
   textureAssets: Set<string>,
   fontAssets: Set<string>,
   textAssets: Set<string>,
+  binaryAssets: Set<string>,
 ): void {
   if (/\.(png|jpg|jpeg|webp)$/i.test(path)) {
     textureAssets.add(path)
@@ -112,6 +125,10 @@ function collectAssetPath(
   }
   if (/\.(ttf|otf)$/i.test(path)) {
     fontAssets.add(path)
+    return
+  }
+  if (isBinaryAssetPath(path)) {
+    binaryAssets.add(path)
     return
   }
   if (/\.(json|txt|atlas)$/i.test(path)) {
@@ -133,16 +150,4 @@ function isSpriteFrameAtlasAsset(value: unknown): value is SpriteFrameAtlasAsset
   return typeof data.texture === 'string'
     && typeof data.atlas === 'string'
     && typeof data.skeleton !== 'string'
-}
-
-async function loadTextAsset(path: string): Promise<string> {
-  if (typeof fetch === 'function') {
-    const response = await fetch(path)
-    if (!response.ok) throw new Error(`Failed to load text asset: ${path}`)
-    return response.text()
-  }
-
-  const text = loadTextFile(path)
-  if (text === null) throw new Error(`Failed to load text asset: ${path}`)
-  return text
 }

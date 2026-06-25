@@ -26,6 +26,9 @@ declare module 'sdl3' {
   /** Load a UTF-8 text file from disk. Returns null on failure. */
   export function loadTextFile(path: string): string | null
 
+  /** Load a binary file from disk. Returns null on failure. */
+  export function loadBinaryFile(path: string): ArrayBuffer | null
+
   /** Load a TrueType font.  Returns a font id (or -1 on failure). */
   export function loadFont(path: string, ptsize: number): number
 

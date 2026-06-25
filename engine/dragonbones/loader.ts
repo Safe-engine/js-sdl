@@ -1,13 +1,17 @@
-import { loadTextFile } from 'sdl3'
 import { AssetManager } from '../AssetManager'
+import {
+  isDragonBonesBinaryPath,
+  loadBinaryAsset,
+  loadJsonAsset,
+} from '../helper/resource-load'
 import type { DragonBonesData, LoadedDragonBonesData } from './types'
-
-const jsonCache = new Map<string, Promise<any>>()
 
 export async function loadDragonBonesData(data: DragonBonesData): Promise<LoadedDragonBonesData> {
   const [skeleton, atlas] = await Promise.all([
-    loadJson(data.skeleton),
-    loadJson(data.atlas),
+    isDragonBonesBinaryPath(data.skeleton)
+      ? loadBinaryAsset(data.skeleton, 'DragonBones skeleton')
+      : loadJsonAsset(data.skeleton, 'DragonBones skeleton'),
+    loadJsonAsset(data.atlas, 'DragonBones atlas'),
   ])
 
   return {
@@ -16,24 +20,4 @@ export async function loadDragonBonesData(data: DragonBonesData): Promise<Loaded
     atlas,
     texture: AssetManager.acquireTexture(data.texture),
   }
-}
-
-function loadJson(path: string): Promise<any> {
-  let promise = jsonCache.get(path)
-  if (!promise) {
-    if (typeof fetch === 'function') {
-      promise = fetch(path).then((response) => {
-        if (!response.ok) throw new Error(`Failed to load DragonBones JSON: ${path}`)
-        return response.json()
-      })
-    } else {
-      const text = loadTextFile(path)
-      if (text === null) {
-        throw new Error(`Failed to load DragonBones JSON: ${path}`)
-      }
-      promise = Promise.resolve(JSON.parse(text))
-    }
-    jsonCache.set(path, promise)
-  }
-  return promise
 }
