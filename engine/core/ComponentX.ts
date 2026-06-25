@@ -1,5 +1,5 @@
-import type { InputEvent } from '../Input';
-import type { Node } from './Node';
+import type { InputEvent } from '../Input'
+import type { Node } from './Node'
 export interface BaseComponentProps<T> {
   $ref?: T
   $push?: T[]
@@ -9,13 +9,13 @@ export interface BaseComponentProps<T> {
   node?: Partial<Node>
   // [$key: `$${string}`]: string
 }
-export type Constructor<T = any> = new (...args: any[]) => T;
+export type Constructor<T = any> = new (...args: any[]) => T
 
 export class ComponentX<Props = unknown> {
   props: Props = {} as any
   node: Node
-  inputEnabled = false;
-  inputPriority = 0;
+  inputEnabled = false
+  inputPriority = 0
   __view?()
   constructor(data?: BaseComponentProps<ComponentX> & Props) {
     this.init(data)
@@ -31,7 +31,39 @@ export class ComponentX<Props = unknown> {
   }
 
   addComponent<T extends ComponentX>(component: Constructor<T> | T, data?: ConstructorParameters<Constructor<T>>[0]): T {
-    return this.node.addComponent(component, data);
+    return this.node.addComponent(component, data)
+  }
+
+  getComponent<T extends ComponentX>(component: Constructor<T>): T {
+    return this.node.getComponent(component)
+  }
+
+  schedule(callback: (arg: any) => void, interval: number, repeat: number, delay) {
+    this.node.schedule(callback.bind(this), interval, repeat, delay)
+  }
+
+  unschedule(callback: (arg: any) => void) {
+    this.node.unschedule(callback.bind(this))
+  }
+
+  unscheduleAllCallbacks() {
+    this.node.unscheduleAllCallbacks()
+  }
+
+  scheduleOnce(callback: (arg: any) => void, delay: number) {
+    this.node.scheduleOnce(callback, delay)
+  }
+
+  getComponentsInChildren<T extends ComponentX>(component: Constructor<T>): T[] {
+    return this.node.getComponentsInChildren(component)
+  }
+
+  getComponentInChildren<T extends ComponentX>(component: Constructor<T>): T {
+    return this.node.getComponentInChildren(component)
+  }
+
+  isEqual(other: ComponentX) {
+    return this.node === other.node
   }
 
   onAwake(): void { }
@@ -42,11 +74,11 @@ export class ComponentX<Props = unknown> {
   onDestroy(): void { }
 
   hitTest(_x: number, _y: number): boolean {
-    return false;
+    return false
   }
 
   allowsDescendantInput(_x: number, _y: number): boolean {
-    return true;
+    return true
   }
 
   onPointerStart(_event: InputEvent): void { }
