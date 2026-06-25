@@ -20,8 +20,8 @@ interface LabelProps {
   size?: number
   align?: TextAlignment
   verticalAlign?: VerticalTextAlignment
-  // outline?: [ColorSource, number]
-  // shadow?: [ColorSource, number, Size]
+  outline?: [Color, number]
+  // shadow?: [Color, number, Size]
   isAdaptWithSize?: boolean
 }
 export class Label extends ComponentX<LabelProps> {
@@ -33,8 +33,8 @@ export class Label extends ComponentX<LabelProps> {
   fontPath = ''
   declare fontSize
   fontId = -1
-  outlineColor: Color = { r: 0, g: 0, b: 0, a: 255 }
-  outlineWidth = 0
+  // outlineColor: Color = { r: 0, g: 0, b: 0, a: 255 }
+  // outlineWidth = 0
   lineHeight = 1.2
   declare align: TextAlignment
   declare verticalAlign: VerticalTextAlignment
@@ -122,10 +122,11 @@ export class Label extends ComponentX<LabelProps> {
       const localX = left - t.anchorX * layoutWidth
       const localY = top + i * lineAdvance - t.anchorY * layoutHeight
 
-      if (this.outlineWidth > 0) {
-        for (const [offsetX, offsetY] of outlineOffsets(this.outlineWidth)) {
+      if (this.props.outline) {
+        const [outlineColor, outlineWidth] = this.props.outline
+        for (const [offsetX, offsetY] of outlineOffsets(outlineWidth)) {
           this.drawLine(texture, t, localX + offsetX, localY + offsetY,
-            this.outlineColor)
+            outlineColor)
         }
       }
       this.drawLine(texture, t, localX, localY, this.node.color)

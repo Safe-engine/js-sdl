@@ -10,15 +10,15 @@ export type Orientation
 
 export class Scene {
   readonly name: string
-  readonly root: Node
+  readonly node: Node
   readonly input: InputSystem
   private _started = false
   __view?(): void
 
   constructor(name = 'Scene') {
     this.name = name
-    this.root = new Node('root')
-    this.input = new InputSystem(this.root)
+    this.node = new Node('root')
+    this.input = new InputSystem(this.node)
   }
 
   /** Override: called once when scene starts. */
@@ -79,16 +79,16 @@ export class Scene {
   /** Engine-internal: update all logic. */
   tick(dt: number): void {
     if (!this._started) {
-      this.root._startTree()
+      this.node._startTree()
       this._started = true
     }
     this.onUpdate(dt)
-    this.root._updateTree(dt)
+    this.node._updateTree(dt)
   }
 
   /** Engine-internal: render all. */
   render(): void {
-    this.root._renderTree()
+    this.node._renderTree()
     this.onRender()
   }
 

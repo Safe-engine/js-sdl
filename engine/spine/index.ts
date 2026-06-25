@@ -9,9 +9,9 @@ import {
   SkeletonJson,
   Texture,
   TextureAtlas,
-  type TextureRegion,
   TextureFilter,
   TextureWrap,
+  type TextureRegion,
   type TrackEntry,
 } from '@esotericsoftware/spine-core'
 import { drawTextureQuad, loadTextFile } from 'sdl3'
@@ -54,7 +54,7 @@ class SdlSpineTexture extends Texture {
 }
 
 export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
-  private skeleton: Skeleton | null = null
+  skeleton: Skeleton
   private state: AnimationState | null = null
   private textures: SdlSpineTexture[] = []
   private loadedKey = ''
@@ -116,6 +116,11 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
 
   onDestroy(): void {
     this.disposeSkeleton()
+  }
+
+  setSkeletonData(data) {
+    this.props.data = data
+    this.reload()
   }
 
   async reload(): Promise<void> {

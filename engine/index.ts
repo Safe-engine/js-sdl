@@ -17,11 +17,6 @@ export {
   TextureAsset,
   TextureAtlas
 } from './AssetManager'
-export {
-  SpriteFrameCache,
-  parseSpriteAtlasFrames,
-  spriteFrameCache
-} from './SpriteFrameCache'
 export type {
   PreloadProgress,
   PreloadRequest
@@ -65,6 +60,9 @@ export type {
   PersistenceJSONOptions,
   PersistenceMigration
 } from './PersistenceJSON'
+export {
+  parseSpriteAtlasFrames, SpriteFrameCache, spriteFrameCache
+} from './SpriteFrameCache'
 export { Viewport } from './Viewport'
 export type {
   ViewportMetrics
@@ -115,3 +113,5 @@ export type {
 } from './physics'
 export { Spine, SpineSkeleton } from './spine'
 export type { SpineData, SpineSkeletonProps } from './spine'
+export { SpineBonesControl } from './spine/SpineBonesControl'
+

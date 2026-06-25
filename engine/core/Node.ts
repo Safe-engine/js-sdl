@@ -16,7 +16,7 @@ interface ScheduledEntry {
 }
 
 export class Node {
-  readonly name: string
+  declare name: string
   parent: Node | null = null
   children: Node[] = []
   components: ComponentX[] = []
@@ -29,6 +29,7 @@ export class Node {
   opacity = 1
   color: Color = { r: 255, g: 255, b: 255, a: 255 }
   zIndex = 0
+  declare tag: Integer
   private _scheduledCallbacks: ScheduledEntry[] = []
   private _eventListeners = new Map<string, EventCallback[]>()
 

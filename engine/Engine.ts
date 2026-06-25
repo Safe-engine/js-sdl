@@ -51,6 +51,8 @@ class EngineImpl {
       this.refreshViewport()
       this._ready = true
       const scene = this._currentScene
+      scene.node.width = width
+      scene.node.height = height
       if (scene) {
         this._activateScene(scene)
       }
@@ -162,13 +164,15 @@ class EngineImpl {
     this._currentScene = s
 
     if (previous) {
+      s.node.width = previous.node.width
+      s.node.height = previous.node.height
       Tween.stopAll()
       previous.input.reset()
       if (this._ready) {
         previous.onExit()
       }
       previous.onUnload()
-      previous.root.destroy()
+      previous.node.destroy()
     }
 
     if (s && this._ready) {
