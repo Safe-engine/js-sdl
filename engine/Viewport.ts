@@ -11,24 +11,24 @@ export type ViewportMetrics = readonly [
   safeY: number,
   safeWidth: number,
   safeHeight: number,
-];
+]
 
 export class Viewport {
-  logicalWidth = 1;
-  logicalHeight = 1;
-  screenWidth = 1;
-  screenHeight = 1;
-  scale = 1;
-  readonly screenRect: Rect = { x: 0, y: 0, width: 1, height: 1 };
-  readonly safeArea: Rect = { x: 0, y: 0, width: 1, height: 1 };
-  readonly safeInsets: Insets = { top: 0, right: 0, bottom: 0, left: 0 };
+  logicalWidth = 1
+  logicalHeight = 1
+  screenWidth = 1
+  screenHeight = 1
+  scale = 1
+  readonly screenRect: Rect = { x: 0, y: 0, width: 1, height: 1 }
+  readonly safeArea: Rect = { x: 0, y: 0, width: 1, height: 1 }
+  readonly safeInsets: Insets = { top: 0, right: 0, bottom: 0, left: 0 }
 
   /** Convert window/client coordinates into logical game coordinates. */
   screenToWorld(x: number, y: number): Point {
     return {
       x: (x - this.screenRect.x) / this.scale,
       y: (y - this.screenRect.y) / this.scale,
-    };
+    }
   }
 
   /** Convert logical game coordinates into window/client coordinates. */
@@ -36,15 +36,15 @@ export class Viewport {
     return {
       x: this.screenRect.x + x * this.scale,
       y: this.screenRect.y + y * this.scale,
-    };
+    }
   }
 
   /** True when a window/client point falls inside the rendered game area. */
   containsScreenPoint(x: number, y: number): boolean {
-    const rect = this.screenRect;
+    const rect = this.screenRect
     return x >= rect.x && y >= rect.y
       && x <= rect.x + rect.width
-      && y <= rect.y + rect.height;
+      && y <= rect.y + rect.height
   }
 
   /** Engine-internal: replace the current platform viewport metrics. */
@@ -62,29 +62,29 @@ export class Viewport {
       safeY,
       safeWidth,
       safeHeight,
-    ] = metrics;
+    ] = metrics
 
-    this.logicalWidth = logicalWidth;
-    this.logicalHeight = logicalHeight;
-    this.screenWidth = screenWidth;
-    this.screenHeight = screenHeight;
-    this.scale = viewportWidth / logicalWidth;
+    this.logicalWidth = logicalWidth
+    this.logicalHeight = logicalHeight
+    this.screenWidth = screenWidth
+    this.screenHeight = screenHeight
+    this.scale = viewportWidth / logicalWidth
     setRect(
       this.screenRect,
       viewportX,
       viewportY,
       viewportWidth,
       viewportHeight,
-    );
-    setRect(this.safeArea, safeX, safeY, safeWidth, safeHeight);
-    this.safeInsets.top = safeY;
-    this.safeInsets.left = safeX;
-    this.safeInsets.right = logicalWidth - safeX - safeWidth;
-    this.safeInsets.bottom = logicalHeight - safeY - safeHeight;
+    )
+    setRect(this.safeArea, safeX, safeY, safeWidth, safeHeight)
+    this.safeInsets.top = safeY
+    this.safeInsets.left = safeX
+    this.safeInsets.right = logicalWidth - safeX - safeWidth
+    this.safeInsets.bottom = logicalHeight - safeY - safeHeight
   }
 }
 
-export const ActiveViewport = new Viewport();
+export const ActiveViewport = new Viewport()
 
 function setRect(
   rect: Rect,
@@ -93,8 +93,8 @@ function setRect(
   width: number,
   height: number,
 ): void {
-  rect.x = x;
-  rect.y = y;
-  rect.width = width;
-  rect.height = height;
+  rect.x = x
+  rect.y = y
+  rect.width = width
+  rect.height = height
 }

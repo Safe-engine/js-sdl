@@ -1,6 +1,6 @@
-import path from 'node:path';
-import { defineConfig } from 'vite';
-import { sdlTsxTransform } from './vite-plugin-sdl-tsx';
+import path from 'node:path'
+import { defineConfig } from 'vite'
+import { sdlTsxTransform } from './vite-plugin-sdl-tsx'
 
 export default defineConfig({
   root: __dirname,
@@ -18,4 +18,4 @@ export default defineConfig({
   },
   server: { port: 6428 },
   plugins: [sdlTsxTransform()],
-});
+})

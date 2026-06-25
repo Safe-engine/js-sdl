@@ -1,24 +1,24 @@
-import { InputSystem } from '../Input';
-import { Node } from './Node';
+import { InputSystem } from '../Input'
+import { Node } from './Node'
 
 export type Orientation
   = | 'unknown'
     | 'landscape'
     | 'landscape-flipped'
     | 'portrait'
-    | 'portrait-flipped';
+    | 'portrait-flipped'
 
 export class Scene {
-  readonly name: string;
-  readonly root: Node;
-  readonly input: InputSystem;
-  private _started = false;
-  __view?(): void;
+  readonly name: string
+  readonly root: Node
+  readonly input: InputSystem
+  private _started = false
+  __view?(): void
 
   constructor(name = 'Scene') {
-    this.name = name;
-    this.root = new Node('root');
-    this.input = new InputSystem(this.root);
+    this.name = name
+    this.root = new Node('root')
+    this.input = new InputSystem(this.root)
   }
 
   /** Override: called once when scene starts. */
@@ -79,31 +79,31 @@ export class Scene {
   /** Engine-internal: update all logic. */
   tick(dt: number): void {
     if (!this._started) {
-      this.root._startTree();
-      this._started = true;
+      this.root._startTree()
+      this._started = true
     }
-    this.onUpdate(dt);
-    this.root._updateTree(dt);
+    this.onUpdate(dt)
+    this.root._updateTree(dt)
   }
 
   /** Engine-internal: render all. */
   render(): void {
-    this.root._renderTree();
-    this.onRender();
+    this.root._renderTree()
+    this.onRender()
   }
 
   /** Engine-internal: dispatch a pointer press to components, then the scene. */
   _dispatchTouchStart(x: number, y: number): void {
-    if (!this.input.dispatchStart(x, y)) this.onTouchStart(x, y);
+    if (!this.input.dispatchStart(x, y)) this.onTouchStart(x, y)
   }
 
   /** Engine-internal: dispatch pointer movement to captured components. */
   _dispatchTouchMove(x: number, y: number): void {
-    if (!this.input.dispatchMove(x, y)) this.onTouchMove(x, y);
+    if (!this.input.dispatchMove(x, y)) this.onTouchMove(x, y)
   }
 
   /** Engine-internal: dispatch a pointer release to captured components. */
   _dispatchTouchEnd(x: number, y: number): void {
-    if (!this.input.dispatchEnd(x, y)) this.onTouchEnd(x, y);
+    if (!this.input.dispatchEnd(x, y)) this.onTouchEnd(x, y)
   }
 }

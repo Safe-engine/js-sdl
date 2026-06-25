@@ -1,5 +1,5 @@
-import MagicString from 'magic-string';
-import ts from 'typescript';
+import MagicString from 'magic-string'
+import ts from 'typescript'
 
 type TransformState = {
   sourceFile: ts.SourceFile
@@ -7,7 +7,7 @@ type TransformState = {
   currentClassName?: string
   isScene: boolean
   listMethods: string[]
-};
+}
 
 function parse(content: string, fileName: string) {
   const scriptKind = fileName.endsWith('.tsx')
@@ -16,25 +16,25 @@ function parse(content: string, fileName: string) {
       ? ts.ScriptKind.JSX
       : fileName.endsWith('.js')
         ? ts.ScriptKind.JS
-        : ts.ScriptKind.TS;
+        : ts.ScriptKind.TS
 
-  return ts.createSourceFile(fileName, content, ts.ScriptTarget.Latest, true, scriptKind);
+  return ts.createSourceFile(fileName, content, ts.ScriptTarget.Latest, true, scriptKind)
 }
 
 function camelCase(str) {
   return str
     .replace(/(?:^\w|[A-Z]|\b\w)/g, function (word, index) {
-      return index === 0 ? word.toLowerCase() : word.toUpperCase();
+      return index === 0 ? word.toLowerCase() : word.toUpperCase()
     })
-    .replace(/\s+/g, '');
+    .replace(/\s+/g, '')
 }
 
-const nameCount = {};
+const nameCount = {}
 
 function getComponentName(name = '') {
   if (!nameCount[name])
-    nameCount[name] = 0;
-  return `${camelCase(name)}Comp${++nameCount[name]}`;
+    nameCount[name] = 0
+  return `${camelCase(name)}Comp${++nameCount[name]}`
 }
 
 function parseValue(
@@ -42,20 +42,20 @@ function parseValue(
   sourceFile: ts.SourceFile,
 ): string | boolean {
   if (!value)
-    return true;
+    return true
   if (ts.isJsxExpression(value))
-    return parseExpression(value.expression, sourceFile);
+    return parseExpression(value.expression, sourceFile)
   if (value.kind === ts.SyntaxKind.ThisKeyword)
-    return 'this';
-  return value.getText(sourceFile);
+    return 'this'
+  return value.getText(sourceFile)
 }
 
 function parseExpression(expression: ts.Expression | undefined, sourceFile: ts.SourceFile): string {
   if (!expression)
-    return '';
+    return ''
   if (expression.kind === ts.SyntaxKind.ThisKeyword)
-    return 'this';
-  return expression.getText(sourceFile);
+    return 'this'
+  return expression.getText(sourceFile)
 }
 
 function parseNodeAttribute(
@@ -68,12 +68,12 @@ function parseNodeAttribute(
     return value.expression.properties
       .map((p) => {
         if (!ts.isPropertyAssignment(p))
-          return '';
-        return `\n    ${componentVar}.${prop}.${p.name.getText(sourceFile)} = ${parseExpression(p.initializer, sourceFile)}`;
+          return ''
+        return `\n    ${componentVar}.${prop}.${p.name.getText(sourceFile)} = ${parseExpression(p.initializer, sourceFile)}`
       })
-      .join('');
+      .join('')
   }
-  return `\n    ${componentVar}.${prop} = ${parseValue(value, sourceFile)}`;
+  return `\n    ${componentVar}.${prop} = ${parseValue(value, sourceFile)}`
 }
 
 function attributesToParams(
@@ -81,64 +81,64 @@ function attributesToParams(
   listMethods: string[] = [],
   sourceFile: ts.SourceFile,
 ) {
-  let props = '';
+  let props = ''
   attributes.forEach((attribute) => {
     if (!ts.isJsxAttribute(attribute))
-      return;
-    const attName = attribute.name.getText(sourceFile);
+      return
+    const attName = attribute.name.getText(sourceFile)
     if (attName === 'node' || attName.includes('$'))
-      return;
-    const val = parseValue(attribute.initializer, sourceFile);
+      return
+    const val = parseValue(attribute.initializer, sourceFile)
     if (typeof val === 'string' && val.includes('this.') && !val.includes('bind(') && !val.includes('+')) {
-      const list = val.split('.');
+      const list = val.split('.')
       if (list.length === 2 && listMethods.includes(list[1])) {
-        props += `${attName}: ${val}.bind(this),`;
+        props += `${attName}: ${val}.bind(this),`
       } else if (list.length > 2 && list[1] !== 'props' && list[2] !== 'node') {
-        props += `${attName}: ${val}.bind(this.${list[1]}),`;
+        props += `${attName}: ${val}.bind(this.${list[1]}),`
       } else {
-        props += `${attName}: ${val},`;
+        props += `${attName}: ${val},`
       }
     } else {
-      props += `${attName}: ${val},`;
+      props += `${attName}: ${val},`
     }
-  });
-  return `{${props}}`;
+  })
+  return `{${props}}`
 }
 
 function getMethodName(name: ts.PropertyName, sourceFile: ts.SourceFile) {
-  return ts.isPrivateIdentifier(name) ? name.text : name.getText(sourceFile);
+  return ts.isPrivateIdentifier(name) ? name.text : name.getText(sourceFile)
 }
 
 function collectJsxBlocks(state: TransformState) {
-  const jsxBlocks: (ts.JsxElement | ts.JsxSelfClosingElement)[] = [];
-  let jsxDepth = 0;
+  const jsxBlocks: (ts.JsxElement | ts.JsxSelfClosingElement)[] = []
+  let jsxDepth = 0
 
   function visit(node: ts.Node) {
     if (ts.isClassDeclaration(node)) {
-      state.currentClassName = node.name?.text;
+      state.currentClassName = node.name?.text
       const superClass = (node.heritageClauses as any)
         ?.flatMap(clause => clause.token === ts.SyntaxKind.ExtendsKeyword ? clause.types : [])
-        ?.[0]?.expression;
-      state.isScene = superClass?.getText(state.sourceFile) === 'Scene';
+        ?.[0]?.expression
+      state.isScene = superClass?.getText(state.sourceFile) === 'Scene'
     } else if (ts.isMethodDeclaration(node)) {
-      state.listMethods.push(getMethodName(node.name, state.sourceFile));
+      state.listMethods.push(getMethodName(node.name, state.sourceFile))
     } else if (ts.isJsxElement(node)) {
       if (jsxDepth === 0)
-        jsxBlocks.push(node);
-      jsxDepth++;
-      state.ms.remove(node.closingElement.getStart(state.sourceFile), node.closingElement.end);
+        jsxBlocks.push(node)
+      jsxDepth++
+      state.ms.remove(node.closingElement.getStart(state.sourceFile), node.closingElement.end)
     } else if (ts.isJsxSelfClosingElement(node) && jsxDepth === 0) {
-      jsxBlocks.push(node);
+      jsxBlocks.push(node)
     }
 
-    ts.forEachChild(node, visit);
+    ts.forEachChild(node, visit)
 
     if (ts.isJsxElement(node))
-      jsxDepth--;
+      jsxDepth--
   }
 
-  visit(state.sourceFile);
-  return jsxBlocks;
+  visit(state.sourceFile)
+  return jsxBlocks
 }
 
 function parseJSX(
@@ -150,68 +150,68 @@ function parseJSX(
   classVar: string,
   parentVar?: string,
 ) {
-  let ret = '';
-  const sourceFile = state.sourceFile;
-  const start = rangeNode.getStart(sourceFile);
-  const end = rangeNode.end;
-  const componentName = tagName.getText(sourceFile);
+  let ret = ''
+  const sourceFile = state.sourceFile
+  const start = rangeNode.getStart(sourceFile)
+  const end = rangeNode.end
+  const componentName = tagName.getText(sourceFile)
 
   if (componentName === 'ExtraDataComp') {
     const keyAttribute = attributes.find(attribute =>
       ts.isJsxAttribute(attribute) && attribute.name.getText(sourceFile) === 'key'
-    );
+    )
     const valueAttribute = attributes.find(attribute =>
       ts.isJsxAttribute(attribute) && attribute.name.getText(sourceFile) === 'value'
-    );
+    )
     if (!parentVar || !keyAttribute || !valueAttribute || !ts.isJsxAttribute(keyAttribute) || !ts.isJsxAttribute(valueAttribute))
-      return;
+      return
     const key = keyAttribute.initializer && ts.isStringLiteral(keyAttribute.initializer)
       ? keyAttribute.initializer.text
-      : parseValue(keyAttribute.initializer, sourceFile);
-    ret += `\n     ${parentVar}.node.setData('${key}', ${parseValue(valueAttribute.initializer, sourceFile)})`;
-    state.ms.overwrite(start, end, ret);
-    return;
+      : parseValue(keyAttribute.initializer, sourceFile)
+    ret += `\n     ${parentVar}.node.setData('${key}', ${parseValue(valueAttribute.initializer, sourceFile)})`
+    state.ms.overwrite(start, end, ret)
+    return
   }
 
-  const compVar = getComponentName(componentName);
-  const params = attributesToParams(attributes, state.listMethods, sourceFile);
-  const createComponentString = `\n    const ${compVar} = instantiate(${componentName}, ${params})`;
+  const compVar = getComponentName(componentName)
+  const params = attributesToParams(attributes, state.listMethods, sourceFile)
+  const createComponentString = `\n    const ${compVar} = instantiate(${componentName}, ${params})`
   if (!parentVar) {
-    state.ms.appendLeft(start, createComponentString);
+    state.ms.appendLeft(start, createComponentString)
     if (state.isScene) {
-      ret += `\nthis.root.addChild(${compVar}.node)`;
+      ret += `\nthis.root.addChild(${compVar}.node)`
     } else {
-      state.ms.appendLeft(start, `\n   const ${classVar} = ${compVar}.addComponent(this)`);
+      state.ms.appendLeft(start, `\n   const ${classVar} = ${compVar}.addComponent(this)`)
     }
     if (!state.isScene && state.listMethods.includes('onLoad')) {
-      ret += `\n${classVar}.onLoad();`;
+      ret += `\n${classVar}.onLoad();`
     }
   } else {
-    ret += createComponentString;
+    ret += createComponentString
   }
   if (parentVar) {
-    ret += `\n     ${parentVar}.node.resolveComponent(${compVar})`;
+    ret += `\n     ${parentVar}.node.resolveComponent(${compVar})`
   }
   attributes.forEach((attribute) => {
     if (!ts.isJsxAttribute(attribute))
-      return;
-    const attName = attribute.name.getText(sourceFile);
-    const refString = parseValue(attribute.initializer, sourceFile);
-    const rightValue = `${compVar}`;
+      return
+    const attName = attribute.name.getText(sourceFile)
+    const refString = parseValue(attribute.initializer, sourceFile)
+    const rightValue = `${compVar}`
     if (attName === '$ref') {
-      ret += `\n${refString} = ${rightValue};`;
+      ret += `\n${refString} = ${rightValue};`
     } else if (attName === '$refNode') {
-      ret += `\n${refString} = ${rightValue}.node;`;
+      ret += `\n${refString} = ${rightValue}.node;`
     } else if (attName === '$push') {
-      ret += `\n${refString}.push(${rightValue});`;
+      ret += `\n${refString}.push(${rightValue});`
     } else if (attName === '$pushNode') {
-      ret += `\n${refString}.push(${rightValue}.node);`;
+      ret += `\n${refString}.push(${rightValue}.node);`
     } else if (attName === 'node' && attribute.initializer) {
-      ret += parseNodeAttribute(attribute.initializer, compVar, attName, sourceFile);
+      ret += parseNodeAttribute(attribute.initializer, compVar, attName, sourceFile)
     }
-  });
-  state.ms.overwrite(start, end, ret);
-  children.forEach(parseChildren(state, classVar, compVar));
+  })
+  state.ms.overwrite(start, end, ret)
+  children.forEach(parseChildren(state, classVar, compVar))
 }
 
 function parseChildren(state: TransformState, classVar: string, compVar: string) {
@@ -225,29 +225,29 @@ function parseChildren(state: TransformState, classVar: string, compVar: string)
         element.openingElement.attributes.properties,
         classVar,
         compVar,
-      );
-      return;
+      )
+      return
     }
     if (ts.isJsxSelfClosingElement(element)) {
-      parseJSX(state, element, element.tagName, [], element.attributes.properties, classVar, compVar);
-      return;
+      parseJSX(state, element, element.tagName, [], element.attributes.properties, classVar, compVar)
+      return
     }
     if (ts.isJsxExpression(element) && element.expression) {
-      parseJSXExpressionContainer(state, classVar, element.expression, compVar);
+      parseJSXExpressionContainer(state, classVar, element.expression, compVar)
     } else if (ts.isCallExpression(element)) {
-      parseJSXExpressionContainer(state, classVar, element, compVar);
+      parseJSXExpressionContainer(state, classVar, element, compVar)
     }
-  };
+  }
 }
 
 function getParameterName(parameter: ts.ParameterDeclaration | undefined, sourceFile: ts.SourceFile, fallback: string) {
   if (!parameter)
-    return fallback;
-  return parameter.name.getText(sourceFile);
+    return fallback
+  return parameter.name.getText(sourceFile)
 }
 
 function getParameterInitializer(parameter: ts.ParameterDeclaration | undefined, sourceFile: ts.SourceFile) {
-  return parameter?.initializer ? parameter.initializer.getText(sourceFile) : '0';
+  return parameter?.initializer ? parameter.initializer.getText(sourceFile) : '0'
 }
 
 function parseJSXExpressionContainer(
@@ -257,41 +257,41 @@ function parseJSXExpressionContainer(
   compVar: string,
 ) {
   if (!ts.isCallExpression(expression))
-    return;
+    return
 
-  const callee = expression.expression;
-  const callback = expression.arguments[0];
+  const callee = expression.expression
+  const callback = expression.arguments[0]
   if (!ts.isPropertyAccessExpression(callee) || !callback || !ts.isArrowFunction(callback))
-    return;
+    return
 
-  const object = callee.expression;
-  const sourceFile = state.sourceFile;
-  const start = callee.getStart(sourceFile);
-  const end = callback.body.getStart(sourceFile);
+  const object = callee.expression
+  const sourceFile = state.sourceFile
+  const start = callee.getStart(sourceFile)
+  const end = callback.body.getStart(sourceFile)
 
   if (ts.isCallExpression(object) && object.expression.getText(sourceFile) === 'Array') {
-    const indexParam = callback.parameters[1] || callback.parameters[0];
-    const indexVar = getParameterName(indexParam, sourceFile, 'i');
-    const startIndex = getParameterInitializer(indexParam, sourceFile);
-    const loopCount = Number(object.arguments[0]?.getText(sourceFile) || 0) + Number(startIndex);
-    state.ms.overwrite(start, end, `\n for(let ${indexVar} = ${startIndex}; ${indexVar} < ${loopCount}; ${indexVar}++) {`);
-    parseChildren(state, classVar, compVar)(callback.body);
-    state.ms.replaceAll('))}', '}}');
+    const indexParam = callback.parameters[1] || callback.parameters[0]
+    const indexVar = getParameterName(indexParam, sourceFile, 'i')
+    const startIndex = getParameterInitializer(indexParam, sourceFile)
+    const loopCount = Number(object.arguments[0]?.getText(sourceFile) || 0) + Number(startIndex)
+    state.ms.overwrite(start, end, `\n for(let ${indexVar} = ${startIndex}; ${indexVar} < ${loopCount}; ${indexVar}++) {`)
+    parseChildren(state, classVar, compVar)(callback.body)
+    state.ms.replaceAll('))}', '}}')
   } else {
-    const indexParam = callback.parameters[1];
-    const indexVar = getParameterName(indexParam, sourceFile, 'i');
-    const loopVar = parseValue(object, sourceFile);
-    const itemVar = getParameterName(callback.parameters[0], sourceFile, 'item');
-    const startIndex = getParameterInitializer(indexParam, sourceFile);
+    const indexParam = callback.parameters[1]
+    const indexVar = getParameterName(indexParam, sourceFile, 'i')
+    const loopVar = parseValue(object, sourceFile)
+    const itemVar = getParameterName(callback.parameters[0], sourceFile, 'item')
+    const startIndex = getParameterInitializer(indexParam, sourceFile)
     if (startIndex !== '0') {
       state.ms.overwrite(start, end, `\n for(let ${indexVar} = ${startIndex}; ${indexVar} < ${loopVar}.length + ${startIndex}; ${indexVar}++) {`
-      + `\n const ${itemVar} = ${loopVar}[${indexVar} - ${startIndex}]`);
+      + `\n const ${itemVar} = ${loopVar}[${indexVar} - ${startIndex}]`)
     } else {
       state.ms.overwrite(start, end, `\n for(let ${indexVar} = 0; ${indexVar} < ${loopVar}.length; ${indexVar}++) {`
-      + `\n const ${itemVar} = ${loopVar}[${indexVar}]`);
+      + `\n const ${itemVar} = ${loopVar}[${indexVar}]`)
     }
-    parseChildren(state, classVar, compVar)(callback.body);
-    state.ms.replaceAll('))}', '}}');
+    parseChildren(state, classVar, compVar)(callback.body)
+    state.ms.replaceAll('))}', '}}')
   }
 }
 
@@ -301,23 +301,23 @@ export function sdlTsxTransform() {
     enforce: 'pre' as any,
     async transform(code, id) {
       if (id.includes('packages/') || id.includes('node_modules/'))
-        return;
+        return
       if (!id.endsWith('.tsx') && !id.endsWith('.ts') && !id.endsWith('.jsx') && !id.endsWith('.js'))
-        return;
+        return
 
-      const sourceFile = parse(code, id);
+      const sourceFile = parse(code, id)
       const state: TransformState = {
         sourceFile,
         ms: new MagicString(code),
         isScene: false,
         listMethods: [],
-      };
-      const sourceFramework = '@safe-engine/sdl';
-      const jsxBlocks = collectJsxBlocks(state);
+      }
+      const sourceFramework = '@safe-engine/sdl'
+      const jsxBlocks = collectJsxBlocks(state)
       if (!jsxBlocks.length)
-        return;
+        return
 
-      const classVar = getComponentName(state.currentClassName);
+      const classVar = getComponentName(state.currentClassName)
       jsxBlocks.forEach((jsxBlock) => {
         if (ts.isJsxElement(jsxBlock)) {
           parseJSX(
@@ -327,17 +327,17 @@ export function sdlTsxTransform() {
             jsxBlock.children,
             jsxBlock.openingElement.attributes.properties,
             classVar,
-          );
+          )
         } else {
-          parseJSX(state, jsxBlock, jsxBlock.tagName, [], jsxBlock.attributes.properties, classVar);
+          parseJSX(state, jsxBlock, jsxBlock.tagName, [], jsxBlock.attributes.properties, classVar)
         }
-      });
+      })
 
-      const end = jsxBlocks[0].parent?.end ?? jsxBlocks[0].end;
+      const end = jsxBlocks[0].parent?.end ?? jsxBlocks[0].end
       if (!/import\s*{[^}]*\binstantiate\b[^}]*}\s*from\s*["']/.test(code))
-        state.ms.prepend(`import { instantiate } from '${sourceFramework}'\n`);
+        state.ms.prepend(`import { instantiate } from '${sourceFramework}'\n`)
       if (!state.isScene)
-        state.ms.appendRight(end, `\n    return ${classVar}`);
+        state.ms.appendRight(end, `\n    return ${classVar}`)
 
       return {
         code: state.ms.toString(),
@@ -347,7 +347,7 @@ export function sdlTsxTransform() {
           source: id,
           includeContent: true,
         }),
-      };
+      }
     },
-  };
+  }
 }
