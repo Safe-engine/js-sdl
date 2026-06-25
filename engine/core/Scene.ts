@@ -48,6 +48,15 @@ export class Scene {
   /** Override: called when a pointer is released. */
   onTouchEnd(_x: number, _y: number): void {}
 
+  /** Override: called when the platform emits committed text input. */
+  onTextInput(_text: string): void {}
+
+  /** Override: called when a physical key is pressed. */
+  onKeyDown(_key: string): void {}
+
+  /** Override: called when a physical key is released. */
+  onKeyUp(_key: string): void {}
+
   /** Override: called when the app becomes inactive. */
   onPause(): void {}
 

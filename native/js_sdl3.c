@@ -81,6 +81,9 @@ static JSValue g_onRender = JS_UNDEFINED;
 static JSValue g_touchStart = JS_UNDEFINED;
 static JSValue g_touchMove  = JS_UNDEFINED;
 static JSValue g_touchEnd   = JS_UNDEFINED;
+static JSValue g_textInput  = JS_UNDEFINED;
+static JSValue g_keyDown    = JS_UNDEFINED;
+static JSValue g_keyUp      = JS_UNDEFINED;
 
 static JSValue g_onPause             = JS_UNDEFINED;
 static JSValue g_onResume            = JS_UNDEFINED;
@@ -272,6 +275,16 @@ static void js_call_touch(JSContext *ctx, JSValue func, float x, float y)
     if (JS_IsException(ret)) js_print_exception(ctx);
     JS_FreeValue(ctx, argv[0]);
     JS_FreeValue(ctx, argv[1]);
+    JS_FreeValue(ctx, ret);
+}
+
+static void js_call_string(JSContext *ctx, JSValue func, const char *value)
+{
+    if (JS_IsUndefined(func) || !value) return;
+    JSValue arg = JS_NewString(ctx, value);
+    JSValue ret = JS_Call(ctx, func, JS_UNDEFINED, 1, &arg);
+    if (JS_IsException(ret)) js_print_exception(ctx);
+    JS_FreeValue(ctx, arg);
     JS_FreeValue(ctx, ret);
 }
 
@@ -1595,6 +1608,73 @@ static JSValue js_onTouchEnd(
     return JS_UNDEFINED;
 }
 
+/* --- Binding: onTextInput(cb) --- */
+static JSValue js_onTextInput(
+    JSContext *ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst *argv)
+{
+    if (!JS_IsFunction(ctx, argv[0])) return JS_EXCEPTION;
+    JS_FreeValue(ctx, g_textInput);
+    g_textInput = JS_DupValue(ctx, argv[0]);
+    return JS_UNDEFINED;
+}
+
+/* --- Binding: onKeyDown(cb) --- */
+static JSValue js_onKeyDown(
+    JSContext *ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst *argv)
+{
+    if (!JS_IsFunction(ctx, argv[0])) return JS_EXCEPTION;
+    JS_FreeValue(ctx, g_keyDown);
+    g_keyDown = JS_DupValue(ctx, argv[0]);
+    return JS_UNDEFINED;
+}
+
+/* --- Binding: onKeyUp(cb) --- */
+static JSValue js_onKeyUp(
+    JSContext *ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst *argv)
+{
+    if (!JS_IsFunction(ctx, argv[0])) return JS_EXCEPTION;
+    JS_FreeValue(ctx, g_keyUp);
+    g_keyUp = JS_DupValue(ctx, argv[0]);
+    return JS_UNDEFINED;
+}
+
+static JSValue js_startTextInput(
+    JSContext *ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst *argv)
+{
+    (void)ctx;
+    (void)this_val;
+    (void)argc;
+    (void)argv;
+    SDL_StartTextInput(g_window);
+    return JS_UNDEFINED;
+}
+
+static JSValue js_stopTextInput(
+    JSContext *ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst *argv)
+{
+    (void)ctx;
+    (void)this_val;
+    (void)argc;
+    (void)argv;
+    SDL_StopTextInput(g_window);
+    return JS_UNDEFINED;
+}
+
 static JSValue js_set_callback(
     JSContext *ctx, JSValueConst callback, JSValue *slot)
 {
@@ -1666,6 +1746,11 @@ static const JSCFunctionListEntry funcs[] =
     JS_CFUNC_DEF("onTouchStart",            1, js_onTouchStart),
     JS_CFUNC_DEF("onTouchMove",             1, js_onTouchMove),
     JS_CFUNC_DEF("onTouchEnd",              1, js_onTouchEnd),
+    JS_CFUNC_DEF("onTextInput",             1, js_onTextInput),
+    JS_CFUNC_DEF("onKeyDown",               1, js_onKeyDown),
+    JS_CFUNC_DEF("onKeyUp",                 1, js_onKeyUp),
+    JS_CFUNC_DEF("startTextInput",          0, js_startTextInput),
+    JS_CFUNC_DEF("stopTextInput",           0, js_stopTextInput),
     JS_CFUNC_DEF("onPause",                 1, js_onPause),
     JS_CFUNC_DEF("onResume",                1, js_onResume),
     JS_CFUNC_DEF("onBackground",            1, js_onBackground),
@@ -1772,6 +1857,9 @@ void js_sdl3_shutdown(JSContext *ctx)
     JS_FreeValue(ctx, g_touchStart);
     JS_FreeValue(ctx, g_touchMove);
     JS_FreeValue(ctx, g_touchEnd);
+    JS_FreeValue(ctx, g_textInput);
+    JS_FreeValue(ctx, g_keyDown);
+    JS_FreeValue(ctx, g_keyUp);
     JS_FreeValue(ctx, g_onPause);
     JS_FreeValue(ctx, g_onResume);
     JS_FreeValue(ctx, g_onBackground);
@@ -1782,6 +1870,7 @@ void js_sdl3_shutdown(JSContext *ctx)
     JS_FreeValue(ctx, g_onTerminate);
     g_onInit = g_onUpdate = g_onRender = JS_UNDEFINED;
     g_touchStart = g_touchMove = g_touchEnd = JS_UNDEFINED;
+    g_textInput = g_keyDown = g_keyUp = JS_UNDEFINED;
     g_onPause = g_onResume = JS_UNDEFINED;
     g_onBackground = g_onForeground = JS_UNDEFINED;
     g_onInterruption = g_onLowMemory = JS_UNDEFINED;
@@ -1856,6 +1945,12 @@ void js_call_touchMove(JSContext *ctx, float x, float y)
     { js_call_touch(ctx, g_touchMove, x, y); }
 void js_call_touchEnd(JSContext *ctx, float x, float y)
     { js_call_touch(ctx, g_touchEnd, x, y); }
+void js_call_textInput(JSContext *ctx, const char *text)
+    { js_call_string(ctx, g_textInput, text); }
+void js_call_keyDown(JSContext *ctx, const char *key)
+    { js_call_string(ctx, g_keyDown, key); }
+void js_call_keyUp(JSContext *ctx, const char *key)
+    { js_call_string(ctx, g_keyUp, key); }
 void js_call_pause(JSContext *ctx) { js_call_void(ctx, g_onPause); }
 void js_call_resume(JSContext *ctx) { js_call_void(ctx, g_onResume); }
 void js_call_background(JSContext *ctx) { js_call_void(ctx, g_onBackground); }

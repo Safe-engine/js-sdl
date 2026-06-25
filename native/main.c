@@ -177,6 +177,17 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
         case SDL_EVENT_FINGER_UP:
             js_call_touchEnd(ctx, event->tfinger.x, event->tfinger.y);
             break;
+        case SDL_EVENT_TEXT_INPUT:
+            js_call_textInput(ctx, event->text.text);
+            break;
+        case SDL_EVENT_KEY_DOWN:
+            if (!event->key.repeat) {
+                js_call_keyDown(ctx, SDL_GetKeyName(event->key.key));
+            }
+            break;
+        case SDL_EVENT_KEY_UP:
+            js_call_keyUp(ctx, SDL_GetKeyName(event->key.key));
+            break;
         case SDL_EVENT_DISPLAY_ORIENTATION: {
             int width;
             int height;

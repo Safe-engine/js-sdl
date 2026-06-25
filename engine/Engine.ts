@@ -6,12 +6,15 @@ import {
   onForeground,
   onInit,
   onInterruption,
+  onKeyDown,
+  onKeyUp,
   onLowMemory,
   onOrientationChange,
   onPause,
   onRender,
   onResume,
   onTerminate,
+  onTextInput,
   onTouchEnd,
   onTouchMove,
   onTouchStart,
@@ -20,6 +23,7 @@ import {
 } from 'sdl3'
 import { Tween } from './animation/Tween'
 import { Audio } from './Audio'
+import { TextInput } from './components/TextInput'
 import { setSceneActivator } from './core/instantiate'
 import { Orientation, Scene } from './core/Scene'
 import { ActiveViewport } from './Viewport'
@@ -75,6 +79,7 @@ class EngineImpl {
     })
 
     onTouchStart((x: number, y: number) => {
+      TextInput.handleGlobalPointerStart(x, y)
       this._currentScene?._dispatchTouchStart(x, y)
     })
 
@@ -84,6 +89,20 @@ class EngineImpl {
 
     onTouchEnd((x: number, y: number) => {
       this._currentScene?._dispatchTouchEnd(x, y)
+    })
+
+    onTextInput((text: string) => {
+      TextInput.handleTextInput(text)
+      this._currentScene?.onTextInput(text)
+    })
+
+    onKeyDown((key: string) => {
+      TextInput.handleKeyDown(key)
+      this._currentScene?.onKeyDown(key)
+    })
+
+    onKeyUp((key: string) => {
+      this._currentScene?.onKeyUp(key)
     })
 
     onPause(() => {

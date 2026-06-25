@@ -1,6 +1,8 @@
 type VoidCallback = () => void
 type UpdateCallback = (dt: number) => void
 type TouchCallback = (x: number, y: number) => void
+type TextInputCallback = (text: string) => void
+type KeyCallback = (key: string) => void
 type InterruptionCallback = (active: boolean) => void
 type OrientationCallback = (
   orientation: number,
@@ -73,6 +75,9 @@ let renderCallback: VoidCallback | null = null
 let touchStartCallback: TouchCallback | null = null
 let touchMoveCallback: TouchCallback | null = null
 let touchEndCallback: TouchCallback | null = null
+let textInputCallback: TextInputCallback | null = null
+let keyDownCallback: KeyCallback | null = null
+let keyUpCallback: KeyCallback | null = null
 let pauseCallback: VoidCallback | null = null
 let resumeCallback: VoidCallback | null = null
 let backgroundCallback: VoidCallback | null = null
@@ -81,6 +86,40 @@ let interruptionCallback: InterruptionCallback | null = null
 let lowMemoryCallback: VoidCallback | null = null
 let orientationCallback: OrientationCallback | null = null
 let terminateCallback: VoidCallback | null = null
+let hiddenTextInput: HTMLInputElement | null = null
+
+function ensureHiddenTextInput(): HTMLInputElement {
+  if (hiddenTextInput) return hiddenTextInput
+  const input = document.createElement('input')
+  input.type = 'text'
+  input.autocomplete = 'off'
+  input.autocapitalize = 'off'
+  input.spellcheck = false
+  input.tabIndex = -1
+  input.setAttribute('aria-hidden', 'true')
+  input.style.position = 'fixed'
+  input.style.left = '-10000px'
+  input.style.top = '0'
+  input.style.width = '1px'
+  input.style.height = '1px'
+  input.style.opacity = '0'
+  input.addEventListener('input', () => {
+    if (input.value) {
+      textInputCallback?.(input.value)
+      input.value = ''
+    }
+  })
+  input.addEventListener('keydown', (event) => {
+    keyDownCallback?.(event.key)
+    if (event.key === 'Tab') event.preventDefault()
+  })
+  input.addEventListener('keyup', (event) => {
+    keyUpCallback?.(event.key)
+  })
+  document.body.appendChild(input)
+  hiddenTextInput = input
+  return input
+}
 
 function compileShader(type: number, source: string): WebGLShader {
   const context = requireGl()
@@ -973,6 +1012,27 @@ export function onTouchMove(callback: TouchCallback): void {
 
 export function onTouchEnd(callback: TouchCallback): void {
   touchEndCallback = callback
+}
+
+export function onTextInput(callback: TextInputCallback): void {
+  textInputCallback = callback
+}
+
+export function onKeyDown(callback: KeyCallback): void {
+  keyDownCallback = callback
+}
+
+export function onKeyUp(callback: KeyCallback): void {
+  keyUpCallback = callback
+}
+
+export function startTextInput(): void {
+  ensureHiddenTextInput().focus({ preventScroll: true })
+}
+
+export function stopTextInput(): void {
+  hiddenTextInput?.blur()
+  if (hiddenTextInput) hiddenTextInput.value = ''
 }
 
 export function onPause(callback: VoidCallback): void {

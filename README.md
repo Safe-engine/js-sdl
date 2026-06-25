@@ -319,8 +319,8 @@ set `button.consumeInput = false` to allow propagation.
 UI components use the existing node tree and logical coordinate system.
 `UIContainer` supports horizontal and vertical stack layout, padding, gaps,
 cross-axis alignment, flexible children, and anchor constraints. `Panel`,
-`UIImage`, `NineSlice`, `ProgressBar`, `Toggle`, and `ScrollView` provide the
-standard retained widgets.
+`UIImage`, `NineSlice`, `ProgressBar`, `TextInput`, `Toggle`, and `ScrollView`
+provide the standard retained widgets.
 
 ```ts
 import {
@@ -329,6 +329,7 @@ import {
   Node,
   Panel,
   ProgressBar,
+  TextInput,
   Toggle,
   UIContainer,
   UIElement,
@@ -364,6 +365,14 @@ const toggle = toggleNode.addComponent(Toggle);
 toggle.setSize(72, 36);
 toggle.onChange = (enabled) => console.log("Sound", enabled);
 
+const nameNode = panel.node!.addChild(new Node("name"));
+const nameInput = nameNode.addComponent(TextInput, {
+  placeholder: "Player name",
+  onChange: (value) => console.log("Name", value),
+  onSubmit: (value) => console.log("Submit", value),
+});
+nameInput.setSize(480, 48);
+
 const topBar = new Node("top-bar");
 topBar.width = 320;
 topBar.height = 72;
@@ -394,6 +403,8 @@ element.offsetBottom = 16;
 content root. Set `contentWidth` and `contentHeight` to define scroll limits.
 Labels support explicit newlines, word wrapping, horizontal and vertical
 alignment, color, opacity, outlines, and localization keys.
+`TextInput` focuses on pointer press, opens the platform text entry path, and
+emits `onChange`, `onFocus`, `onBlur`, and `onSubmit` callbacks.
 
 ### Tweening
 
