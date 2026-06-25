@@ -101,6 +101,24 @@ describe('Node scheduling', () => {
     expect(calls).toBe(1)
   })
 
+  test('pauses child scheduled callbacks while an ancestor is inactive', () => {
+    const parent = new Node('parent')
+    const child = parent.addChild(new Node('child'))
+    let calls = 0
+
+    child.schedule(() => {
+      calls += 1
+    }, 0)
+
+    parent.active = false
+    parent._updateTree(1)
+    expect(calls).toBe(0)
+
+    parent.active = true
+    parent._updateTree(0.16)
+    expect(calls).toBe(1)
+  })
+
   test('clears scheduled callbacks when the node is destroyed', () => {
     const node = new Node('timer')
     let calls = 0
