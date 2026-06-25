@@ -1,4 +1,4 @@
-import { drawRect } from 'sdl3'
+import * as sdl from 'sdl3'
 import { white } from '../helper/constants'
 import type { InputEvent } from '../Input'
 import { UIElement } from './UI'
@@ -79,18 +79,18 @@ export class Slider extends UIElement<SliderProps> {
   onRender(): void {
     const rect = this.worldRect()
     const ratio = this.valueRatio()
-    drawRect(rect.x, rect.y, rect.width, rect.height,
+    sdl.drawRect(rect.x, rect.y, rect.width, rect.height,
       this.trackColor.r, this.trackColor.g, this.trackColor.b,
       this.disabled ? 120 : this.trackColor.a ?? 255)
 
     if (this.vertical) {
       const fillHeight = rect.height * ratio
-      drawRect(rect.x, rect.y + rect.height - fillHeight, rect.width, fillHeight,
+      sdl.drawRect(rect.x, rect.y + rect.height - fillHeight, rect.width, fillHeight,
         this.fillColor.r, this.fillColor.g, this.fillColor.b,
         this.disabled ? 160 : this.fillColor.a ?? 255)
     } else {
       const fillWidth = rect.width * ratio
-      drawRect(rect.x, rect.y, fillWidth, rect.height,
+      sdl.drawRect(rect.x, rect.y, fillWidth, rect.height,
         this.fillColor.r, this.fillColor.g, this.fillColor.b,
         this.disabled ? 160 : this.fillColor.a ?? 255)
     }
@@ -102,13 +102,13 @@ export class Slider extends UIElement<SliderProps> {
     if (this.vertical) {
       const cy = rect.y + rect.height - rect.height * ratio
       const thumbHeight = Math.min(thumbExtent, rect.height)
-      drawRect(rect.x, cy - thumbHeight * 0.5, rect.width, thumbHeight,
+      sdl.drawRect(rect.x, cy - thumbHeight * 0.5, rect.width, thumbHeight,
         this.thumbColor.r, this.thumbColor.g, this.thumbColor.b,
         this.disabled ? 180 : this.thumbColor.a ?? 255)
     } else {
       const cx = rect.x + rect.width * ratio
       const thumbWidth = Math.min(thumbExtent, rect.width)
-      drawRect(cx - thumbWidth * 0.5, rect.y, thumbWidth, rect.height,
+      sdl.drawRect(cx - thumbWidth * 0.5, rect.y, thumbWidth, rect.height,
         this.thumbColor.r, this.thumbColor.g, this.thumbColor.b,
         this.disabled ? 180 : this.thumbColor.a ?? 255)
     }

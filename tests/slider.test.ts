@@ -1,5 +1,6 @@
 import { describe, expect, mock, test } from 'bun:test'
 import { InputSystem } from '../engine/Input'
+import { Slider } from '../engine/components/Slider'
 import { Node } from '../engine/core/Node'
 
 mock.module('sdl3', () => ({
@@ -15,8 +16,6 @@ mock.module('sdl3', () => ({
   releaseFont: () => {},
   releaseTexture: () => {},
 }))
-
-const { Slider } = await import('../engine/components/UI')
 
 describe('Slider', () => {
   test('snaps values to the configured range and step', () => {

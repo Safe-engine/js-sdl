@@ -1,11 +1,6 @@
 import { Body, BodyType, BoxShape, CircleShape, Contact, ContactImpulse, EdgeShape, Fixture, Manifold, PolygonShape, Shape, Transform, TransformValue, Vec2, World } from 'planck'
-import {
-  drawCircle,
-  drawLine,
-  drawPoint,
-  drawPolyline,
-  type DrawPoint,
-} from 'sdl3'
+import * as sdl from 'sdl3'
+import type { DrawPoint } from 'sdl3'
 import {
   DEG_TO_RAD,
   PhysicsRigidBodyComponent,
@@ -218,7 +213,7 @@ function drawFixtureDebug(
         Transform.mulVec2(transform, circleShape.getCenter()),
         pixelsPerMeter,
       )
-      drawCircle(
+      sdl.drawCircle(
         center.x,
         center.y,
         circleShape.getRadius() * pixelsPerMeter,
@@ -227,14 +222,14 @@ function drawFixtureDebug(
         color.b,
         color.a,
       )
-      drawPoint(center.x, center.y, color.r, color.g, color.b, color.a)
+      sdl.drawPoint(center.x, center.y, color.r, color.g, color.b, color.a)
       break
     }
     case 'edge': {
       const edgeShape = shape as EdgeShape
       const a = toDebugPoint(Transform.mulVec2(transform, edgeShape.m_vertex1), pixelsPerMeter)
       const b = toDebugPoint(Transform.mulVec2(transform, edgeShape.m_vertex2), pixelsPerMeter)
-      drawLine(a.x, a.y, b.x, b.y, color.r, color.g, color.b, color.a)
+      sdl.drawLine(a.x, a.y, b.x, b.y, color.r, color.g, color.b, color.a)
       break
     }
     case 'polygon': {
@@ -246,7 +241,7 @@ function drawFixtureDebug(
           pixelsPerMeter,
         ))
       }
-      drawPolyline(points, color.r, color.g, color.b, color.a, true)
+      sdl.drawPolyline(points, color.r, color.g, color.b, color.a, true)
       break
     }
   }

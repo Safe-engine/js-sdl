@@ -1,12 +1,4 @@
-import {
-  getTextureHeight,
-  getTextureWidth,
-  loadFont,
-  loadTextTexture,
-  loadTexture,
-  releaseFont,
-  releaseTexture,
-} from 'sdl3'
+import * as sdl from 'sdl3'
 
 interface TextureRecord {
   id: number
@@ -37,11 +29,11 @@ export class TextureAsset {
   }
 
   get width(): number {
-    return getTextureWidth(this.id) || this.fallbackWidth
+    return sdl.getTextureWidth(this.id) || this.fallbackWidth
   }
 
   get height(): number {
-    return getTextureHeight(this.id) || this.fallbackHeight
+    return sdl.getTextureHeight(this.id) || this.fallbackHeight
   }
 
   release(): void {
@@ -214,14 +206,14 @@ export class AssetManager {
   private static textTextures = new Map<string, TextureRecord>()
 
   static acquireTexture(path: string): TextureAsset {
-    return this.acquireTextureRecord(this.textures, path, () => loadTexture(path))
+    return this.acquireTextureRecord(this.textures, path, () => sdl.loadTexture(path))
   }
 
   static acquireFont(path: string, size: number): FontAsset {
     const key = `${path}\0${size}`
     let record = this.fonts.get(key)
     if (!record) {
-      const id = loadFont(path, size)
+      const id = sdl.loadFont(path, size)
       if (id < 0) throw new Error(`Failed to load font: ${path} (${size}px)`)
       record = { id, refs: 0 }
       this.fonts.set(key, record)
@@ -230,7 +222,7 @@ export class AssetManager {
     return new FontAsset(key, record.id, path, size, (assetKey) => {
       const current = this.fonts.get(assetKey)
       if (!current || --current.refs > 0) return
-      releaseFont(current.id)
+      sdl.releaseFont(current.id)
       this.fonts.delete(assetKey)
     })
   }
@@ -240,7 +232,7 @@ export class AssetManager {
     return this.acquireTextureRecord(
       this.textTextures,
       key,
-      () => loadTextTexture(font.id, text),
+      () => sdl.loadTextTexture(font.id, text),
     )
   }
 
@@ -280,8 +272,8 @@ export class AssetManager {
       if (id < 0) throw new Error(`Failed to load texture asset: ${key}`)
       record = {
         id,
-        width: getTextureWidth(id),
-        height: getTextureHeight(id),
+        width: sdl.getTextureWidth(id),
+        height: sdl.getTextureHeight(id),
         refs: 0,
       }
       cache.set(key, record)
@@ -296,7 +288,7 @@ export class AssetManager {
       (assetKey) => {
         const current = cache.get(assetKey)
         if (!current || --current.refs > 0) return
-        releaseTexture(current.id)
+        sdl.releaseTexture(current.id)
         cache.delete(assetKey)
       },
     )

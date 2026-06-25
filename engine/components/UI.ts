@@ -1,9 +1,4 @@
-import {
-  drawRect,
-  drawTextureRegionRotated,
-  popClipRect,
-  pushClipRect,
-} from 'sdl3'
+import * as sdl from 'sdl3'
 import { AssetManager, TextureAsset } from '../AssetManager'
 import { ComponentX } from '../core/ComponentX'
 import type { Node } from '../core/Node'
@@ -178,7 +173,7 @@ export class Panel extends UIContainer {
 
   onRender(): void {
     const rect = this.worldRect()
-    drawRect(rect.x, rect.y, rect.width, rect.height,
+    sdl.drawRect(rect.x, rect.y, rect.width, rect.height,
       this.color.r, this.color.g, this.color.b,
       this.opacity * (this.color.a ?? 255))
   }
@@ -221,7 +216,7 @@ export class NineSlice extends UIElement {
       for (let column = 0; column < 3; column++) {
         if (sourceW[column] > 0 && sourceH[row] > 0
           && destW[column] > 0 && destH[row] > 0) {
-          drawTextureRegionRotated(
+          sdl.drawTextureRegionRotated(
             this.texture.id,
             sourceX[column], sourceY[row], sourceW[column], sourceH[row],
             dx, dy, destW[column], destH[row],
@@ -293,11 +288,11 @@ export class Toggle extends UIElement {
   onRender(): void {
     const rect = this.worldRect()
     const color = this.checked ? this.trackOnColor : this.trackOffColor
-    drawRect(rect.x, rect.y, rect.width, rect.height,
+    sdl.drawRect(rect.x, rect.y, rect.width, rect.height,
       color.r, color.g, color.b, this.disabled ? 120 : color.a ?? 255)
     const thumb = Math.min(rect.height, rect.width * 0.5)
     const x = this.checked ? rect.x + rect.width - thumb : rect.x
-    drawRect(x, rect.y, thumb, rect.height,
+    sdl.drawRect(x, rect.y, thumb, rect.height,
       this.thumbColor.r, this.thumbColor.g, this.thumbColor.b,
       this.disabled ? 160 : this.thumbColor.a ?? 255)
   }
@@ -332,11 +327,11 @@ export class ScrollView extends UIContainer {
 
   onRender(): void {
     const rect = this.worldRect()
-    pushClipRect(rect.x, rect.y, rect.width, rect.height)
+    sdl.pushClipRect(rect.x, rect.y, rect.width, rect.height)
   }
 
   onRenderEnd(): void {
-    popClipRect()
+    sdl.popClipRect()
   }
 
   hitTest(x: number, y: number): boolean {
