@@ -8,6 +8,7 @@ import {
   TextureAtlas,
 } from '../AssetManager'
 import { ComponentX } from '../core/ComponentX'
+import { spriteFrameCache } from '../SpriteFrameCache'
 
 const DEFAULT_NODE_WIDTH = 64
 const DEFAULT_NODE_HEIGHT = 64
@@ -27,6 +28,7 @@ export class Sprite extends ComponentX<SpriteProps> {
   private texture: TextureAsset | null = null
   private loadedPath = ''
   private loadedAtlas: TextureAtlas | null = null
+  private cachedFrame: TextureRegion | null = null
 
   onAwake(): void {
     if (this.props.spriteFrame) {
@@ -38,10 +40,20 @@ export class Sprite extends ComponentX<SpriteProps> {
     this.ensureTexture()
   }
 
+  get spriteFrame() {
+    return this.props.spriteFrame
+  }
+
+  set spriteFrame(frameString: string) {
+    this.props.spriteFrame = frameString
+    this.setTexture(frameString)
+  }
+
   setTexture(path: string): this {
     if (this.texturePath === path && !this.atlas) return this
     this.releaseTexture()
     this.atlas = null
+    this.frameName = ''
     this.texturePath = path
     this.ensureTexture()
     return this
@@ -110,6 +122,7 @@ export class Sprite extends ComponentX<SpriteProps> {
       this.releaseTexture()
       this.texture = AssetManager.acquireTexture(this.atlas.texture.key)
       this.loadedAtlas = this.atlas
+      this.cachedFrame = null
       this.textureId = this.texture.id
       const frame = this.getFrame()
       this.applyNaturalSize(frame?.width ?? this.texture.width,
@@ -122,14 +135,19 @@ export class Sprite extends ComponentX<SpriteProps> {
     }
     if (this.texture && this.loadedPath === this.texturePath) return
     this.releaseTexture()
-    this.texture = AssetManager.acquireTexture(this.texturePath)
+    const spriteFrame = spriteFrameCache.get(this.texturePath)
+    this.texture = AssetManager.acquireTexture(spriteFrame?.texturePath ?? this.texturePath)
     this.loadedPath = this.texturePath
+    this.cachedFrame = spriteFrame?.region ?? null
     this.textureId = this.texture.id
-    this.applyNaturalSize(this.texture.width, this.texture.height)
+    this.applyNaturalSize(
+      this.cachedFrame?.width ?? this.texture.width,
+      this.cachedFrame?.height ?? this.texture.height,
+    )
   }
 
   private getFrame(): TextureRegion | null {
-    return this.atlas?.getFrame(this.frameName) ?? null
+    return this.atlas?.getFrame(this.frameName) ?? this.cachedFrame
   }
 
   private applyNaturalSize(width: number, height: number): void {
@@ -146,6 +164,7 @@ export class Sprite extends ComponentX<SpriteProps> {
     this.texture = null
     this.loadedPath = ''
     this.loadedAtlas = null
+    this.cachedFrame = null
     this.textureId = -1
   }
 }

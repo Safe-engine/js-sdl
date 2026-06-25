@@ -17,6 +17,11 @@ export {
   TextureAsset,
   TextureAtlas
 } from './AssetManager'
+export {
+  SpriteFrameCache,
+  parseSpriteAtlasFrames,
+  spriteFrameCache
+} from './SpriteFrameCache'
 export type {
   PreloadProgress,
   PreloadRequest

@@ -1,5 +1,6 @@
 import { drawRect, drawTextureRegionRotated } from 'sdl3'
 import { AssetManager, TextureAsset } from '../AssetManager'
+import { spriteFrameCache } from '../SpriteFrameCache'
 import { UIElement } from './UI'
 
 export interface ProgressBarProps {
@@ -16,6 +17,7 @@ export class ProgressBar extends UIElement<ProgressBarProps> {
   vertical = false
   private texture: TextureAsset | null = null
   private loadedPath = ''
+  private frame: TextureRegion | null = null
 
   setValue(value: number): this {
     this.props.fillRange = Math.max(this.min, Math.min(this.max, value))
@@ -59,14 +61,20 @@ export class ProgressBar extends UIElement<ProgressBarProps> {
 
     if (width <= 0 || height <= 0) return
 
-    const sourceWidth = this.vertical ? this.texture.width : this.texture.width * ratio
-    const sourceHeight = this.vertical ? this.texture.height * ratio : this.texture.height
+    const frame = this.frame ?? {
+      x: 0,
+      y: 0,
+      width: this.texture.width,
+      height: this.texture.height,
+    }
+    const sourceWidth = this.vertical ? frame.width : frame.width * ratio
+    const sourceHeight = this.vertical ? frame.height * ratio : frame.height
     const sourceX = isReverse && !this.vertical
-      ? this.texture.width - sourceWidth
-      : 0
+      ? frame.x + frame.width - sourceWidth
+      : frame.x
     const sourceY = isReverse && this.vertical
-      ? this.texture.height - sourceHeight
-      : 0
+      ? frame.y + frame.height - sourceHeight
+      : frame.y
     drawTextureRegionRotated(
       this.texture.id,
       sourceX, sourceY, sourceWidth, sourceHeight,
@@ -91,15 +99,21 @@ export class ProgressBar extends UIElement<ProgressBarProps> {
     }
     if (this.texture && this.loadedPath === this.props.spriteFrame) return
     this.releaseTexture()
-    this.texture = AssetManager.acquireTexture(this.props.spriteFrame)
+    const spriteFrame = spriteFrameCache.get(this.props.spriteFrame)
+    this.texture = AssetManager.acquireTexture(spriteFrame?.texturePath ?? this.props.spriteFrame)
     this.loadedPath = this.props.spriteFrame
-    this.applyNaturalSize(this.texture.width, this.texture.height)
+    this.frame = spriteFrame?.region ?? null
+    this.applyNaturalSize(
+      this.frame?.width ?? this.texture.width,
+      this.frame?.height ?? this.texture.height,
+    )
   }
 
   private releaseTexture(): void {
     this.texture?.release()
     this.texture = null
     this.loadedPath = ''
+    this.frame = null
   }
 
   private applyNaturalSize(width: number, height: number): void {

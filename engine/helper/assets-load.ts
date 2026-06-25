@@ -1,10 +1,17 @@
 import { loadTextFile } from 'sdl3'
 import { AssetGroup, AssetManager } from '../AssetManager'
+import { spriteFrameCache } from '../SpriteFrameCache'
 
 type DragonBonesAsset = {
   atlas?: string
   skeleton?: string
   texture?: string
+}
+
+type SpriteFrameAtlasAsset = {
+  atlas: string
+  texture: string
+  prefix?: string
 }
 
 const loadedAssetGroups = new WeakMap<object, AssetGroup>()
@@ -21,6 +28,7 @@ export async function loadAll(assets: any, cb?: (progress: number) => void) {
 
   for (const texturePath of textureAssets) {
     group.addTexture(texturePath, texturePath)
+    spriteFrameCache.addTexture(texturePath)
   }
 
   for (const fontPath of fontAssets) {
@@ -42,6 +50,13 @@ export async function loadAll(assets: any, cb?: (progress: number) => void) {
     await loadTextAsset(path)
     loaded++
     report()
+  }
+
+  for (const value of Object.values(assets ?? {})) {
+    if (!isSpriteFrameAtlasAsset(value)) continue
+    await spriteFrameCache.loadAtlas(value.texture, value.atlas, {
+      prefix: value.prefix,
+    })
   }
 
   if (assets && typeof assets === 'object') {
@@ -68,6 +83,12 @@ function collectAssets(
   for (const value of Object.values(assets)) {
     if (typeof value === 'string') {
       collectAssetPath(value, textureAssets, fontAssets, textAssets)
+      continue
+    }
+
+    if (isSpriteFrameAtlasAsset(value)) {
+      textureAssets.add(value.texture)
+      textAssets.add(value.atlas)
       continue
     }
 
@@ -104,6 +125,14 @@ function isDragonBonesAsset(value: unknown): value is DragonBonesAsset {
   return typeof data.texture === 'string'
     || typeof data.atlas === 'string'
     || typeof data.skeleton === 'string'
+}
+
+function isSpriteFrameAtlasAsset(value: unknown): value is SpriteFrameAtlasAsset {
+  if (!value || typeof value !== 'object') return false
+  const data = value as SpriteFrameAtlasAsset & { skeleton?: unknown }
+  return typeof data.texture === 'string'
+    && typeof data.atlas === 'string'
+    && typeof data.skeleton !== 'string'
 }
 
 async function loadTextAsset(path: string): Promise<string> {
