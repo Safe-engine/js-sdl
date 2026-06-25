@@ -5,3 +5,5 @@ export function Vec2(x = 0, y = 0): Vec2 {
 export function Rect(x = 0, y = 0, width = 0, height = 0): Rect {
   return { x, y, width, height }
 }
+
+export const clamp01 = (value: number): number => Math.max(0, Math.min(1, value))

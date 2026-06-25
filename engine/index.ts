@@ -3,12 +3,12 @@ export {
   Tween,
   TweenHandle,
   TweenSequence
-} from './animation/Tween'
+} from './animation'
 export type {
   EasingFunction,
   TweenOptions,
   TweenValues
-} from './animation/Tween'
+} from './animation'
 export {
   AssetGroup,
   AssetManager,
