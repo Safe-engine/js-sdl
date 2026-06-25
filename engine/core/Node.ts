@@ -16,6 +16,7 @@ export class Node {
   visible = true;
   opacity = 1;
   color: Color = { r: 255, g: 255, b: 255, a: 255 };
+  zIndex = 0;
 
   x = 0;
   y = 0;
@@ -118,6 +119,11 @@ export class Node {
     return child;
   }
 
+  getRenderChildren(): Node[] {
+    if (this.children.length < 2) return this.children;
+    return [...this.children].sort((a, b) => a.zIndex - b.zIndex);
+  }
+
   removeFromParent(): void {
     if (!this.parent) return;
     const idx = this.parent.children.indexOf(this);
@@ -142,8 +148,9 @@ export class Node {
     for (let i = 0; i < this.components.length; i++) {
       this.components[i].onRender();
     }
-    for (let i = 0; i < this.children.length; i++) {
-      this.children[i]._renderTree();
+    const renderChildren = this.getRenderChildren();
+    for (let i = 0; i < renderChildren.length; i++) {
+      renderChildren[i]._renderTree();
     }
     for (let i = this.components.length - 1; i >= 0; i--) {
       this.components[i].onRenderEnd();

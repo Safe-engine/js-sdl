@@ -107,7 +107,7 @@ export class InputSystem {
         renderOrder++;
       }
       if (allowChildren) {
-        for (const child of node.children) visit(child);
+        for (const child of node.getRenderChildren()) visit(child);
       }
     };
 
