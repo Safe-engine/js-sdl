@@ -75,6 +75,8 @@ export type {
   VerticalTextAlignment
 } from './components/Label'
 export { ProgressBar } from './components/ProgressBar'
+export { Slider } from './components/Slider'
+export type { SliderProps } from './components/Slider'
 export { Sprite } from './components/Sprite'
 export { TextInput } from './components/TextInput'
 export type { TextInputProps } from './components/TextInput'
@@ -116,3 +118,4 @@ export type {
 export { Spine, SpineSkeleton } from './spine'
 export type { SpineData, SpineSkeletonProps } from './spine'
 export { SpineBonesControl } from './spine/SpineBonesControl'
+
