@@ -3,6 +3,7 @@ import { ComponentX } from './ComponentX'
 type Constructor<T = any> = new (...args: any[]) => T
 type ComponentInput<T extends ComponentX> = Constructor<T> | T
 type ScheduledCallback = (dt: number) => void
+type EventCallback = (...args: any[]) => void
 
 interface ScheduledEntry {
   callback: ScheduledCallback
@@ -29,6 +30,7 @@ export class Node {
   color: Color = { r: 255, g: 255, b: 255, a: 255 }
   zIndex = 0
   private _scheduledCallbacks: ScheduledEntry[] = []
+  private _eventListeners = new Map<string, EventCallback[]>()
 
   x = 0
   y = 0
@@ -143,6 +145,44 @@ export class Node {
     this.parent = null
   }
 
+  on(event: string, callback: EventCallback): this {
+    const listeners = this._eventListeners.get(event) ?? []
+    listeners.push(callback)
+    this._eventListeners.set(event, listeners)
+    return this
+  }
+
+  off(event: string, callback?: EventCallback): this {
+    if (callback === undefined) {
+      this._eventListeners.delete(event)
+      return this
+    }
+
+    const listeners = this._eventListeners.get(event)
+    if (!listeners) return this
+
+    const nextListeners = listeners.filter(listener => listener !== callback)
+    if (nextListeners.length > 0) {
+      this._eventListeners.set(event, nextListeners)
+    } else {
+      this._eventListeners.delete(event)
+    }
+
+    return this
+  }
+
+  emit(event: string, ...args: any[]): this {
+    const listeners = this._eventListeners.get(event)
+    if (!listeners?.length) return this
+
+    for (const listener of [...listeners]) {
+      if (!this._eventListeners.get(event)?.includes(listener)) continue
+      listener(...args)
+    }
+
+    return this
+  }
+
   scheduleOnce(callback: ScheduledCallback, delay = 0): void {
     this.schedule(callback, 0, 0, delay)
   }
@@ -208,6 +248,7 @@ export class Node {
 
   destroy(): void {
     this.unscheduleAllCallbacks()
+    this._eventListeners.clear()
     for (const c of this.components) c.onDestroy()
     for (const child of [...this.children]) child.destroy()
     this.removeFromParent()

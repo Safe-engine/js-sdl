@@ -38,7 +38,7 @@ export class ComponentX<Props = unknown> {
     return this.node.getComponent(component)
   }
 
-  schedule(callback: (arg: any) => void, interval: number, repeat: number, delay) {
+  schedule(callback: (arg: any) => void, interval: number, repeat?: number, delay?) {
     this.node.schedule(callback.bind(this), interval, repeat, delay)
   }
 
@@ -50,7 +50,7 @@ export class ComponentX<Props = unknown> {
     this.node.unscheduleAllCallbacks()
   }
 
-  scheduleOnce(callback: (arg: any) => void, delay: number) {
+  scheduleOnce(callback: (arg: any) => void, delay?: number) {
     this.node.scheduleOnce(callback, delay)
   }
 
