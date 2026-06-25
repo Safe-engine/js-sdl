@@ -112,8 +112,12 @@ export class Node {
     return component
   }
 
-  resolveComponent<T extends ComponentX>(component: T): T {
-    return this.addComponent(component)
+  resolveComponent<T extends ComponentX>(component: T) {
+    if ((component as any).__view) {
+      this.addChild(component.node)
+    } else {
+      this.addComponent(component)
+    }
   }
 
   getComponent<T extends ComponentX>(type: Constructor<T>): T | null {

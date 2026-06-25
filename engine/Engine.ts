@@ -55,9 +55,9 @@ class EngineImpl {
       this.refreshViewport()
       this._ready = true
       const scene = this._currentScene
-      scene.node.width = width
-      scene.node.height = height
       if (scene) {
+        scene.node.width = width
+        scene.node.height = height
         this._activateScene(scene)
       }
     })

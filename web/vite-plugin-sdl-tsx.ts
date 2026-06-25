@@ -179,7 +179,7 @@ function parseJSX(
   if (!parentVar) {
     state.ms.appendLeft(start, createComponentString)
     if (state.isScene) {
-      ret += `\nthis.root.addChild(${compVar}.node)`
+      ret += `\nthis.node.addChild(${compVar}.node)`
     } else {
       state.ms.appendLeft(start, `\n   const ${classVar} = ${compVar}.addComponent(this)`)
     }
