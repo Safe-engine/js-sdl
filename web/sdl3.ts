@@ -322,6 +322,7 @@ function safeAreaInsets(): [number, number, number, number] {
 
 function resizeDrawingBuffer(): void {
   if (!canvas || !gl) return
+  fitCanvasToViewport()
   const rect = canvas.getBoundingClientRect()
   const ratio = window.devicePixelRatio || 1
   const width = Math.max(1, Math.round(rect.width * ratio))
@@ -330,6 +331,20 @@ function resizeDrawingBuffer(): void {
   canvas.width = width
   canvas.height = height
   gl.viewport(0, 0, width, height)
+}
+
+function fitCanvasToViewport(): void {
+  if (!canvas) return
+  const scale = Math.min(
+    window.innerWidth / logicalWidth,
+    window.innerHeight / logicalHeight,
+  )
+  const width = Math.max(1, Math.floor(logicalWidth * scale))
+  const height = Math.max(1, Math.floor(logicalHeight * scale))
+  const styleWidth = `${width}px`
+  const styleHeight = `${height}px`
+  if (canvas.style.width !== styleWidth) canvas.style.width = styleWidth
+  if (canvas.style.height !== styleHeight) canvas.style.height = styleHeight
 }
 
 export function getViewportMetrics(): [
@@ -420,6 +435,7 @@ export function createWindow(title: string, width: number, height: number): void
   canvas.width = width
   canvas.height = height
   canvas.style.aspectRatio = `${width} / ${height}`
+  fitCanvasToViewport()
   canvas.style.touchAction = 'none'
 
   gl = canvas.getContext('webgl', {

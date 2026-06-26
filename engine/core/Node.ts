@@ -46,26 +46,12 @@ export class Node {
 
   get worldX(): number {
     const pt = this._getParentTransform()
-    if (!pt) return this.x
-
-    const radians = pt.worldRotation * Math.PI / 180
-    const cos = Math.cos(radians)
-    const sin = Math.sin(radians)
-    const x = this.x * pt.worldScaleX
-    const y = this.y * pt.worldScaleY
-    return pt.worldX + x * cos - y * sin
+    return pt ? pt.contentToWorld(this.x, this.y).x : this.x
   }
 
   get worldY(): number {
     const pt = this._getParentTransform()
-    if (!pt) return this.y
-
-    const radians = pt.worldRotation * Math.PI / 180
-    const cos = Math.cos(radians)
-    const sin = Math.sin(radians)
-    const x = this.x * pt.worldScaleX
-    const y = this.y * pt.worldScaleY
-    return pt.worldY + x * sin + y * cos
+    return pt ? pt.contentToWorld(this.x, this.y).y : this.y
   }
 
   get worldRotation(): number {
@@ -86,6 +72,26 @@ export class Node {
   private _getParentTransform() {
     const p = this.parent ?? null
     return p
+  }
+
+  contentToWorld(x: number, y: number): Point {
+    return this.localToWorld(
+      x - this.anchorX * this.width,
+      y - this.anchorY * this.height,
+    )
+  }
+
+  localToWorld(x: number, y: number): Point {
+    const radians = this.worldRotation * Math.PI / 180
+    const cos = Math.cos(radians)
+    const sin = Math.sin(radians)
+    const scaledX = x * this.worldScaleX
+    const scaledY = y * this.worldScaleY
+
+    return {
+      x: this.worldX + scaledX * cos - scaledY * sin,
+      y: this.worldY + scaledX * sin + scaledY * cos,
+    }
   }
 
   setPosition(x: number, y: number): this {
@@ -114,6 +120,8 @@ export class Node {
 
   resolveComponent<T extends ComponentX>(component: T) {
     if ((component as any).__view) {
+      this.addChild(component.node)
+    } else if ((component as any).__explicitNode && component.node !== this) {
       this.addChild(component.node)
     } else {
       this.addComponent(component)

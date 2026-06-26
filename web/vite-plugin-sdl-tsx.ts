@@ -65,7 +65,8 @@ function parseNodeAttribute(
   sourceFile: ts.SourceFile,
 ) {
   if (ts.isJsxExpression(value) && value.expression && ts.isObjectLiteralExpression(value.expression)) {
-    return value.expression.properties
+    return `\n    ;(${componentVar} as any).__explicitNode = true`
+      + value.expression.properties
       .map((p) => {
         if (!ts.isPropertyAssignment(p))
           return ''
@@ -73,7 +74,7 @@ function parseNodeAttribute(
       })
       .join('')
   }
-  return `\n    ${componentVar}.${prop} = ${parseValue(value, sourceFile)}`
+  return `\n    ;(${componentVar} as any).__explicitNode = true\n    ${componentVar}.${prop} = ${parseValue(value, sourceFile)}`
 }
 
 function attributesToParams(
@@ -176,8 +177,19 @@ function parseJSX(
   const compVar = getComponentName(componentName)
   const params = attributesToParams(attributes, state.listMethods, sourceFile)
   const createComponentString = `\n    const ${compVar} = instantiate(${componentName}, ${params})`
+  const nodeAttributeString = attributes
+    .filter(attribute => ts.isJsxAttribute(attribute)
+      && attribute.name.getText(sourceFile) === 'node'
+      && attribute.initializer)
+    .map(attribute => parseNodeAttribute(
+      (attribute as ts.JsxAttribute).initializer!,
+      compVar,
+      'node',
+      sourceFile,
+    ))
+    .join('')
   if (!parentVar) {
-    state.ms.appendLeft(start, createComponentString)
+    state.ms.appendLeft(start, createComponentString + nodeAttributeString)
     if (state.isScene) {
       ret += `\nthis.node.addChild(${compVar}.node)`
     } else {
@@ -187,7 +199,7 @@ function parseJSX(
       ret += `\n${classVar}.onLoad();`
     }
   } else {
-    ret += createComponentString
+    ret += createComponentString + nodeAttributeString
   }
   if (parentVar) {
     ret += `\n     ${parentVar}.node.resolveComponent(${compVar})`
@@ -206,8 +218,6 @@ function parseJSX(
       ret += `\n${refString}.push(${rightValue});`
     } else if (attName === '$pushNode') {
       ret += `\n${refString}.push(${rightValue}.node);`
-    } else if (attName === 'node' && attribute.initializer) {
-      ret += parseNodeAttribute(attribute.initializer, compVar, attName, sourceFile)
     }
   })
   state.ms.overwrite(start, end, ret)

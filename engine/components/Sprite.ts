@@ -29,6 +29,8 @@ export class Sprite extends ComponentX<SpriteProps> {
   private loadedPath = ''
   private loadedAtlas: TextureAtlas | null = null
   private cachedFrame: TextureRegion | null = null
+  private autoWidth = DEFAULT_NODE_WIDTH
+  private autoHeight = DEFAULT_NODE_HEIGHT
 
   onAwake(): void {
     if (this.props.spriteFrame) {
@@ -80,7 +82,6 @@ export class Sprite extends ComponentX<SpriteProps> {
     const h = baseHeight * t.worldScaleY
     const dx = t.worldX - t.anchorX * w
     const dy = t.worldY - t.anchorY * h
-
     if (frame) {
       drawTextureRegionRotated(
         this.textureId,
@@ -118,7 +119,12 @@ export class Sprite extends ComponentX<SpriteProps> {
 
   private ensureTexture(): void {
     if (this.atlas) {
-      if (this.texture && this.loadedAtlas === this.atlas) return
+      if (this.texture && this.loadedAtlas === this.atlas) {
+        const frame = this.getFrame()
+        this.applyNaturalSize(frame?.width ?? this.texture.width,
+          frame?.height ?? this.texture.height)
+        return
+      }
       this.releaseTexture()
       this.texture = AssetManager.acquireTexture(this.atlas.texture.key)
       this.loadedAtlas = this.atlas
@@ -133,7 +139,13 @@ export class Sprite extends ComponentX<SpriteProps> {
       this.releaseTexture()
       return
     }
-    if (this.texture && this.loadedPath === this.texturePath) return
+    if (this.texture && this.loadedPath === this.texturePath) {
+      this.applyNaturalSize(
+        this.cachedFrame?.width ?? this.texture.width,
+        this.cachedFrame?.height ?? this.texture.height,
+      )
+      return
+    }
     this.releaseTexture()
     const spriteFrame = spriteFrameCache.get(this.texturePath)
     this.texture = AssetManager.acquireTexture(spriteFrame?.texturePath ?? this.texturePath)
@@ -151,11 +163,13 @@ export class Sprite extends ComponentX<SpriteProps> {
   }
 
   private applyNaturalSize(width: number, height: number): void {
-    if (width > 0 && this.node.width === DEFAULT_NODE_WIDTH) {
+    if (width > 0 && (this.node.width === DEFAULT_NODE_WIDTH || this.node.width === this.autoWidth)) {
       this.node.width = width
+      this.autoWidth = width
     }
-    if (height > 0 && this.node.height === DEFAULT_NODE_HEIGHT) {
+    if (height > 0 && (this.node.height === DEFAULT_NODE_HEIGHT || this.node.height === this.autoHeight)) {
       this.node.height = height
+      this.autoHeight = height
     }
   }
 

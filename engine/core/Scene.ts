@@ -18,6 +18,8 @@ export class Scene {
   constructor(name = 'Scene') {
     this.name = name
     this.node = new Node('root')
+    this.node.anchorX = 0
+    this.node.anchorY = 0
     this.input = new InputSystem(this.node)
   }
 
