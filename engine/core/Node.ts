@@ -94,10 +94,18 @@ export class Node {
     }
   }
 
-  setPosition(x: number, y: number): this {
+  get position(): Point {
+    return { x: this.x, y: this.y }
+  }
+
+  set position(pos: Point) {
+    this.x = pos.x
+    this.y = pos.y
+  }
+
+  setPosition(x: number, y: number) {
     this.x = x
     this.y = y
-    return this
   }
 
   set scale(sx: number) {
