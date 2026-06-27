@@ -31,6 +31,19 @@ Create a production build in `dist-web/` with:
 bun run web:build
 ```
 
+### Resolution policy
+
+`Engine.start()` accepts an optional fourth argument that controls how the
+logical game size is presented inside the actual window or browser viewport:
+
+```ts
+Engine.start('My Game', 720, 1280, 'letterbox')
+```
+
+Available policies are `letterbox` (default), `overscan`, `stretch`, and
+`integer-scale`. The active `Engine.viewport` exposes the resulting rendered
+rectangle, X/Y scale, and safe area.
+
 ### Mobile prerequisites
 
 Mobile builds compile SDL3, SDL3_image, FreeType, and QuickJS from source:

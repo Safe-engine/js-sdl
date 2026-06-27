@@ -27,6 +27,7 @@ import { TextInput } from './components/TextInput'
 import { setSceneActivator } from './core/instantiate'
 import { Orientation, Scene } from './core/Scene'
 import { ActiveViewport } from './Viewport'
+import type { ResolutionPolicy } from './Viewport'
 
 const ORIENTATIONS: Orientation[] = [
   'unknown',
@@ -46,18 +47,22 @@ class EngineImpl {
   private _interrupted = false
 
   /** Create window and register main loop. */
-  start(title: string, width: number, height: number): void {
+  start(
+    title: string,
+    width: number,
+    height: number,
+    resolutionPolicy: ResolutionPolicy = 'letterbox',
+  ): void {
     if (this._initialized) return
     this._initialized = true
 
     onInit(() => {
-      createWindow(title, width, height)
+      createWindow(title, width, height, resolutionPolicy)
       this.refreshViewport()
       this._ready = true
       const scene = this._currentScene
       if (scene) {
-        scene.node.width = width
-        scene.node.height = height
+        this._resizeSceneToViewport(scene)
         this._activateScene(scene)
       }
     })
@@ -146,6 +151,7 @@ class EngineImpl {
 
     onOrientationChange((value: number, width: number, height: number) => {
       this.refreshViewport()
+      if (this._currentScene) this._resizeSceneToViewport(this._currentScene)
       const orientation = ORIENTATIONS[value] ?? 'unknown'
       this._currentScene?.onOrientationChange(orientation, width, height)
     })
@@ -183,8 +189,10 @@ class EngineImpl {
     this._currentScene = s
 
     if (previous) {
-      s.node.width = previous.node.width
-      s.node.height = previous.node.height
+      if (s) {
+        s.node.width = previous.node.width
+        s.node.height = previous.node.height
+      }
       Tween.stopAll()
       previous.input.reset()
       if (this._ready) {
@@ -195,8 +203,14 @@ class EngineImpl {
     }
 
     if (s && this._ready) {
+      this._resizeSceneToViewport(s)
       this._activateScene(s)
     }
+  }
+
+  private _resizeSceneToViewport(scene: Scene): void {
+    scene.node.width = this.viewport.logicalWidth
+    scene.node.height = this.viewport.logicalHeight
   }
 
   private _activateScene(scene: Scene): void {

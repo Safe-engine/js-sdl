@@ -65,6 +65,7 @@ export {
 } from './SpriteFrameCache'
 export { Viewport } from './Viewport'
 export type {
+  ResolutionPolicy,
   ViewportMetrics
 } from './Viewport'
 // Components
@@ -118,4 +119,3 @@ export type {
 export { Spine, SpineSkeleton } from './spine'
 export type { SpineData, SpineSkeletonProps } from './spine'
 export { SpineBonesControl } from './spine/SpineBonesControl'
-

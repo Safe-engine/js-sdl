@@ -14,6 +14,8 @@ static SDL_Window   *g_window   = NULL;
 static SDL_Renderer *g_renderer = NULL;
 static int           g_win_w    = 1280;
 static int           g_win_h    = 720;
+static SDL_RendererLogicalPresentation g_resolution_policy =
+    SDL_LOGICAL_PRESENTATION_LETTERBOX;
 static FT_Library    g_ft_library = NULL;
 
 #define MAX_TEXTURES 256
@@ -315,6 +317,52 @@ static void js_call_orientation(
 }
 
 /* --- Binding: createWindow(title, w, h) --- */
+static SDL_RendererLogicalPresentation js_resolution_policy(
+    JSContext *ctx,
+    JSValueConst value)
+{
+    if (JS_IsUndefined(value)) return SDL_LOGICAL_PRESENTATION_LETTERBOX;
+    const char *policy = JS_ToCString(ctx, value);
+    if (!policy) return SDL_LOGICAL_PRESENTATION_LETTERBOX;
+
+    SDL_RendererLogicalPresentation result = SDL_LOGICAL_PRESENTATION_LETTERBOX;
+    if (strcmp(policy, "overscan") == 0) {
+        result = SDL_LOGICAL_PRESENTATION_OVERSCAN;
+    } else if (strcmp(policy, "stretch") == 0) {
+        result = SDL_LOGICAL_PRESENTATION_STRETCH;
+    } else if (strcmp(policy, "integer-scale") == 0) {
+        result = SDL_LOGICAL_PRESENTATION_INTEGER_SCALE;
+    }
+
+    JS_FreeCString(ctx, policy);
+    return result;
+}
+
+static SDL_FRect js_presentation_rect(int screen_w, int screen_h)
+{
+    float width = (float)screen_w;
+    float height = (float)screen_h;
+    if (g_resolution_policy != SDL_LOGICAL_PRESENTATION_STRETCH) {
+        float scale_x = (float)screen_w / (float)g_win_w;
+        float scale_y = (float)screen_h / (float)g_win_h;
+        float scale = g_resolution_policy == SDL_LOGICAL_PRESENTATION_OVERSCAN
+            ? SDL_max(scale_x, scale_y)
+            : SDL_min(scale_x, scale_y);
+        if (g_resolution_policy == SDL_LOGICAL_PRESENTATION_INTEGER_SCALE) {
+            scale = SDL_max(1.0f, (float)((int)scale));
+        }
+        width = (float)g_win_w * scale;
+        height = (float)g_win_h * scale;
+    }
+
+    return (SDL_FRect){
+        ((float)screen_w - width) * 0.5f,
+        ((float)screen_h - height) * 0.5f,
+        width,
+        height,
+    };
+}
+
 static JSValue js_createWindow(
     JSContext *ctx,
     JSValueConst this_val,
@@ -324,6 +372,9 @@ static JSValue js_createWindow(
     const char *title = JS_ToCString(ctx, argv[0]);
     JS_ToInt32(ctx, &g_win_w, argv[1]);
     JS_ToInt32(ctx, &g_win_h, argv[2]);
+    g_resolution_policy = js_resolution_policy(
+        ctx,
+        argc > 3 ? argv[3] : JS_UNDEFINED);
 
     g_window = SDL_CreateWindow(title, g_win_w, g_win_h, 0);
     g_renderer = SDL_CreateRenderer(g_window, NULL);
@@ -331,7 +382,7 @@ static JSValue js_createWindow(
         g_renderer,
         g_win_w,
         g_win_h,
-        SDL_LOGICAL_PRESENTATION_LETTERBOX);
+        g_resolution_policy);
 
     JS_FreeCString(ctx, title);
     return JS_UNDEFINED;
@@ -352,15 +403,7 @@ static JSValue js_getViewportMetrics(
     int screen_h = g_win_h;
     SDL_Rect safe = { 0, 0, screen_w, screen_h };
     SDL_GetWindowSize(g_window, &screen_w, &screen_h);
-    float scale_x = (float)screen_w / (float)g_win_w;
-    float scale_y = (float)screen_h / (float)g_win_h;
-    float scale = SDL_min(scale_x, scale_y);
-    SDL_FRect viewport = {
-        ((float)screen_w - (float)g_win_w * scale) * 0.5f,
-        ((float)screen_h - (float)g_win_h * scale) * 0.5f,
-        (float)g_win_w * scale,
-        (float)g_win_h * scale,
-    };
+    SDL_FRect viewport = js_presentation_rect(screen_w, screen_h);
     if (!SDL_GetWindowSafeArea(g_window, &safe)) {
         safe = (SDL_Rect){ 0, 0, screen_w, screen_h };
     }

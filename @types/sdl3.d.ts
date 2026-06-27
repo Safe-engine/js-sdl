@@ -7,8 +7,21 @@
  */
 
 declare module 'sdl3' {
+  export type ResolutionPolicy
+    = | 'letterbox'
+      | 'overscan'
+      | 'stretch'
+      | 'fixed-width'
+      | 'fixed-height'
+      | 'integer-scale'
+
   /** Create a window and its renderer. */
-  export function createWindow(title: string, w: number, h: number): void
+  export function createWindow(
+    title: string,
+    w: number,
+    h: number,
+    resolutionPolicy?: ResolutionPolicy,
+  ): void
 
   /**
    * Return logical size, screen size, presentation rectangle, and logical

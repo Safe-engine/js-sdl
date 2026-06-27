@@ -9,6 +9,13 @@ type OrientationCallback = (
   width: number,
   height: number,
 ) => void
+type ResolutionPolicy
+  = | 'letterbox'
+    | 'overscan'
+    | 'stretch'
+    | 'fixed-width'
+    | 'fixed-height'
+    | 'integer-scale'
 
 interface TextureAsset {
   texture: WebGLTexture | null
@@ -52,6 +59,9 @@ let whiteTexture: WebGLTexture | null = null
 const clipStack: Array<[number, number, number, number]> = []
 let logicalWidth = 1
 let logicalHeight = 1
+let designedLogicalWidth = 1
+let designedLogicalHeight = 1
+let resolutionPolicy: ResolutionPolicy = 'letterbox'
 let nextTextureId = 0
 let nextFontId = 0
 let nextAudioId = 0
@@ -335,16 +345,72 @@ function resizeDrawingBuffer(): void {
 
 function fitCanvasToViewport(): void {
   if (!canvas) return
-  const scale = Math.min(
-    window.innerWidth / logicalWidth,
-    window.innerHeight / logicalHeight,
-  )
-  const width = Math.max(1, Math.floor(logicalWidth * scale))
-  const height = Math.max(1, Math.floor(logicalHeight * scale))
+  const rect = presentationRect()
+  const width = Math.max(1, Math.floor(rect.width))
+  const height = Math.max(1, Math.floor(rect.height))
   const styleWidth = `${width}px`
   const styleHeight = `${height}px`
+  canvas.style.maxWidth = 'none'
+  canvas.style.maxHeight = 'none'
+  canvas.style.aspectRatio = resolutionPolicy === 'stretch'
+    || resolutionPolicy === 'fixed-width'
+    || resolutionPolicy === 'fixed-height'
+    ? 'auto'
+    : `${logicalWidth} / ${logicalHeight}`
   if (canvas.style.width !== styleWidth) canvas.style.width = styleWidth
   if (canvas.style.height !== styleHeight) canvas.style.height = styleHeight
+}
+
+function presentationRect(): Rect {
+  const screenWidth = window.innerWidth
+  const screenHeight = window.innerHeight
+  let width = screenWidth
+  let height = screenHeight
+
+  logicalWidth = designedLogicalWidth
+  logicalHeight = designedLogicalHeight
+
+  if (resolutionPolicy === 'fixed-width') {
+    const scale = screenWidth / designedLogicalWidth
+    logicalHeight = screenHeight / scale
+    return {
+      x: 0,
+      y: 0,
+      width: screenWidth,
+      height: screenHeight,
+    }
+  }
+
+  if (resolutionPolicy === 'fixed-height') {
+    const scale = screenHeight / designedLogicalHeight
+    logicalWidth = screenWidth / scale
+    return {
+      x: 0,
+      y: 0,
+      width: screenWidth,
+      height: screenHeight,
+    }
+  }
+
+  if (resolutionPolicy !== 'stretch') {
+    const scaleX = screenWidth / logicalWidth
+    const scaleY = screenHeight / logicalHeight
+    let scale = resolutionPolicy === 'overscan'
+      ? Math.max(scaleX, scaleY)
+      : Math.min(scaleX, scaleY)
+    if (resolutionPolicy === 'integer-scale') {
+      scale = Math.max(1, Math.floor(scale))
+    }
+    width = logicalWidth * scale
+    height = logicalHeight * scale
+  }
+
+  return {
+    x: (screenWidth - width) * 0.5,
+    y: (screenHeight - height) * 0.5,
+    width,
+    height,
+  }
 }
 
 export function getViewportMetrics(): [
@@ -369,11 +435,12 @@ export function getViewportMetrics(): [
     rect.bottom,
     window.innerHeight - safeBottom,
   )
-  const scale = rect.width / logicalWidth
-  const safeX = Math.max(0, (safeScreenLeft - rect.left) / scale)
-  const safeY = Math.max(0, (safeScreenTop - rect.top) / scale)
-  const safeWidth = Math.max(0, (safeScreenRight - safeScreenLeft) / scale)
-  const safeHeight = Math.max(0, (safeScreenBottom - safeScreenTop) / scale)
+  const scaleX = rect.width / logicalWidth
+  const scaleY = rect.height / logicalHeight
+  const safeX = Math.max(0, (safeScreenLeft - rect.left) / scaleX)
+  const safeY = Math.max(0, (safeScreenTop - rect.top) / scaleY)
+  const safeWidth = Math.max(0, (safeScreenRight - safeScreenLeft) / scaleX)
+  const safeHeight = Math.max(0, (safeScreenBottom - safeScreenTop) / scaleY)
 
   return [
     logicalWidth,
@@ -421,10 +488,18 @@ function startLoop(): void {
   requestAnimationFrame(frame)
 }
 
-export function createWindow(title: string, width: number, height: number): void {
+export function createWindow(
+  title: string,
+  width: number,
+  height: number,
+  policy: ResolutionPolicy = 'letterbox',
+): void {
   document.title = title
-  logicalWidth = width
-  logicalHeight = height
+  designedLogicalWidth = width
+  designedLogicalHeight = height
+  logicalWidth = designedLogicalWidth
+  logicalHeight = designedLogicalHeight
+  resolutionPolicy = policy
 
   canvas = document.querySelector<HTMLCanvasElement>('#sdl-canvas')
   if (!canvas) {
@@ -434,7 +509,6 @@ export function createWindow(title: string, width: number, height: number): void
   }
   canvas.width = width
   canvas.height = height
-  canvas.style.aspectRatio = `${width} / ${height}`
   fitCanvasToViewport()
   canvas.style.touchAction = 'none'
 
