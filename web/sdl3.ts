@@ -345,9 +345,36 @@ function resizeDrawingBuffer(): void {
 
 function fitCanvasToViewport(): void {
   if (!canvas) return
-  const rect = presentationRect()
-  const width = Math.max(1, Math.floor(rect.width))
-  const height = Math.max(1, Math.floor(rect.height))
+  logicalWidth = designedLogicalWidth
+  logicalHeight = designedLogicalHeight
+
+  let width = window.innerWidth
+  let height = window.innerHeight
+  if (resolutionPolicy === 'fixed-width') {
+    const scale = window.innerWidth / designedLogicalWidth
+    logicalHeight = window.innerHeight / scale
+  } else if (resolutionPolicy === 'fixed-height') {
+    const scale = window.innerHeight / designedLogicalHeight
+    logicalWidth = window.innerWidth / scale
+  } else if (resolutionPolicy !== 'stretch') {
+    const scale = resolutionPolicy === 'overscan'
+      ? Math.max(
+          window.innerWidth / logicalWidth,
+          window.innerHeight / logicalHeight,
+        )
+      : Math.min(
+          window.innerWidth / logicalWidth,
+          window.innerHeight / logicalHeight,
+        )
+    const finalScale = resolutionPolicy === 'integer-scale'
+      ? Math.max(1, Math.floor(scale))
+      : scale
+    width = logicalWidth * finalScale
+    height = logicalHeight * finalScale
+  }
+
+  width = Math.max(1, Math.floor(width))
+  height = Math.max(1, Math.floor(height))
   const styleWidth = `${width}px`
   const styleHeight = `${height}px`
   canvas.style.maxWidth = 'none'
@@ -359,58 +386,6 @@ function fitCanvasToViewport(): void {
     : `${logicalWidth} / ${logicalHeight}`
   if (canvas.style.width !== styleWidth) canvas.style.width = styleWidth
   if (canvas.style.height !== styleHeight) canvas.style.height = styleHeight
-}
-
-function presentationRect(): Rect {
-  const screenWidth = window.innerWidth
-  const screenHeight = window.innerHeight
-  let width = screenWidth
-  let height = screenHeight
-
-  logicalWidth = designedLogicalWidth
-  logicalHeight = designedLogicalHeight
-
-  if (resolutionPolicy === 'fixed-width') {
-    const scale = screenWidth / designedLogicalWidth
-    logicalHeight = screenHeight / scale
-    return {
-      x: 0,
-      y: 0,
-      width: screenWidth,
-      height: screenHeight,
-    }
-  }
-
-  if (resolutionPolicy === 'fixed-height') {
-    const scale = screenHeight / designedLogicalHeight
-    logicalWidth = screenWidth / scale
-    return {
-      x: 0,
-      y: 0,
-      width: screenWidth,
-      height: screenHeight,
-    }
-  }
-
-  if (resolutionPolicy !== 'stretch') {
-    const scaleX = screenWidth / logicalWidth
-    const scaleY = screenHeight / logicalHeight
-    let scale = resolutionPolicy === 'overscan'
-      ? Math.max(scaleX, scaleY)
-      : Math.min(scaleX, scaleY)
-    if (resolutionPolicy === 'integer-scale') {
-      scale = Math.max(1, Math.floor(scale))
-    }
-    width = logicalWidth * scale
-    height = logicalHeight * scale
-  }
-
-  return {
-    x: (screenWidth - width) * 0.5,
-    y: (screenHeight - height) * 0.5,
-    width,
-    height,
-  }
 }
 
 export function getViewportMetrics(): [
@@ -567,7 +542,10 @@ export function createWindow(
   }
   canvas.addEventListener('pointerup', endPointer)
   canvas.addEventListener('pointercancel', endPointer)
-  window.addEventListener('resize', emitOrientation)
+  window.addEventListener('resize', () => {
+    resizeDrawingBuffer()
+    emitOrientation()
+  })
 }
 
 export function loadTexture(path: string): number {
