@@ -18,6 +18,12 @@ interface SpriteProps {
   // tiledSize?: Size
 }
 
+export interface SpriteFillOptions {
+  fillRange?: number
+  isVertical?: boolean
+  isReverse?: boolean
+}
+
 export class Sprite extends ComponentX<SpriteProps> {
   texturePath = ''
   textureId = -1
@@ -31,6 +37,9 @@ export class Sprite extends ComponentX<SpriteProps> {
   private autoHeight = DEFAULT_NODE_HEIGHT
   private naturalWidth = 0
   private naturalHeight = 0
+  private fillRange = 1
+  private fillVertical = false
+  private fillReverse = false
 
   onAwake(): void {
     if (this.props.spriteFrame) {
@@ -69,6 +78,19 @@ export class Sprite extends ComponentX<SpriteProps> {
     return this
   }
 
+  setFill(options: SpriteFillOptions): this {
+    if (options.fillRange !== undefined) {
+      this.fillRange = Math.max(0, Math.min(1, options.fillRange))
+    }
+    if (options.isVertical !== undefined) {
+      this.fillVertical = options.isVertical
+    }
+    if (options.isReverse !== undefined) {
+      this.fillReverse = options.isReverse
+    }
+    return this
+  }
+
   onRender(): void {
     this.ensureTexture()
     if (!this.node.visible || this.textureId < 0) return
@@ -84,6 +106,17 @@ export class Sprite extends ComponentX<SpriteProps> {
     const h = baseHeight * t.worldScaleY
     const dx = t.worldX - t.anchorX * w
     const dy = t.worldY - t.anchorY * h
+    if (this.fillRange <= 0) return
+    if (this.fillRange < 1) {
+      const source = frame ?? {
+        x: 0,
+        y: 0,
+        width: this.texture?.width ?? naturalWidth,
+        height: this.texture?.height ?? naturalHeight,
+      }
+      this.drawFilledRegion(source, dx, dy, w, h)
+      return
+    }
     if (frame) {
       drawTextureRegionRotated(
         this.textureId,
@@ -180,6 +213,56 @@ export class Sprite extends ComponentX<SpriteProps> {
 
   private isSharedNode(): boolean {
     return this.node.components[0] !== this
+  }
+
+  private drawFilledRegion(
+    source: TextureRegion,
+    dx: number,
+    dy: number,
+    w: number,
+    h: number,
+  ): void {
+    const t = this.node
+    let sourceX = source.x
+    let sourceY = source.y
+    let sourceWidth = source.width
+    let sourceHeight = source.height
+    let x = dx
+    let y = dy
+    let width = w
+    let height = h
+
+    if (this.fillVertical) {
+      sourceHeight *= this.fillRange
+      height *= this.fillRange
+      if (this.fillReverse) {
+        const sourceOffset = source.height - sourceHeight
+        const destOffset = h - height
+        sourceY += sourceOffset
+        y += destOffset
+      }
+    } else {
+      sourceWidth *= this.fillRange
+      width *= this.fillRange
+      if (this.fillReverse) {
+        const sourceOffset = source.width - sourceWidth
+        const destOffset = w - width
+        sourceX += sourceOffset
+        x += destOffset
+      }
+    }
+
+    drawTextureRegionRotated(
+      this.textureId,
+      sourceX, sourceY, sourceWidth, sourceHeight,
+      x, y, width, height,
+      t.worldRotation,
+      t.anchorX * w - (x - dx),
+      t.anchorY * h - (y - dy),
+      this.node.flipX, this.node.flipY,
+      this.node.color.r, this.node.color.g, this.node.color.b,
+      this.node.opacity * (this.node.color.a ?? 255),
+    )
   }
 
   private releaseTexture(): void {

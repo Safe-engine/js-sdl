@@ -3,11 +3,23 @@ import { Node } from '../engine/core/Node'
 
 const sdlState = globalThis as typeof globalThis & {
   __jsSdlDrawCalls?: Array<{ id: number, x: number, y: number, width: number, height: number }>
+  __jsSdlRegionDrawCalls?: Array<{
+    id: number
+    sourceX: number
+    sourceY: number
+    sourceWidth: number
+    sourceHeight: number
+    x: number
+    y: number
+    width: number
+    height: number
+  }>
   __jsSdlNextAssetId?: number
   __jsSdlTextureSizes?: Map<number, { width: number, height: number }>
 }
 const textureSizes = sdlState.__jsSdlTextureSizes ??= new Map()
 const drawCalls = sdlState.__jsSdlDrawCalls ??= []
+const regionDrawCalls = sdlState.__jsSdlRegionDrawCalls ??= []
 
 function nextAssetId(): number {
   const id = sdlState.__jsSdlNextAssetId ?? 1
@@ -16,7 +28,29 @@ function nextAssetId(): number {
 }
 
 mock.module('sdl3', () => ({
-  drawTextureRegionRotated: () => {},
+  drawTextureRegionRotated: (
+    id: number,
+    sourceX: number,
+    sourceY: number,
+    sourceWidth: number,
+    sourceHeight: number,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ) => {
+    regionDrawCalls.push({
+      id,
+      sourceX,
+      sourceY,
+      sourceWidth,
+      sourceHeight,
+      x,
+      y,
+      width,
+      height,
+    })
+  },
   drawTextureRotated: (
     id: number,
     x: number,
@@ -46,6 +80,7 @@ mock.module('sdl3', () => ({
 }))
 
 const { Sprite } = await import('../engine/components/Sprite')
+const { ProgressBar } = await import('../engine/components/ProgressBar')
 
 describe('Sprite sizing', () => {
   test('renders nested sprites at their own natural size without parent size scaling', () => {
@@ -88,6 +123,22 @@ describe('Sprite sizing', () => {
 
     expect(node.width).toBe(244)
     expect(node.height).toBe(335)
+  })
+
+  test('lets a ProgressBar component clamp Sprite rendering to fillRange', () => {
+    const node = new Node('progress')
+    const sprite = node.addComponent(Sprite, { spriteFrame: 'Texture/UI/progress.png' })
+    textureSizes.set(sprite.textureId, { width: 100, height: 20 })
+    node.addComponent(ProgressBar, { fillRange: 0.5 })
+
+    regionDrawCalls.length = 0
+    sprite.onRender()
+
+    const lastDrawCall = regionDrawCalls[regionDrawCalls.length - 1]
+    expect(lastDrawCall?.sourceWidth).toBe(50)
+    expect(lastDrawCall?.sourceHeight).toBe(20)
+    expect(lastDrawCall?.width).toBe(50)
+    expect(lastDrawCall?.height).toBe(20)
   })
 
   test('renders a nested sprite component at its own size without stealing parent auto size', () => {
