@@ -17,6 +17,9 @@ export class ComponentX<Props = unknown> {
   inputEnabled = false
   inputPriority = 0
   __view?()
+  private readonly scheduledCallbacks
+    = new WeakMap<(arg: any) => void, (arg: any) => void>()
+
   constructor(data?: BaseComponentProps<ComponentX> & Props) {
     this.init(data)
   }
@@ -46,11 +49,16 @@ export class ComponentX<Props = unknown> {
   }
 
   schedule(callback: (arg: any) => void, interval: number, repeat?: number, delay?) {
-    this.node.schedule(callback.bind(this), interval, repeat, delay)
+    this.node.schedule(
+      this.resolveScheduledCallback(callback),
+      interval,
+      repeat,
+      delay,
+    )
   }
 
   unschedule(callback: (arg: any) => void) {
-    this.node.unschedule(callback.bind(this))
+    this.node.unschedule(this.resolveScheduledCallback(callback))
   }
 
   unscheduleAllCallbacks() {
@@ -58,7 +66,7 @@ export class ComponentX<Props = unknown> {
   }
 
   scheduleOnce(callback: (arg: any) => void, delay?: number) {
-    this.node.scheduleOnce(callback, delay)
+    this.node.scheduleOnce(this.resolveScheduledCallback(callback), delay)
   }
 
   getComponentsInChildren<T extends ComponentX>(component: Constructor<T>): T[] {
@@ -92,4 +100,13 @@ export class ComponentX<Props = unknown> {
   onPointerStart(_event: InputEvent): void { }
   onPointerMove(_event: InputEvent): void { }
   onPointerEnd(_event: InputEvent): void { }
+
+  private resolveScheduledCallback(callback: (arg: any) => void) {
+    let bound = this.scheduledCallbacks.get(callback)
+    if (!bound) {
+      bound = callback.bind(this)
+      this.scheduledCallbacks.set(callback, bound)
+    }
+    return bound
+  }
 }

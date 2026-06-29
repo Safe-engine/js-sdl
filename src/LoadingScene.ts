@@ -15,7 +15,7 @@ import { HomeScene } from './HomeScene'
 
 export class LoadingScene extends Scene {
   private progressBar: ProgressBar | null = null
-  private percentLabel: Label | null = null
+  private percentLabel: Label
   private loadStarted = false
 
   onEnter(): void {
@@ -28,19 +28,19 @@ export class LoadingScene extends Scene {
     try {
       await loadAll(allAssets, (progress) => {
         this.progressBar?.setValue(progress)
-        this.percentLabel?.setText(`${Math.round(progress * 100)}%`)
+        this.percentLabel.string = (`${Math.round(progress * 100)}%`)
         console.info('LoadingScene load assets', progress)
       })
       loadScene(HomeScene)
     } catch (error) {
       console.error('LoadingScene failed to load assets', error)
-      this.percentLabel?.setText('LOAD FAILED')
+      this.percentLabel.string = ('LOAD FAILED')
     }
   }
 
   __view() {
     const backgroundComp = instantiate(Panel, {})
-    this.root.addChild(backgroundComp.node)
+    this.node.addChild(backgroundComp.node)
     backgroundComp.node.x = 360
     backgroundComp.node.y = 640
     backgroundComp.node.width = 720
@@ -53,7 +53,7 @@ export class LoadingScene extends Scene {
       align: 'center',
       verticalAlign: 'middle',
     })
-    this.root.addChild(titleComp.node)
+    this.node.addChild(titleComp.node)
     titleComp.node.x = 360
     titleComp.node.y = 560
     titleComp.node.width = 360
@@ -63,7 +63,7 @@ export class LoadingScene extends Scene {
       spriteFrame: sf_button,
       fillRange: 0,
     })
-    this.root.addChild(progressBarComp.node)
+    this.node.addChild(progressBarComp.node)
     progressBarComp.node.x = 360
     progressBarComp.node.y = 640
     progressBarComp.node.width = 480
@@ -76,7 +76,7 @@ export class LoadingScene extends Scene {
       align: 'center',
       verticalAlign: 'middle',
     })
-    this.root.addChild(percentLabel.node)
+    this.node.addChild(percentLabel.node)
     percentLabel.node.x = 360
     percentLabel.node.y = 700
     percentLabel.node.width = 160

@@ -138,8 +138,8 @@ describe('Label sizing', () => {
     label.onRender()
 
     const lastDrawCall = drawCalls[drawCalls.length - 1]
-    expect(lastDrawCall?.x).toBe(898)
-    expect(lastDrawCall?.y).toBe(2287)
+    expect(lastDrawCall?.x).toBe(1054)
+    expect(lastDrawCall?.y).toBe(2330)
     expect(lastDrawCall?.width).toBe(20)
     expect(lastDrawCall?.height).toBe(20)
   })

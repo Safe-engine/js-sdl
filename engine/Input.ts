@@ -75,7 +75,7 @@ export class InputSystem {
     y: number,
   ): boolean {
     const captured = this.captured.filter(component =>
-      component.inputEnabled && this.isActive(component.node)
+      component.inputEnabled && this.isInteractive(component.node)
     )
     if (captured.length === 0) return false
 
@@ -97,7 +97,7 @@ export class InputSystem {
     let renderOrder = 0
 
     const visit = (node: Node): void => {
-      if (!node.active) return
+      if (!node.active || !node.visible) return
       let allowChildren = true
       for (const component of node.components) {
         if (component.inputEnabled && component.hitTest(x, y)) {
@@ -119,9 +119,9 @@ export class InputSystem {
     return candidates
   }
 
-  private isActive(node: Node | null): boolean {
+  private isInteractive(node: Node | null): boolean {
     for (let current = node; current; current = current.parent) {
-      if (!current.active) return false
+      if (!current.active || !current.visible) return false
     }
     return node !== null
   }

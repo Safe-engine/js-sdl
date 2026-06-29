@@ -20,12 +20,12 @@ interface ScheduledEntry {
 
 export class Node {
   declare name: string
-  parent: Node | null = null
+  private _parent: Node | null = null
   children: Node[] = []
   components: ComponentX[] = []
   active = true
-  width = DEFAULT_NODE_WIDTH
-  height = DEFAULT_NODE_HEIGHT
+  private _width = DEFAULT_NODE_WIDTH
+  private _height = DEFAULT_NODE_HEIGHT
   flipX = false
   flipY = false
   visible = true
@@ -35,16 +35,61 @@ export class Node {
   declare tag: Integer
   private _scheduledCallbacks: ScheduledEntry[] = []
   private _eventListeners = new Map<string, EventCallback[]>()
+  private _childRevision = 0
 
   private _x = Number.NaN
   private _y = Number.NaN
-  rotation = 0
-  scaleX = 1
-  scaleY = 1
-  anchorX = 0.5
-  anchorY = 0.5
+  private _rotation = 0
+  private _scaleX = 1
+  private _scaleY = 1
+  private _anchorX = 0.5
+  private _anchorY = 0.5
+  private _transformDirty = true
+  private _worldX = 0
+  private _worldY = 0
+  private _worldRotation = 0
+  private _worldScaleX = 1
+  private _worldScaleY = 1
   constructor(name?: string) {
     this.name = name
+  }
+
+  get parent(): Node | null {
+    return this._parent
+  }
+
+  set parent(value: Node | null) {
+    if (this._parent === value) return
+    this._parent = value
+    this._markTransformDirty()
+  }
+
+  get childRevision(): number {
+    return this._childRevision
+  }
+
+  get transformDirty(): boolean {
+    return this._transformDirty
+  }
+
+  get width(): number {
+    return this._width
+  }
+
+  set width(value: number) {
+    if (this._width === value) return
+    this._width = value
+    this._markTransformDirty()
+  }
+
+  get height(): number {
+    return this._height
+  }
+
+  set height(value: number) {
+    if (this._height === value) return
+    this._height = value
+    this._markTransformDirty()
   }
 
   get x(): number {
@@ -52,7 +97,9 @@ export class Node {
   }
 
   set x(value: number) {
+    if (Object.is(this._x, value)) return
     this._x = value
+    this._markTransformDirty()
   }
 
   get y(): number {
@@ -60,7 +107,9 @@ export class Node {
   }
 
   set y(value: number) {
+    if (Object.is(this._y, value)) return
     this._y = value
+    this._markTransformDirty()
   }
 
   get hasExplicitPosition(): boolean {
@@ -68,33 +117,78 @@ export class Node {
   }
 
   get worldX(): number {
-    const pt = this._getParentTransform()
-    return pt ? pt.contentToWorld(this.x, this.y).x : this.x
+    this._ensureWorldTransform()
+    return this._worldX
   }
 
   get worldY(): number {
-    const pt = this._getParentTransform()
-    return pt ? pt.contentToWorld(this.x, this.y).y : this.y
+    this._ensureWorldTransform()
+    return this._worldY
   }
 
   get worldRotation(): number {
-    const pt = this._getParentTransform()
-    return (pt?.worldRotation ?? 0) + this.rotation
+    this._ensureWorldTransform()
+    return this._worldRotation
   }
 
   get worldScaleX(): number {
-    const pt = this._getParentTransform()
-    return (pt?.worldScaleX ?? 1) * this.scaleX
+    this._ensureWorldTransform()
+    return this._worldScaleX
   }
 
   get worldScaleY(): number {
-    const pt = this._getParentTransform()
-    return (pt?.worldScaleY ?? 1) * this.scaleY
+    this._ensureWorldTransform()
+    return this._worldScaleY
   }
 
-  private _getParentTransform() {
-    const p = this.parent ?? null
-    return p
+  get rotation(): number {
+    return this._rotation
+  }
+
+  set rotation(value: number) {
+    if (this._rotation === value) return
+    this._rotation = value
+    this._markTransformDirty()
+  }
+
+  get scaleX(): number {
+    return this._scaleX
+  }
+
+  set scaleX(value: number) {
+    if (this._scaleX === value) return
+    this._scaleX = value
+    this._markTransformDirty()
+  }
+
+  get scaleY(): number {
+    return this._scaleY
+  }
+
+  set scaleY(value: number) {
+    if (this._scaleY === value) return
+    this._scaleY = value
+    this._markTransformDirty()
+  }
+
+  get anchorX(): number {
+    return this._anchorX
+  }
+
+  set anchorX(value: number) {
+    if (this._anchorX === value) return
+    this._anchorX = value
+    this._markTransformDirty()
+  }
+
+  get anchorY(): number {
+    return this._anchorY
+  }
+
+  set anchorY(value: number) {
+    if (this._anchorY === value) return
+    this._anchorY = value
+    this._markTransformDirty()
   }
 
   contentToWorld(x: number, y: number): Point {
@@ -183,6 +277,7 @@ export class Node {
     } else {
       this.children.push(child)
     }
+    this._childRevision += 1
     return child
   }
 
@@ -194,7 +289,10 @@ export class Node {
   removeFromParent(): void {
     if (!this.parent) return
     const idx = this.parent.children.indexOf(this)
-    if (idx >= 0) this.parent.children.splice(idx, 1)
+    if (idx >= 0) {
+      this.parent.children.splice(idx, 1)
+      this.parent._childRevision += 1
+    }
     this.parent = null
   }
 
@@ -280,7 +378,7 @@ export class Node {
 
   /** Internal: traverse render through tree. */
   _renderTree(): void {
-    if (!this.active) return
+    if (!this.active || !this.visible) return
     for (let i = 0; i < this.components.length; i++) {
       this.components[i].onRender()
     }
@@ -307,6 +405,42 @@ export class Node {
     this.removeFromParent()
     this.components.length = 0
     this.children.length = 0
+    this._childRevision += 1
+  }
+
+  private _markTransformDirty(): void {
+    this._transformDirty = true
+    for (const child of this.children) {
+      child._markTransformDirty()
+    }
+  }
+
+  private _ensureWorldTransform(): void {
+    if (!this._transformDirty) return
+
+    const parent = this.parent
+    if (!parent) {
+      this._worldX = this.x
+      this._worldY = this.y
+      this._worldRotation = this.rotation
+      this._worldScaleX = this.scaleX
+      this._worldScaleY = this.scaleY
+      this._transformDirty = false
+      return
+    }
+
+    const radians = parent.worldRotation * Math.PI / 180
+    const cos = Math.cos(radians)
+    const sin = Math.sin(radians)
+    const scaledX = this.x * parent.worldScaleX
+    const scaledY = this.y * parent.worldScaleY
+
+    this._worldX = parent.worldX + scaledX * cos - scaledY * sin
+    this._worldY = parent.worldY + scaledX * sin + scaledY * cos
+    this._worldRotation = parent.worldRotation + this.rotation
+    this._worldScaleX = parent.worldScaleX * this.scaleX
+    this._worldScaleY = parent.worldScaleY * this.scaleY
+    this._transformDirty = false
   }
 
   private _updateScheduledCallbacks(dt: number): void {

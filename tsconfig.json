@@ -20,13 +20,9 @@
   },
   "exclude": [
     "web/vite-plugin-sdl-tsx.ts",
-    "@types/package.d.ts",
-    "src",
-    "web"
+    "@types/package.d.ts"
   ],
   "include": [
-    "src",
-    "web",
     "engine",
     "@types"
   ]

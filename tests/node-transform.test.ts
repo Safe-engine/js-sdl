@@ -6,7 +6,7 @@ import { Scene } from '../engine/core/Scene'
 class TestComponent extends ComponentX {}
 
 describe('Node transforms', () => {
-  test('positions children inside the parent content rect', () => {
+  test('positions children relative to the parent transform origin', () => {
     const parent = new Node('parent')
     parent.width = 1126
     parent.height = 2436
@@ -18,8 +18,8 @@ describe('Node transforms', () => {
     child.y = 1355
     parent.addChild(child)
 
-    expect(child.worldX).toBe(496)
-    expect(child.worldY).toBe(1355)
+    expect(child.worldX).toBe(1059)
+    expect(child.worldY).toBe(2573)
   })
 
   test('scene roots keep scene coordinates in screen space', () => {
@@ -45,8 +45,8 @@ describe('Node transforms', () => {
     parent.rotation = 90
 
     const child = new Node('child')
-    child.x = 100
-    child.y = 50
+    child.x = 50
+    child.y = 0
     parent.addChild(child)
 
     expect(child.worldX).toBeCloseTo(50)
@@ -62,8 +62,8 @@ describe('Node transforms', () => {
     parent.scale = 2
 
     const child = new Node('child')
-    child.x = 75
-    child.y = 25
+    child.x = 25
+    child.y = -25
     parent.addChild(child)
 
     expect(child.worldX).toBe(100)
@@ -81,8 +81,8 @@ describe('Node transforms', () => {
     const child = new Node('child')
     child.width = 20
     child.height = 10
-    child.x = 75
-    child.y = 25
+    child.x = 25
+    child.y = -25
     child.scale = 0.5
     parent.addChild(child)
 
@@ -96,6 +96,33 @@ describe('Node transforms', () => {
     node.scale = 2
 
     expect(node.localToWorld(-10, 5)).toEqual({ x: 30, y: 60 })
+  })
+
+  test('invalidates cached world transforms when an ancestor changes', () => {
+    const parent = new Node('parent')
+    parent.width = 100
+    parent.height = 100
+    parent.x = 50
+    parent.y = 50
+
+    const child = new Node('child')
+    child.x = 50
+    child.y = 0
+    parent.addChild(child)
+
+    expect(child.transformDirty).toBe(true)
+    expect(child.worldX).toBe(100)
+    expect(parent.transformDirty).toBe(false)
+    expect(child.transformDirty).toBe(false)
+
+    parent.rotation = 90
+
+    expect(parent.transformDirty).toBe(true)
+    expect(child.transformDirty).toBe(true)
+    expect(child.worldX).toBeCloseTo(50)
+    expect(child.worldY).toBeCloseTo(100)
+    expect(parent.transformDirty).toBe(false)
+    expect(child.transformDirty).toBe(false)
   })
 
   test('resolves explicitly positioned components as child nodes', () => {

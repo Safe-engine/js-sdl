@@ -1,4 +1,5 @@
 import { ComponentX, Constructor } from './ComponentX'
+import { Node } from './Node'
 import { Scene } from './Scene'
 
 export type GetProps<T> = T extends ComponentX<infer P> ? P : never
@@ -16,8 +17,10 @@ export function setSceneActivator(activator: SceneActivator): void {
 
 export function instantiate<T extends ComponentX>(ComponentType: Constructor<T>, data?: GetProps<T>): T {
   const instance = new ComponentType(data)
-  instance.init(data)
   if (!instance.__view) {
+    if (shouldAutoCreateNode(instance)) {
+      new Node(ComponentType.name).addComponent(instance)
+    }
     return instance
   }
   return instance.__view() as T
@@ -35,4 +38,11 @@ function activateLoadedScene<T extends Scene>(instance: T): T {
     pendingScenes.push(instance)
   }
   return instance
+}
+
+function shouldAutoCreateNode(instance: ComponentX): boolean {
+  const prototype = Object.getPrototypeOf(instance)
+
+  return prototype.onRender !== ComponentX.prototype.onRender
+    || prototype.onRenderEnd !== ComponentX.prototype.onRenderEnd
 }

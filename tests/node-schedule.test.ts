@@ -1,5 +1,14 @@
 import { describe, expect, test } from 'bun:test'
+import { ComponentX } from '../engine/core/ComponentX'
 import { Node } from '../engine/core/Node'
+
+class ScheduledComponent extends ComponentX {
+  ticks = 0
+
+  tick(): void {
+    this.ticks += 1
+  }
+}
 
 describe('Node scheduling', () => {
   test('runs scheduleOnce after its delay', () => {
@@ -131,5 +140,26 @@ describe('Node scheduling', () => {
     node._updateTree(0.16)
 
     expect(calls).toBe(0)
+  })
+
+  test('keeps a stable callback reference for component schedules', () => {
+    const node = new Node('timer')
+    const component = node.addComponent(new ScheduledComponent())
+
+    component.schedule(component.tick, 0)
+    component.unschedule(component.tick)
+    node._updateTree(0.16)
+
+    expect(component.ticks).toBe(0)
+  })
+
+  test('binds component scheduleOnce callbacks to the component instance', () => {
+    const node = new Node('timer')
+    const component = node.addComponent(new ScheduledComponent())
+
+    component.scheduleOnce(component.tick, 0)
+    node._updateTree(0.16)
+
+    expect(component.ticks).toBe(1)
   })
 })

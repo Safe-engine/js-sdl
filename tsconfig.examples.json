@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true,
+    "declaration": false,
+    "sourceMap": false
+  },
+  "exclude": [
+    "@types/package.d.ts",
+    "web/vite-plugin-sdl-tsx.ts",
+    "lib",
+    "dist",
+    "dist-web",
+    "build",
+    "node_modules"
+  ],
+  "include": [
+    "engine",
+    "src",
+    "web",
+    "@types"
+  ]
+}

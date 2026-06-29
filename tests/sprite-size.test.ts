@@ -71,8 +71,8 @@ describe('Sprite sizing', () => {
     const lastDrawCall = drawCalls[drawCalls.length - 1]
     expect(lastDrawCall?.width).toBe(244)
     expect(lastDrawCall?.height).toBe(335)
-    expect(lastDrawCall?.x).toBeCloseTo(147)
-    expect(lastDrawCall?.y).toBeCloseTo(1821)
+    expect(lastDrawCall?.x).toBeCloseTo(786)
+    expect(lastDrawCall?.y).toBeCloseTo(3042.5)
   })
 
   test('applies natural size after async texture dimensions become available', () => {

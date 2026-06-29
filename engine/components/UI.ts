@@ -9,26 +9,199 @@ export type LayoutDirection = 'none' | 'horizontal' | 'vertical'
 export type LayoutAlignment = 'start' | 'center' | 'end' | 'stretch'
 
 export class UIElement<Props = unknown> extends ComponentX<Props> {
-  width = 100
-  height = 100
-  minWidth = 0
-  minHeight = 0
-  maxWidth = Number.POSITIVE_INFINITY
-  maxHeight = Number.POSITIVE_INFINITY
-  flex = 0
-  margin: Insets = zeroInsets()
-  anchorMinX: number | null = null
-  anchorMinY: number | null = null
-  anchorMaxX: number | null = null
-  anchorMaxY: number | null = null
-  offsetLeft = 0
-  offsetTop = 0
-  offsetRight = 0
-  offsetBottom = 0
+  private _width = 100
+  private _height = 100
+  private _minWidth = 0
+  private _minHeight = 0
+  private _maxWidth = Number.POSITIVE_INFINITY
+  private _maxHeight = Number.POSITIVE_INFINITY
+  private _flex = 0
+  private _margin: Insets = zeroInsets()
+  private _anchorMinX: number | null = null
+  private _anchorMinY: number | null = null
+  private _anchorMaxX: number | null = null
+  private _anchorMaxY: number | null = null
+  private _offsetLeft = 0
+  private _offsetTop = 0
+  private _offsetRight = 0
+  private _offsetBottom = 0
+  private _layoutDirty = true
+  private _layoutVersion = 0
+  private _lastParentLayoutVersion = -1
 
   onUpdate(_dt: number): void {
+    if (!this.needsLayout()) return
     this.applyAnchors()
     this.clampSize()
+    this.clearLayoutDirty()
+  }
+
+  get width(): number {
+    return this._width
+  }
+
+  set width(value: number) {
+    if (this._width === value) return
+    this._width = value
+    this.markLayoutDirty()
+  }
+
+  get height(): number {
+    return this._height
+  }
+
+  set height(value: number) {
+    if (this._height === value) return
+    this._height = value
+    this.markLayoutDirty()
+  }
+
+  get minWidth(): number {
+    return this._minWidth
+  }
+
+  set minWidth(value: number) {
+    if (this._minWidth === value) return
+    this._minWidth = value
+    this.markLayoutDirty()
+  }
+
+  get minHeight(): number {
+    return this._minHeight
+  }
+
+  set minHeight(value: number) {
+    if (this._minHeight === value) return
+    this._minHeight = value
+    this.markLayoutDirty()
+  }
+
+  get maxWidth(): number {
+    return this._maxWidth
+  }
+
+  set maxWidth(value: number) {
+    if (this._maxWidth === value) return
+    this._maxWidth = value
+    this.markLayoutDirty()
+  }
+
+  get maxHeight(): number {
+    return this._maxHeight
+  }
+
+  set maxHeight(value: number) {
+    if (this._maxHeight === value) return
+    this._maxHeight = value
+    this.markLayoutDirty()
+  }
+
+  get flex(): number {
+    return this._flex
+  }
+
+  set flex(value: number) {
+    if (this._flex === value) return
+    this._flex = value
+    this.markLayoutDirty()
+  }
+
+  get margin(): Insets {
+    return this._margin
+  }
+
+  set margin(value: Insets) {
+    if (this._margin === value) return
+    this._margin = value
+    this.markLayoutDirty()
+  }
+
+  get anchorMinX(): number | null {
+    return this._anchorMinX
+  }
+
+  set anchorMinX(value: number | null) {
+    if (this._anchorMinX === value) return
+    this._anchorMinX = value
+    this.markLayoutDirty()
+  }
+
+  get anchorMinY(): number | null {
+    return this._anchorMinY
+  }
+
+  set anchorMinY(value: number | null) {
+    if (this._anchorMinY === value) return
+    this._anchorMinY = value
+    this.markLayoutDirty()
+  }
+
+  get anchorMaxX(): number | null {
+    return this._anchorMaxX
+  }
+
+  set anchorMaxX(value: number | null) {
+    if (this._anchorMaxX === value) return
+    this._anchorMaxX = value
+    this.markLayoutDirty()
+  }
+
+  get anchorMaxY(): number | null {
+    return this._anchorMaxY
+  }
+
+  set anchorMaxY(value: number | null) {
+    if (this._anchorMaxY === value) return
+    this._anchorMaxY = value
+    this.markLayoutDirty()
+  }
+
+  get offsetLeft(): number {
+    return this._offsetLeft
+  }
+
+  set offsetLeft(value: number) {
+    if (this._offsetLeft === value) return
+    this._offsetLeft = value
+    this.markLayoutDirty()
+  }
+
+  get offsetTop(): number {
+    return this._offsetTop
+  }
+
+  set offsetTop(value: number) {
+    if (this._offsetTop === value) return
+    this._offsetTop = value
+    this.markLayoutDirty()
+  }
+
+  get offsetRight(): number {
+    return this._offsetRight
+  }
+
+  set offsetRight(value: number) {
+    if (this._offsetRight === value) return
+    this._offsetRight = value
+    this.markLayoutDirty()
+  }
+
+  get offsetBottom(): number {
+    return this._offsetBottom
+  }
+
+  set offsetBottom(value: number) {
+    if (this._offsetBottom === value) return
+    this._offsetBottom = value
+    this.markLayoutDirty()
+  }
+
+  get layoutDirty(): boolean {
+    return this._layoutDirty
+  }
+
+  get layoutVersion(): number {
+    return this._layoutVersion
   }
 
   setSize(width: number, height: number): this {
@@ -48,6 +221,15 @@ export class UIElement<Props = unknown> extends ComponentX<Props> {
     this.anchorMaxX = maxX
     this.anchorMaxY = maxY
     return this
+  }
+
+  protected markLayoutDirty(): void {
+    this._layoutDirty = true
+  }
+
+  protected needsLayout(): boolean {
+    return this._layoutDirty
+      || this.parentLayoutVersion !== this._lastParentLayoutVersion
   }
 
   protected applyAnchors(): void {
@@ -77,6 +259,19 @@ export class UIElement<Props = unknown> extends ComponentX<Props> {
     this.height = Math.max(this.minHeight, Math.min(this.maxHeight, this.height))
   }
 
+  protected clearLayoutDirty(): void {
+    const parentLayoutVersion = this.parentLayoutVersion
+    if (this._layoutDirty || this._lastParentLayoutVersion !== parentLayoutVersion) {
+      this._layoutVersion += 1
+    }
+    this._layoutDirty = false
+    this._lastParentLayoutVersion = parentLayoutVersion
+  }
+
+  private get parentLayoutVersion(): number {
+    return findUIElement(this.node?.parent ?? null)?.layoutVersion ?? -1
+  }
+
   protected worldRect(): { x: number, y: number, width: number, height: number } {
     const t = this.node
     const width = this.width * Math.abs(t.worldScaleX)
@@ -97,14 +292,61 @@ export class UIElement<Props = unknown> extends ComponentX<Props> {
 }
 
 export class UIContainer extends UIElement {
-  direction: LayoutDirection = 'none'
-  gap = 0
-  padding: Insets = zeroInsets()
-  align: LayoutAlignment = 'start'
+  private _direction: LayoutDirection = 'none'
+  private _gap = 0
+  private _padding: Insets = zeroInsets()
+  private _align: LayoutAlignment = 'start'
+  private _lastChildRevision = -1
+
+  get direction(): LayoutDirection {
+    return this._direction
+  }
+
+  set direction(value: LayoutDirection) {
+    if (this._direction === value) return
+    this._direction = value
+    this.markLayoutDirty()
+  }
+
+  get gap(): number {
+    return this._gap
+  }
+
+  set gap(value: number) {
+    if (this._gap === value) return
+    this._gap = value
+    this.markLayoutDirty()
+  }
+
+  get padding(): Insets {
+    return this._padding
+  }
+
+  set padding(value: Insets) {
+    if (this._padding === value) return
+    this._padding = value
+    this.markLayoutDirty()
+  }
+
+  get align(): LayoutAlignment {
+    return this._align
+  }
+
+  set align(value: LayoutAlignment) {
+    if (this._align === value) return
+    this._align = value
+    this.markLayoutDirty()
+  }
 
   onUpdate(dt: number): void {
-    super.onUpdate(dt)
-    if (this.direction !== 'none') this.layoutChildren()
+    const ownLayoutNeeded = this.needsLayout()
+    if (ownLayoutNeeded) {
+      super.onUpdate(dt)
+    }
+    if (this.direction !== 'none' && (ownLayoutNeeded || this.needsChildLayout())) {
+      this.layoutChildren()
+      this._lastChildRevision = this.node?.childRevision ?? -1
+    }
   }
 
   layoutChildren(): void {
@@ -164,6 +406,16 @@ export class UIContainer extends UIElement {
         cursor += element.height + marginAfter + this.gap
       }
     }
+  }
+
+  private needsChildLayout(): boolean {
+    if (!this.node) return false
+    if (this.node.childRevision !== this._lastChildRevision) return true
+    for (const child of this.node.children) {
+      const element = findUIElement(child)
+      if (element?.layoutDirty) return true
+    }
+    return false
   }
 }
 

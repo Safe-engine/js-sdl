@@ -60,7 +60,7 @@ export class GameScene extends Scene {
     bullet.node.y = this.player.node.y - 56
     this.bullets.push({ bullet })
 
-    this.root.addChild(bullet.node)
+    this.node.addChild(bullet.node)
     this.shootCooldown = 0.12
   }
 
@@ -71,23 +71,23 @@ export class GameScene extends Scene {
 
   __view() {
     const mapComp1 = instantiate(TiledMap, { mapFile: map_1_json })
-    this.root.addChild(mapComp1.node)
+    this.node.addChild(mapComp1.node)
     mapComp1.node.x = 0
     mapComp1.node.y = 0
     mapComp1.node.anchorX = 0
     mapComp1.node.anchorY = 0
     mapComp1.node.scale = 0.55
     const physicsWorldComp1 = instantiate(PhysicsWorld, { debugDraw: { enabled: true, alpha: 190 } })
-    this.root.addChild(physicsWorldComp1.node)
+    this.node.addChild(physicsWorldComp1.node)
     const playerComp1 = instantiate(Player, {})
-    this.root.addChild(playerComp1.node)
+    this.node.addChild(playerComp1.node)
     this.player = playerComp1
     playerComp1.node.x = 360
     playerComp1.node.y = 1040
     playerComp1.node.anchorX = 0.5
     playerComp1.node.anchorY = 0.5
     const Label2 = instantiate(Label, { string: 'Tap to shoot', font: lilita_one_regularFont, size: 26 })
-    this.root.addChild(Label2.node)
+    this.node.addChild(Label2.node)
     Label2.node.x = 24
     Label2.node.y = 24
     Label2.node.width = 240
@@ -95,7 +95,7 @@ export class GameScene extends Scene {
     Label2.node.anchorX = 0
     Label2.node.anchorY = 0
     const spriteComp2 = instantiate(Sprite, { spriteFrame: sf_button })
-    this.root.addChild(spriteComp2.node)
+    this.node.addChild(spriteComp2.node)
     spriteComp2.node.x = 360
     spriteComp2.node.y = 240
     spriteComp2.node.width = 220
