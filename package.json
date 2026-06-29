@@ -1,6 +1,6 @@
 {
   "name": "@safe-engine/sdl",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "safe-engine with sdl renderer support",
   "main": "lib/index.js",
   "types": "@types/package.d.ts",
@@ -19,7 +19,7 @@
     "test:native": "cmake -S . -B build && cmake --build build --target js_sdl3_native_tests --parallel && ctest --test-dir build --output-on-failure",
     "sync-res": "bun ./node_modules/safex-sync-res/src/index.ts",
     "predev": "bun run sync-res",
-    "build": "bun run typecheck && tsc --build tsconfig.json",
+    "build": "tsc --build tsconfig.json",
     "dev": "vite build --watch --config native/vite.config.ts",
     "web:dev": "vite --config web/vite.config.ts --host",
     "web:build": "vite build --config web/vite.config.ts",
