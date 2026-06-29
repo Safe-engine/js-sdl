@@ -61,20 +61,19 @@ function parseExpression(expression: ts.Expression | undefined, sourceFile: ts.S
 function parseNodeAttribute(
   value: ts.JsxAttributeValue,
   componentVar: string,
-  prop: string,
   sourceFile: ts.SourceFile,
 ) {
   if (ts.isJsxExpression(value) && value.expression && ts.isObjectLiteralExpression(value.expression)) {
-    return `\n    ;(${componentVar} as any).__explicitNode = true`
+    return `\n    ${componentVar}.ensureNode()`
       + value.expression.properties
       .map((p) => {
         if (!ts.isPropertyAssignment(p))
           return ''
-        return `\n    ${componentVar}.${prop}.${p.name.getText(sourceFile)} = ${parseExpression(p.initializer, sourceFile)}`
+        return `\n    ${componentVar}.node.${p.name.getText(sourceFile)} = ${parseExpression(p.initializer, sourceFile)}`
       })
       .join('')
   }
-  return `\n    ;(${componentVar} as any).__explicitNode = true\n    ${componentVar}.${prop} = ${parseValue(value, sourceFile)}`
+  return `\n    ${parseValue(value, sourceFile)}.addComponent(${componentVar})`
 }
 
 function attributesToParams(
@@ -108,6 +107,31 @@ function attributesToParams(
 
 function getMethodName(name: ts.PropertyName, sourceFile: ts.SourceFile) {
   return ts.isPrivateIdentifier(name) ? name.text : name.getText(sourceFile)
+}
+
+function hasDedicatedNodeRequirement(
+  attributes: ts.NodeArray<ts.JsxAttributeLike>,
+  children: readonly ts.JsxChild[],
+  parentVar?: string,
+) {
+  if (!parentVar)
+    return true
+
+  const hasNodeRef = attributes.some((attribute) => {
+    if (!ts.isJsxAttribute(attribute))
+      return false
+    const attName = attribute.name.getText()
+    return attName === '$refNode' || attName === '$pushNode'
+  })
+  if (hasNodeRef)
+    return true
+
+  return children.some(child =>
+    ts.isJsxElement(child)
+    || ts.isJsxSelfClosingElement(child)
+    || (ts.isJsxExpression(child) && !!child.expression)
+    || ts.isCallExpression(child),
+  )
 }
 
 function collectJsxBlocks(state: TransformState) {
@@ -177,6 +201,14 @@ function parseJSX(
   const compVar = getComponentName(componentName)
   const params = attributesToParams(attributes, state.listMethods, sourceFile)
   const createComponentString = `\n    const ${compVar} = instantiate(${componentName}, ${params})`
+  const hasNodeAttribute = attributes.some(attribute =>
+    ts.isJsxAttribute(attribute)
+    && attribute.name.getText(sourceFile) === 'node'
+    && attribute.initializer
+  )
+  const ensureNodeString = !hasNodeAttribute && hasDedicatedNodeRequirement(attributes, children, parentVar)
+    ? `\n    ${compVar}.ensureNode()`
+    : ''
   const nodeAttributeString = attributes
     .filter(attribute => ts.isJsxAttribute(attribute)
       && attribute.name.getText(sourceFile) === 'node'
@@ -184,12 +216,11 @@ function parseJSX(
     .map(attribute => parseNodeAttribute(
       (attribute as ts.JsxAttribute).initializer!,
       compVar,
-      'node',
       sourceFile,
     ))
     .join('')
   if (!parentVar) {
-    state.ms.appendLeft(start, createComponentString + nodeAttributeString)
+    state.ms.appendLeft(start, createComponentString + ensureNodeString + nodeAttributeString)
     if (state.isScene) {
       ret += `\nthis.node.addChild(${compVar}.node)`
     } else {
@@ -199,7 +230,7 @@ function parseJSX(
       ret += `\n${classVar}.onLoad();`
     }
   } else {
-    ret += createComponentString + nodeAttributeString
+    ret += createComponentString + ensureNodeString + nodeAttributeString
   }
   if (parentVar) {
     ret += `\n     ${parentVar}.node.resolveComponent(${compVar})`

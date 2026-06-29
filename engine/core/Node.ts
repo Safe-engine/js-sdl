@@ -1,5 +1,8 @@
 import { ComponentX } from './ComponentX'
 
+export const DEFAULT_NODE_WIDTH = 0
+export const DEFAULT_NODE_HEIGHT = 0
+
 type Constructor<T = any> = new (...args: any[]) => T
 type ComponentInput<T extends ComponentX> = Constructor<T> | T
 type ScheduledCallback = (dt: number) => void
@@ -21,8 +24,8 @@ export class Node {
   children: Node[] = []
   components: ComponentX[] = []
   active = true
-  width = 64
-  height = 64
+  width = DEFAULT_NODE_WIDTH
+  height = DEFAULT_NODE_HEIGHT
   flipX = false
   flipY = false
   visible = true
@@ -33,8 +36,8 @@ export class Node {
   private _scheduledCallbacks: ScheduledEntry[] = []
   private _eventListeners = new Map<string, EventCallback[]>()
 
-  x = 0
-  y = 0
+  private _x = Number.NaN
+  private _y = Number.NaN
   rotation = 0
   scaleX = 1
   scaleY = 1
@@ -42,6 +45,26 @@ export class Node {
   anchorY = 0.5
   constructor(name?: string) {
     this.name = name
+  }
+
+  get x(): number {
+    return Number.isNaN(this._x) ? 0 : this._x
+  }
+
+  set x(value: number) {
+    this._x = value
+  }
+
+  get y(): number {
+    return Number.isNaN(this._y) ? 0 : this._y
+  }
+
+  set y(value: number) {
+    this._y = value
+  }
+
+  get hasExplicitPosition(): boolean {
+    return !Number.isNaN(this._x) || !Number.isNaN(this._y)
   }
 
   get worldX(): number {
@@ -103,6 +126,15 @@ export class Node {
     this.y = pos.y
   }
 
+  get xy(): [number, number] {
+    return [this.x, this.y]
+  }
+
+  set xy([x, y]: [number, number]) {
+    this.x = x
+    this.y = y
+  }
+
   setPosition(x: number, y: number) {
     this.x = x
     this.y = y
@@ -116,7 +148,9 @@ export class Node {
   addComponent<T extends ComponentX>(c: ComponentInput<T>, data?: ConstructorParameters<Constructor<T>>[0]): T {
     const component = typeof c === 'function' ? new c(data) : c
     if (component.node && component.node !== this) {
-      component.node.components = component.node.components.filter(item => item !== component)
+      const previousNode = component.node
+      previousNode.components = previousNode.components.filter(item => item !== component)
+      component.onNodeReassigned(previousNode, this)
     }
     component.node = this
     if (!this.components.includes(component)) {
@@ -127,13 +161,11 @@ export class Node {
   }
 
   resolveComponent<T extends ComponentX>(component: T) {
-    if ((component as any).__view) {
+    if (component.node && component.node !== this) {
       this.addChild(component.node)
-    } else if ((component as any).__explicitNode && component.node !== this) {
-      this.addChild(component.node)
-    } else {
-      this.addComponent(component)
+      return
     }
+    this.addComponent(component)
   }
 
   getComponent<T extends ComponentX>(type: Constructor<T>): T | null {

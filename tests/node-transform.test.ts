@@ -100,19 +100,18 @@ describe('Node transforms', () => {
 
   test('resolves explicitly positioned components as child nodes', () => {
     const parent = new Node('parent')
-    const child = new Node('child')
-    const component = child.addComponent(TestComponent)
-    ;(component as any).__explicitNode = true
+    const component = new TestComponent()
+    component.ensureNode('child')
 
     parent.resolveComponent(component)
 
-    expect(parent.children).toEqual([child])
+    expect(parent.children).toEqual([component.node])
     expect(parent.components).not.toContain(component)
   })
 
   test('resolves plain components onto the parent node', () => {
     const parent = new Node('parent')
-    const component = new Node('component').addComponent(TestComponent)
+    const component = new TestComponent()
 
     parent.resolveComponent(component)
 

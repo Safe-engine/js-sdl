@@ -8,10 +8,8 @@ import {
   TextureAtlas,
 } from '../AssetManager'
 import { ComponentX } from '../core/ComponentX'
+import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH } from '../core/Node'
 import { spriteFrameCache } from '../SpriteFrameCache'
-
-const DEFAULT_NODE_WIDTH = 64
-const DEFAULT_NODE_HEIGHT = 64
 
 interface SpriteProps {
   spriteFrame: string
@@ -31,6 +29,8 @@ export class Sprite extends ComponentX<SpriteProps> {
   private cachedFrame: TextureRegion | null = null
   private autoWidth = DEFAULT_NODE_WIDTH
   private autoHeight = DEFAULT_NODE_HEIGHT
+  private naturalWidth = 0
+  private naturalHeight = 0
 
   onAwake(): void {
     if (this.props.spriteFrame) {
@@ -76,8 +76,10 @@ export class Sprite extends ComponentX<SpriteProps> {
     if (!t) return
 
     const frame = this.getFrame()
-    const baseWidth = this.node.width || frame?.width || this.texture?.width || 0
-    const baseHeight = this.node.height || frame?.height || this.texture?.height || 0
+    const naturalWidth = this.naturalWidth || frame?.width || this.texture?.width || 0
+    const naturalHeight = this.naturalHeight || frame?.height || this.texture?.height || 0
+    const baseWidth = this.isSharedNode() ? naturalWidth : this.node.width || naturalWidth
+    const baseHeight = this.isSharedNode() ? naturalHeight : this.node.height || naturalHeight
     const w = baseWidth * t.worldScaleX
     const h = baseHeight * t.worldScaleY
     const dx = t.worldX - t.anchorX * w
@@ -163,14 +165,21 @@ export class Sprite extends ComponentX<SpriteProps> {
   }
 
   private applyNaturalSize(width: number, height: number): void {
-    if (width > 0 && (this.node.width === DEFAULT_NODE_WIDTH || this.node.width === this.autoWidth)) {
+    if (width > 0) this.naturalWidth = width
+    if (height > 0) this.naturalHeight = height
+
+    if (!this.isSharedNode() && width > 0 && (this.node.width === DEFAULT_NODE_WIDTH || this.node.width === this.autoWidth)) {
       this.node.width = width
       this.autoWidth = width
     }
-    if (height > 0 && (this.node.height === DEFAULT_NODE_HEIGHT || this.node.height === this.autoHeight)) {
+    if (!this.isSharedNode() && height > 0 && (this.node.height === DEFAULT_NODE_HEIGHT || this.node.height === this.autoHeight)) {
       this.node.height = height
       this.autoHeight = height
     }
+  }
+
+  private isSharedNode(): boolean {
+    return this.node.components[0] !== this
   }
 
   private releaseTexture(): void {

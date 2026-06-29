@@ -4,6 +4,7 @@ import {
 } from 'sdl3'
 import { AssetManager, TextureAsset } from '../AssetManager'
 import { ComponentX } from '../core/ComponentX'
+import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH } from '../core/Node'
 
 export interface TiledMapProps {
   mapFile: string
@@ -72,7 +73,6 @@ const FLIPPED_HORIZONTALLY_FLAG = 0x80000000
 const FLIPPED_VERTICALLY_FLAG = 0x40000000
 const FLIPPED_DIAGONALLY_FLAG = 0x20000000
 const GID_MASK = ~(FLIPPED_HORIZONTALLY_FLAG | FLIPPED_VERTICALLY_FLAG | FLIPPED_DIAGONALLY_FLAG)
-const DEFAULT_NODE_SIZE = 64
 
 const mapCache = new Map<string, Promise<TiledMapData>>()
 
@@ -283,8 +283,8 @@ export class TiledMap extends ComponentX<TiledMapProps> {
 
   private fitDefaultNodeSize(): void {
     if (!this.map) return
-    if (this.node.width === DEFAULT_NODE_SIZE) this.node.width = this.getMapPixelWidth()
-    if (this.node.height === DEFAULT_NODE_SIZE) this.node.height = this.getMapPixelHeight()
+    if (this.node.width === DEFAULT_NODE_WIDTH) this.node.width = this.getMapPixelWidth()
+    if (this.node.height === DEFAULT_NODE_HEIGHT) this.node.height = this.getMapPixelHeight()
   }
 
   private releaseTilesets(): void {

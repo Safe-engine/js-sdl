@@ -1,5 +1,6 @@
 import { drawRect, drawTextureRegionRotated } from 'sdl3'
 import { AssetManager, TextureAsset } from '../AssetManager'
+import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH } from '../core/Node'
 import { spriteFrameCache } from '../SpriteFrameCache'
 import { UIElement } from './UI'
 
@@ -117,7 +118,7 @@ export class ProgressBar extends UIElement<ProgressBarProps> {
   }
 
   private applyNaturalSize(width: number, height: number): void {
-    if (width > 0 && this.node.width === 64) this.node.width = width
-    if (height > 0 && this.node.height === 64) this.node.height = height
+    if (width > 0 && this.node.width === DEFAULT_NODE_WIDTH) this.node.width = width
+    if (height > 0 && this.node.height === DEFAULT_NODE_HEIGHT) this.node.height = height
   }
 }

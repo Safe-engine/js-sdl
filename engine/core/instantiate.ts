@@ -1,5 +1,4 @@
 import { ComponentX, Constructor } from './ComponentX'
-import { Node } from './Node'
 import { Scene } from './Scene'
 
 export type GetProps<T> = T extends ComponentX<infer P> ? P : never
@@ -19,9 +18,6 @@ export function instantiate<T extends ComponentX>(ComponentType: Constructor<T>,
   const instance = new ComponentType(data)
   instance.init(data)
   if (!instance.__view) {
-    if (!instance.node) {
-      new Node(ComponentType.name).addComponent(instance)
-    }
     return instance
   }
   return instance.__view() as T

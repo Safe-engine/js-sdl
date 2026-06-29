@@ -5,11 +5,8 @@ import {
   TextureAsset,
 } from '../AssetManager'
 import { ComponentX } from '../core/ComponentX'
-import { Node } from '../core/Node'
+import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH, Node } from '../core/Node'
 import { Localization } from '../Localization'
-
-const DEFAULT_NODE_WIDTH = 64
-const DEFAULT_NODE_HEIGHT = 64
 
 export type TextAlignment = 'left' | 'center' | 'right'
 export type VerticalTextAlignment = 'top' | 'middle' | 'bottom'
@@ -46,6 +43,8 @@ export class Label extends ComponentX<LabelProps> {
   private localizationRevision = -1
   private autoWidth = 0
   private autoHeight = 0
+  private naturalWidth = 0
+  private naturalHeight = 0
 
   onAwake(): void {
     if (this.props.string !== undefined) {
@@ -101,18 +100,18 @@ export class Label extends ComponentX<LabelProps> {
     const t = this.node
     if (!t) return
 
-    const naturalWidth = this.lineTextures.reduce(
-      (width, texture) => Math.max(width, texture.width), 0)
-    const layoutWidth = this.node.width > 0 ? this.node.width : naturalWidth
+    const { width: naturalWidth, height: textHeight } = this.measureText()
+    const layoutWidth = this.isSharedNode()
+      ? naturalWidth
+      : this.node.width > 0 ? this.node.width : naturalWidth
+    const layoutHeight = this.isSharedNode()
+      ? textHeight
+      : this.node.height > 0 ? this.node.height : textHeight
     const lineAdvance = this.fontSize * this.lineHeight
-    const textHeight = this.lineTextures.length === 1
-      ? this.lineTextures[0].height
-      : (this.lineTextures.length - 1) * lineAdvance
-        + this.lineTextures[this.lineTextures.length - 1].height
-    const layoutHeight = this.node.height > 0 ? this.node.height : textHeight
     let top = 0
     if (this.verticalAlign === 'middle') top = (layoutHeight - textHeight) * 0.5
     if (this.verticalAlign === 'bottom') top = layoutHeight - textHeight
+    const renderOrigin = this.getRenderOrigin()
 
     for (let i = 0; i < this.lineTextures.length; i++) {
       const texture = this.lineTextures[i]
@@ -126,10 +125,11 @@ export class Label extends ComponentX<LabelProps> {
         const [outlineColor, outlineWidth] = this.props.outline
         for (const [offsetX, offsetY] of outlineOffsets(outlineWidth)) {
           this.drawLine(texture, t, localX + offsetX, localY + offsetY,
-            outlineColor)
+            outlineColor, renderOrigin)
         }
       }
-      this.drawLine(texture, t, localX, localY, this.node.color)
+      this.drawLine(texture, t, localX, localY, this.node.color,
+        renderOrigin)
     }
   }
 
@@ -143,13 +143,16 @@ export class Label extends ComponentX<LabelProps> {
     localX: number,
     localY: number,
     color: Color,
+    origin?: Point,
   ): void {
     const radians = transform.worldRotation * Math.PI / 180
     const scaledX = localX * transform.worldScaleX
     const scaledY = localY * transform.worldScaleY
-    const x = transform.worldX
+    const originX = origin?.x ?? transform.worldX
+    const originY = origin?.y ?? transform.worldY
+    const x = originX
       + scaledX * Math.cos(radians) - scaledY * Math.sin(radians)
-    const y = transform.worldY
+    const y = originY
       + scaledX * Math.sin(radians) + scaledY * Math.cos(radians)
     drawTextureRotated(
       texture.id,
@@ -166,6 +169,20 @@ export class Label extends ComponentX<LabelProps> {
       color.g,
       color.b,
       this.node.opacity * (color.a ?? 255),
+    )
+  }
+
+  private getRenderOrigin(): Point | undefined {
+    if (this.isSharedNode()
+      || this.node.hasExplicitPosition
+      || !this.node.parent
+    ) {
+      return undefined
+    }
+
+    return this.node.parent.contentToWorld(
+      this.node.parent.width * 0.5,
+      this.node.parent.height * 0.5,
     )
   }
 
@@ -205,6 +222,21 @@ export class Label extends ComponentX<LabelProps> {
   }
 
   private applyNaturalSize(): void {
+    const { width, height } = this.measureText()
+    this.naturalWidth = width
+    this.naturalHeight = height
+
+    if (!this.isSharedNode() && width > 0 && this.isAutoWidth()) {
+      this.node.width = width
+      this.autoWidth = width
+    }
+    if (!this.isSharedNode() && height > 0 && this.isAutoHeight()) {
+      this.node.height = height
+      this.autoHeight = height
+    }
+  }
+
+  private measureText(): Size {
     const width = this.lineTextures.reduce(
       (maxWidth, texture) => Math.max(maxWidth, texture.width), 0)
     const lineAdvance = this.fontSize * this.lineHeight
@@ -215,24 +247,26 @@ export class Label extends ComponentX<LabelProps> {
         : (this.lineTextures.length - 1) * lineAdvance
           + this.lineTextures[this.lineTextures.length - 1].height
 
-    if (width > 0 && this.isAutoWidth()) {
-      this.node.width = width
-      this.autoWidth = width
-    }
-    if (height > 0 && this.isAutoHeight()) {
-      this.node.height = height
-      this.autoHeight = height
+    return {
+      width: width || this.naturalWidth,
+      height: height || this.naturalHeight,
     }
   }
 
   private isAutoWidth(): boolean {
-    return this.node.width === DEFAULT_NODE_WIDTH
+    return this.isSharedNode()
+      || this.node.width === DEFAULT_NODE_WIDTH
       || (this.autoWidth > 0 && this.node.width === this.autoWidth)
   }
 
   private isAutoHeight(): boolean {
-    return this.node.height === DEFAULT_NODE_HEIGHT
+    return this.isSharedNode()
+      || this.node.height === DEFAULT_NODE_HEIGHT
       || (this.autoHeight > 0 && this.node.height === this.autoHeight)
+  }
+
+  private isSharedNode(): boolean {
+    return this.node.components[0] !== this
   }
 
   private releaseText(): void {
@@ -240,6 +274,8 @@ export class Label extends ComponentX<LabelProps> {
     this.lineTextures = []
     this.lines = []
     this.loadedSignature = ''
+    this.naturalWidth = 0
+    this.naturalHeight = 0
   }
 
   private releaseAssets(): void {

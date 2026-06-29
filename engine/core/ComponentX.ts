@@ -1,5 +1,5 @@
 import type { InputEvent } from '../Input'
-import type { Node } from './Node'
+import { Node } from './Node'
 export interface BaseComponentProps<T> {
   $ref?: T
   $push?: T[]
@@ -13,7 +13,7 @@ export type Constructor<T = any> = new (...args: any[]) => T
 
 export class ComponentX<Props = unknown> {
   props: Props = {} as any
-  node: Node
+  declare node: Node
   inputEnabled = false
   inputPriority = 0
   __view?()
@@ -36,6 +36,13 @@ export class ComponentX<Props = unknown> {
 
   getComponent<T extends ComponentX>(component: Constructor<T>): T {
     return this.node.getComponent(component)
+  }
+
+  ensureNode(name = this.constructor.name): Node {
+    if (!this.node) {
+      new Node(name).addComponent(this)
+    }
+    return this.node
   }
 
   schedule(callback: (arg: any) => void, interval: number, repeat?: number, delay?) {
@@ -71,6 +78,7 @@ export class ComponentX<Props = unknown> {
   onUpdate(_dt: number): void { }
   onRender(): void { }
   onRenderEnd(): void { }
+  onNodeReassigned(_previousNode: Node, _nextNode: Node): void { }
   onDestroy(): void { }
 
   hitTest(_x: number, _y: number): boolean {
