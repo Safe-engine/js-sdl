@@ -291,7 +291,7 @@ export class UIElement<Props = unknown> extends ComponentX<Props> {
   }
 }
 
-export class UIContainer extends UIElement {
+export class UIContainer<T = unknown> extends UIElement<T> {
   private _direction: LayoutDirection = 'none'
   private _gap = 0
   private _padding: Insets = zeroInsets()
@@ -550,13 +550,18 @@ export class Toggle extends UIElement {
   }
 }
 
-export class ScrollView extends UIContainer {
+interface ScrollViewProps {
+  viewSize: Size
+  contentSize: Size
+  horizontal?: boolean
+  vertical?: boolean
+  isScrollToTop?: boolean
+  isBounced?: boolean
+  onScroll?: (offset: Vec2) => void
+}
+export class ScrollView extends UIContainer<ScrollViewProps> {
   scrollX = 0
   scrollY = 0
-  contentWidth = 0
-  contentHeight = 0
-  horizontal = false
-  vertical = true
   inputEnabled = true
   inputPriority = 100
   private dragX = 0
@@ -570,9 +575,9 @@ export class ScrollView extends UIContainer {
     this.clampScroll()
     const content = this.node?.children[0]
     if (content) {
-      content.x = -this.node!.anchorX * this.width
+      content.x = -this.node!.anchorX * this.props.viewSize.width
         - this.scrollX
-      content.y = -this.node!.anchorY * this.height
+      content.y = -this.node!.anchorY * this.props.viewSize.height
         - this.scrollY
     }
   }
@@ -606,8 +611,8 @@ export class ScrollView extends UIContainer {
     this.dragged = this.dragged
       || Math.abs(event.x - this.dragX) > 4
       || Math.abs(event.y - this.dragY) > 4
-    if (this.horizontal) this.scrollX = this.startScrollX - (event.x - this.dragX)
-    if (this.vertical) this.scrollY = this.startScrollY - (event.y - this.dragY)
+    if (this.props.horizontal) this.scrollX = this.startScrollX - (event.x - this.dragX)
+    if (this.props.vertical) this.scrollY = this.startScrollY - (event.y - this.dragY)
     this.clampScroll()
     if (this.dragged) event.stopPropagation()
   }
@@ -625,9 +630,9 @@ export class ScrollView extends UIContainer {
 
   private clampScroll(): void {
     this.scrollX = Math.max(0, Math.min(
-      Math.max(0, this.contentWidth - this.width), this.scrollX))
+      Math.max(0, this.props.contentSize.width - this.props.viewSize.width), this.scrollX))
     this.scrollY = Math.max(0, Math.min(
-      Math.max(0, this.contentHeight - this.height), this.scrollY))
+      Math.max(0, this.props.contentSize.height - this.props.viewSize.height), this.scrollY))
   }
 }
 
