@@ -181,6 +181,12 @@ function parseJSX(
   const end = rangeNode.end
   const componentName = tagName.getText(sourceFile)
 
+  if (componentName === 'Scene') {
+    state.ms.overwrite(start, end, '')
+    children.forEach(parseChildren(state, classVar, parentVar ?? 'this'))
+    return
+  }
+
   if (componentName === 'ExtraDataComp') {
     const keyAttribute = attributes.find(attribute =>
       ts.isJsxAttribute(attribute) && attribute.name.getText(sourceFile) === 'key'

@@ -8,6 +8,10 @@ export type Orientation
     | 'portrait'
     | 'portrait-flipped'
 
+export interface SceneProps {
+  children?: unknown
+}
+
 export class Scene {
   readonly name: string
   readonly node: Node
@@ -15,8 +19,8 @@ export class Scene {
   private _started = false
   __view?(): void
 
-  constructor(name = 'Scene') {
-    this.name = name
+  constructor(nameOrProps: string | SceneProps = 'Scene') {
+    this.name = typeof nameOrProps === 'string' ? nameOrProps : 'Scene'
     this.node = new Node('root')
     this.node.anchorX = 0
     this.node.anchorY = 0
