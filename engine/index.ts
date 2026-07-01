@@ -101,6 +101,7 @@ export type { WidgetProps } from './components/Widget'
 export type { BaseComponentProps } from './core/ComponentX'
 export * from './helper/Intersection'
 export * from './helper/math'
+export { loadJsonAsset } from './helper/resource-load'
 export {
   box, BoxShape,
   ChainShape, circle, CircleShape, edge, EdgeShape,

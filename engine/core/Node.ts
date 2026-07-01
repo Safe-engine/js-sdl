@@ -286,7 +286,7 @@ export class Node {
     return [...this.children].sort((a, b) => a.zIndex - b.zIndex)
   }
 
-  removeFromParent(): void {
+  removeFromParent() {
     if (!this.parent) return
     const idx = this.parent.children.indexOf(this)
     if (idx >= 0) {
@@ -294,6 +294,12 @@ export class Node {
       this.parent._childRevision += 1
     }
     this.parent = null
+  }
+
+  removeAllChildren(){
+    for (const child of this.children) {
+      child.destroy()
+    }
   }
 
   on(event: string, callback: EventCallback): this {

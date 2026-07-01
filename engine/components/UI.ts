@@ -571,7 +571,9 @@ export class ScrollView extends UIContainer<ScrollViewProps> {
   private dragged = false
 
   onUpdate(dt: number): void {
+    this.setSize(this.props.viewSize.width, this.props.viewSize.height)
     super.onUpdate(dt)
+    this.syncContentNodeSize()
     this.clampScroll()
     const content = this.node?.children[0]
     if (content) {
@@ -621,11 +623,23 @@ export class ScrollView extends UIContainer<ScrollViewProps> {
     if (this.dragged) event.stopPropagation()
   }
 
-  scrollTo(x: number, y: number): this {
+  scrollTo(x: number, y: number) {
     this.scrollX = x
     this.scrollY = y
     this.clampScroll()
-    return this
+  }
+
+  setInnerContainerSize(size: Size) {
+    this.props.contentSize = size
+    this.syncContentNodeSize()
+    this.clampScroll()
+  }
+
+  private syncContentNodeSize(): void {
+    const content = this.node?.children[0]
+    if (!content) return
+    content.width = this.props.contentSize.width
+    content.height = this.props.contentSize.height
   }
 
   private clampScroll(): void {
