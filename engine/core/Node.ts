@@ -6,7 +6,12 @@ export const DEFAULT_NODE_HEIGHT = 0
 type Constructor<T = any> = new (...args: any[]) => T
 type ComponentInput<T extends ComponentX> = Constructor<T> | T
 type ScheduledCallback = (dt: number) => void
-type EventCallback = (...args: any[]) => void
+type EventCallback = (this: any, ...args: any[]) => void
+
+interface EventListenerEntry {
+  callback: EventCallback
+  target?: unknown
+}
 
 interface ScheduledEntry {
   callback: ScheduledCallback
@@ -34,7 +39,7 @@ export class Node {
   zIndex = 0
   declare tag: Integer
   private _scheduledCallbacks: ScheduledEntry[] = []
-  private _eventListeners = new Map<string, EventCallback[]>()
+  private _eventListeners = new Map<string, EventListenerEntry[]>()
   private _childRevision = 0
 
   private _x = Number.NaN
@@ -302,14 +307,14 @@ export class Node {
     }
   }
 
-  on(event: string, callback: EventCallback): this {
+  on(event: string, callback: EventCallback, target?: unknown): this {
     const listeners = this._eventListeners.get(event) ?? []
-    listeners.push(callback)
+    listeners.push({ callback, target })
     this._eventListeners.set(event, listeners)
     return this
   }
 
-  off(event: string, callback?: EventCallback): this {
+  off(event: string, callback?: EventCallback, target?: unknown): this {
     if (callback === undefined) {
       this._eventListeners.delete(event)
       return this
@@ -318,7 +323,11 @@ export class Node {
     const listeners = this._eventListeners.get(event)
     if (!listeners) return this
 
-    const nextListeners = listeners.filter(listener => listener !== callback)
+    const nextListeners = listeners.filter((listener) => {
+      if (listener.callback !== callback) return true
+      if (target !== undefined && listener.target !== target) return true
+      return false
+    })
     if (nextListeners.length > 0) {
       this._eventListeners.set(event, nextListeners)
     } else {
@@ -334,7 +343,7 @@ export class Node {
 
     for (const listener of [...listeners]) {
       if (!this._eventListeners.get(event)?.includes(listener)) continue
-      listener(...args)
+      listener.callback.apply(listener.target, args)
     }
 
     return this

@@ -81,7 +81,7 @@ export type { SliderProps } from './components/Slider'
 export { Sprite } from './components/Sprite'
 export { TextInput } from './components/TextInput'
 export type { TextInputProps } from './components/TextInput'
-export { TiledMap } from './components/TiledMap'
+export { TiledMap, TiledMapLayer } from './components/TiledMap'
 export type { TiledMapProps } from './components/TiledMap'
 export {
   NineSlice,
@@ -120,3 +120,4 @@ export type {
 export { Spine, SpineSkeleton } from './spine'
 export type { SpineData, SpineSkeletonProps } from './spine'
 export { SpineBonesControl } from './spine/SpineBonesControl'
+

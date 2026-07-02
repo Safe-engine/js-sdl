@@ -92,4 +92,37 @@ describe('Node events', () => {
 
     expect(calls).toBe(0)
   })
+
+  test('binds listener targets passed to on', () => {
+    const node = new Node('events')
+    const target = {
+      total: 0,
+      add(this: { total: number }, value: number) {
+        this.total += value
+      },
+    }
+
+    node.on('score', target.add, target)
+    node.emit('score', 7)
+
+    expect(target.total).toBe(7)
+  })
+
+  test('removes only the matching listener target', () => {
+    const node = new Node('events')
+    const first = { calls: 0 }
+    const second = { calls: 0 }
+
+    function onChange(this: { calls: number }) {
+      this.calls += 1
+    }
+
+    node.on('change', onChange, first)
+    node.on('change', onChange, second)
+    node.off('change', onChange, first)
+    node.emit('change')
+
+    expect(first.calls).toBe(0)
+    expect(second.calls).toBe(1)
+  })
 })

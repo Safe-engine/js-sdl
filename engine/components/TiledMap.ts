@@ -69,6 +69,36 @@ interface TilePlacement {
   flipY: boolean
 }
 
+export class TiledMapLayer {
+  constructor(
+    private readonly node: { anchorX: number, anchorY: number },
+    private readonly map: TiledMapData,
+    private readonly layer: TiledLayer,
+  ) {}
+
+  getPositionAt(column: number, row: number): Point {
+    const position = getTilePositionFor(
+      this.map,
+      column + (this.layer.x ?? 0),
+      row + (this.layer.y ?? 0),
+    )
+    return {
+      x: position.x - this.node.anchorX * getMapPixelWidthFor(this.map),
+      y: position.y - this.node.anchorY * getMapPixelHeightFor(this.map),
+    }
+  }
+
+  getTileAt(column: number, row: number): number | null {
+    if (!this.layer.data) return null
+    if (column < 0 || row < 0 || column >= this.layer.width || row >= this.layer.height) {
+      return null
+    }
+    const rawGid = this.layer.data[row * this.layer.width + column]
+    if (!rawGid) return null
+    return rawGid & GID_MASK
+  }
+}
+
 const FLIPPED_HORIZONTALLY_FLAG = 0x80000000
 const FLIPPED_VERTICALLY_FLAG = 0x40000000
 const FLIPPED_DIAGONALLY_FLAG = 0x20000000
@@ -167,6 +197,11 @@ export class TiledMap extends ComponentX<TiledMapProps> {
     this.fitDefaultNodeSize()
   }
 
+  getLayer(name: string): TiledMapLayer {
+    const { map, layer } = this.requireLayer(name)
+    return new TiledMapLayer(this.node, map, layer)
+  }
+
   private buildTiles(): TilePlacement[] {
     if (!this.map) return []
 
@@ -217,28 +252,7 @@ export class TiledMap extends ComponentX<TiledMapProps> {
   }
 
   private getTilePosition(column: number, row: number): { x: number, y: number } {
-    const map = this.map!
-
-    if (map.orientation === 'staggered' && map.staggeraxis === 'y') {
-      const staggered = isStaggeredIndex(row, map.staggerindex)
-      return {
-        x: column * map.tilewidth + (staggered ? map.tilewidth / 2 : 0),
-        y: row * map.tileheight / 2,
-      }
-    }
-
-    if (map.orientation === 'staggered' && map.staggeraxis === 'x') {
-      const staggered = isStaggeredIndex(column, map.staggerindex)
-      return {
-        x: column * map.tilewidth / 2,
-        y: row * map.tileheight + (staggered ? map.tileheight / 2 : 0),
-      }
-    }
-
-    return {
-      x: column * map.tilewidth,
-      y: row * map.tileheight,
-    }
+    return getTilePositionFor(this.map!, column, row)
   }
 
   private getTileset(gid: number): LoadedTileset | null {
@@ -251,34 +265,12 @@ export class TiledMap extends ComponentX<TiledMapProps> {
 
   private getMapPixelWidth(): number {
     if (!this.map) return this.node.width
-    const widestTile = Math.max(
-      this.map.tilewidth,
-      ...this.map.tilesets.map(tileset => tileset.tilewidth),
-    )
-    const overhang = Math.max(0, widestTile - this.map.tilewidth)
-    if (this.map.orientation === 'staggered' && this.map.staggeraxis === 'x') {
-      return (this.map.width + 1) * this.map.tilewidth / 2 + overhang
-    }
-    const staggerOffset = this.map.orientation === 'staggered' && this.map.staggeraxis === 'y'
-      ? this.map.tilewidth / 2
-      : 0
-    return this.map.width * this.map.tilewidth + staggerOffset + overhang
+    return getMapPixelWidthFor(this.map)
   }
 
   private getMapPixelHeight(): number {
     if (!this.map) return this.node.height
-    const tallestTile = Math.max(
-      this.map.tileheight,
-      ...this.map.tilesets.map(tileset => tileset.tileheight),
-    )
-    const overhang = Math.max(0, tallestTile - this.map.tileheight)
-    if (this.map.orientation === 'staggered' && this.map.staggeraxis === 'y') {
-      return (this.map.height + 1) * this.map.tileheight / 2 + overhang
-    }
-    const staggerOffset = this.map.orientation === 'staggered' && this.map.staggeraxis === 'x'
-      ? this.map.tileheight / 2
-      : 0
-    return this.map.height * this.map.tileheight + staggerOffset + overhang
+    return getMapPixelHeightFor(this.map)
   }
 
   private fitDefaultNodeSize(): void {
@@ -294,10 +286,78 @@ export class TiledMap extends ComponentX<TiledMapProps> {
     this.map = null
     this.loadedMapFile = ''
   }
+
+  private requireLayer(name: string): { map: TiledMapData, layer: TiledLayer } {
+    if (!this.map) {
+      throw new Error(`TiledMap layer "${name}" is not available before the map has loaded`)
+    }
+    const layer = this.map.layers.find(candidate => candidate.name === name)
+    if (!layer) {
+      throw new Error(`TiledMap layer "${name}" was not found`)
+    }
+    return { map: this.map, layer }
+  }
 }
 
 function isStaggeredIndex(value: number, staggerindex: 'odd' | 'even' = 'odd'): boolean {
   return staggerindex === 'odd' ? value % 2 === 1 : value % 2 === 0
+}
+
+function getTilePositionFor(
+  map: TiledMapData,
+  column: number,
+  row: number,
+): { x: number, y: number } {
+  if (map.orientation === 'staggered' && map.staggeraxis === 'y') {
+    const staggered = isStaggeredIndex(row, map.staggerindex)
+    return {
+      x: column * map.tilewidth + (staggered ? map.tilewidth / 2 : 0),
+      y: row * map.tileheight / 2,
+    }
+  }
+
+  if (map.orientation === 'staggered' && map.staggeraxis === 'x') {
+    const staggered = isStaggeredIndex(column, map.staggerindex)
+    return {
+      x: column * map.tilewidth / 2,
+      y: row * map.tileheight + (staggered ? map.tileheight / 2 : 0),
+    }
+  }
+
+  return {
+    x: column * map.tilewidth,
+    y: row * map.tileheight,
+  }
+}
+
+function getMapPixelWidthFor(map: TiledMapData): number {
+  const widestTile = Math.max(
+    map.tilewidth,
+    ...map.tilesets.map(tileset => tileset.tilewidth),
+  )
+  const overhang = Math.max(0, widestTile - map.tilewidth)
+  if (map.orientation === 'staggered' && map.staggeraxis === 'x') {
+    return (map.width + 1) * map.tilewidth / 2 + overhang
+  }
+  const staggerOffset = map.orientation === 'staggered' && map.staggeraxis === 'y'
+    ? map.tilewidth / 2
+    : 0
+  return map.width * map.tilewidth + staggerOffset + overhang
+}
+
+function getMapPixelHeightFor(map: TiledMapData): number {
+  const tallestTile = Math.max(
+    map.tileheight,
+    ...map.tilesets.map(tileset => tileset.tileheight),
+  )
+  const overhang = Math.max(0, tallestTile - map.tileheight)
+  if (map.orientation === 'staggered' && map.staggeraxis === 'y') {
+    return (map.height + 1) * map.tileheight / 2 + overhang
+  }
+  const staggerOffset = map.orientation === 'staggered' && map.staggeraxis === 'x'
+    ? map.tileheight / 2
+    : 0
+  return map.height * map.tileheight + staggerOffset + overhang
 }
 
 async function loadMap(path: string): Promise<TiledMapData> {
