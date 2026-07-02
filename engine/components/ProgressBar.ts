@@ -2,7 +2,7 @@ import { ComponentX } from '../core/ComponentX'
 import { Sprite } from './Sprite'
 
 export interface ProgressBarProps {
-  spriteFrame?: string
+  // spriteFrame?: string
   isVertical?: boolean
   fillRange?: number
   fillCenter?: Vec2

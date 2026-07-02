@@ -4,11 +4,11 @@
     "body": [
       "import { ComponentX, Container, Sprite } from \"@safe-engine/sdl\"\n",
       "export default class ${TM_FILENAME_BASE}  extends ComponentX {",
-      "  start() {",
+      "  onEnter() {",
       "    // TODO: implement start logic",
       "  }",
       "",
-      "  render() {",
+      "  __view() {",
       "    <Sprite spriteFrame={$1}></Sprite>;",
       "  }",
       "}"
@@ -46,7 +46,7 @@
   "start": {
     "prefix": "start",
     "body": [
-      "start() {",
+      "onEnter() {",
       "  ${1}",
       "}"
     ],
