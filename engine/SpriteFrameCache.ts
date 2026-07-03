@@ -1,13 +1,18 @@
 import { loadTextFile } from 'sdl3'
 
+export interface SpriteFrameRegion extends TextureRegion {
+  rotated?: boolean
+}
+
 export interface SpriteFrameDefinition {
   texturePath: string
-  region: TextureRegion | null
+  region: SpriteFrameRegion | null
 }
 
 interface SpriteAtlasFrameJson {
   filename?: string
   name?: string
+  rotated?: boolean
   frame?: {
     x?: number
     y?: number
@@ -16,6 +21,7 @@ interface SpriteAtlasFrameJson {
     width?: number
     height?: number
   }
+  frameString?: string
   x?: number
   y?: number
   w?: number
@@ -24,26 +30,46 @@ interface SpriteAtlasFrameJson {
   height?: number
 }
 
-function toRegion(value: unknown): TextureRegion | null {
+function parseFrameString(frame: string): SpriteFrameRegion | null {
+  const match = frame.match(/\{\{(\d+),(\d+)\},\{(\d+),(\d+)\}\}/)
+  if (!match) return null
+
+  return {
+    x: Number(match[1]),
+    y: Number(match[2]),
+    width: Number(match[3]),
+    height: Number(match[4]),
+  }
+}
+
+function withRotation(region: SpriteFrameRegion | null, frame: SpriteAtlasFrameJson): SpriteFrameRegion | null {
+  if (!region) return null
+  if (frame.rotated === true) return { ...region, rotated: true }
+  return region
+}
+
+function toRegion(value: unknown): SpriteFrameRegion | null {
   if (!value || typeof value !== 'object') return null
   const frame = value as SpriteAtlasFrameJson
+  if (typeof frame.frame === 'string') return withRotation(parseFrameString(frame.frame), frame)
+  if (typeof frame.frameString === 'string') return withRotation(parseFrameString(frame.frameString), frame)
   const source = frame.frame && typeof frame.frame === 'object' ? frame.frame : frame
   const x = Number(source.x)
   const y = Number(source.y)
   const width = Number(source.w ?? source.width)
   const height = Number(source.h ?? source.height)
   if (![x, y, width, height].every(Number.isFinite)) return null
-  return { x, y, width, height }
+  return withRotation({ x, y, width, height }, frame)
 }
 
-export function parseSpriteAtlasFrames(data: unknown): Record<string, TextureRegion> {
+export function parseSpriteAtlasFrames(data: unknown): Record<string, SpriteFrameRegion> {
   if (!data || typeof data !== 'object') return {}
 
   const atlas = data as { frames?: unknown }
   const source = atlas.frames ?? data
   if (!source || typeof source !== 'object') return {}
 
-  const frames: Record<string, TextureRegion> = {}
+  const frames: Record<string, SpriteFrameRegion> = {}
   if (Array.isArray(source)) {
     for (const entry of source) {
       if (!entry || typeof entry !== 'object') continue
@@ -81,7 +107,7 @@ export class SpriteFrameCache {
     return this
   }
 
-  addFrame(key: string, texturePath: string, region: TextureRegion): this {
+  addFrame(key: string, texturePath: string, region: SpriteFrameRegion): this {
     this.frames.set(key, { texturePath, region })
     return this
   }
@@ -107,10 +133,8 @@ export class SpriteFrameCache {
     let data: unknown
     try {
       data = JSON.parse(text)
-    } catch (error) {
-      throw new Error(`Failed to parse sprite atlas JSON: ${atlasPath}`, {
-        cause: error,
-      })
+    } catch {
+      throw new Error(`Failed to parse sprite atlas JSON: ${atlasPath}`)
     }
     return this.addAtlas(texturePath, data, options)
   }

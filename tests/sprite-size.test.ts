@@ -13,6 +13,9 @@ const sdlState = globalThis as typeof globalThis & {
     y: number
     width: number
     height: number
+    angle?: number
+    centerX?: number
+    centerY?: number
   }>
   __jsSdlNextAssetId?: number
   __jsSdlTextureSizes?: Map<number, { width: number, height: number }>
@@ -38,6 +41,9 @@ mock.module('sdl3', () => ({
     y: number,
     width: number,
     height: number,
+    angle: number,
+    centerX: number,
+    centerY: number,
   ) => {
     regionDrawCalls.push({
       id,
@@ -49,6 +55,9 @@ mock.module('sdl3', () => ({
       y,
       width,
       height,
+      angle,
+      centerX,
+      centerY,
     })
   },
   drawTextureRotated: (
@@ -81,6 +90,7 @@ mock.module('sdl3', () => ({
 
 const { Sprite } = await import('../engine/components/Sprite')
 const { ProgressBar } = await import('../engine/components/ProgressBar')
+const { spriteFrameCache } = await import('../engine/SpriteFrameCache')
 
 describe('Sprite sizing', () => {
   test('renders nested sprites at their own natural size without parent size scaling', () => {
@@ -201,5 +211,36 @@ describe('Sprite sizing', () => {
 
     expect(node.width).toBe(120)
     expect(node.height).toBe(80)
+  })
+
+  test('renders rotated atlas frames in their unrotated bounds', () => {
+    spriteFrameCache.addFrame('rotated-block', 'Texture/blocks.png', {
+      x: 10,
+      y: 20,
+      width: 30,
+      height: 50,
+      rotated: true,
+    })
+    const node = new Node('rotated')
+    const sprite = node.addComponent(Sprite, { spriteFrame: 'rotated-block' })
+    textureSizes.set(sprite.textureId, { width: 128, height: 128 })
+
+    regionDrawCalls.length = 0
+    sprite.onRender()
+
+    expect(node.width).toBe(30)
+    expect(node.height).toBe(50)
+    const lastDrawCall = regionDrawCalls[regionDrawCalls.length - 1]
+    expect(lastDrawCall?.sourceX).toBe(10)
+    expect(lastDrawCall?.sourceY).toBe(20)
+    expect(lastDrawCall?.sourceWidth).toBe(50)
+    expect(lastDrawCall?.sourceHeight).toBe(30)
+    expect(lastDrawCall?.x).toBe(-25)
+    expect(lastDrawCall?.y).toBe(-15)
+    expect(lastDrawCall?.width).toBe(50)
+    expect(lastDrawCall?.height).toBe(30)
+    expect(lastDrawCall?.angle).toBe(-90)
+    expect(lastDrawCall?.centerX).toBe(25)
+    expect(lastDrawCall?.centerY).toBe(15)
   })
 })

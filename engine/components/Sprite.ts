@@ -9,7 +9,7 @@ import {
 } from '../AssetManager'
 import { ComponentX } from '../core/ComponentX'
 import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH } from '../core/Node'
-import { spriteFrameCache } from '../SpriteFrameCache'
+import { SpriteFrameRegion, spriteFrameCache } from '../SpriteFrameCache'
 
 interface SpriteProps {
   spriteFrame: string
@@ -32,7 +32,7 @@ export class Sprite extends ComponentX<SpriteProps> {
   private texture: TextureAsset | null = null
   private loadedPath = ''
   private loadedAtlas: TextureAtlas | null = null
-  private cachedFrame: TextureRegion | null = null
+  private cachedFrame: SpriteFrameRegion | null = null
   private autoWidth = DEFAULT_NODE_WIDTH
   private autoHeight = DEFAULT_NODE_HEIGHT
   private naturalWidth = 0
@@ -118,17 +118,7 @@ export class Sprite extends ComponentX<SpriteProps> {
       return
     }
     if (frame) {
-      drawTextureRegionRotated(
-        this.textureId,
-        frame.x, frame.y, frame.width, frame.height,
-        dx, dy, w, h,
-        t.worldRotation,
-        t.anchorX * w,
-        t.anchorY * h,
-        this.node.flipX, this.node.flipY,
-        this.node.color.r, this.node.color.g, this.node.color.b,
-        this.node.opacity * (this.node.color.a ?? 255),
-      )
+      this.drawFrame(frame, w, h)
       return
     }
 
@@ -193,7 +183,7 @@ export class Sprite extends ComponentX<SpriteProps> {
     )
   }
 
-  private getFrame(): TextureRegion | null {
+  private getFrame(): SpriteFrameRegion | null {
     return this.atlas?.getFrame(this.frameName) ?? this.cachedFrame
   }
 
@@ -215,8 +205,51 @@ export class Sprite extends ComponentX<SpriteProps> {
     return this.node.components[0] !== this
   }
 
+  private drawFrame(
+    frame: SpriteFrameRegion,
+    width: number,
+    height: number,
+  ): void {
+    const t = this.node
+    const opacity = this.node.opacity * (this.node.color.a ?? 255)
+    if (!frame.rotated) {
+      drawTextureRegionRotated(
+        this.textureId,
+        frame.x, frame.y, frame.width, frame.height,
+        t.worldX - t.anchorX * width,
+        t.worldY - t.anchorY * height,
+        width, height,
+        t.worldRotation,
+        t.anchorX * width,
+        t.anchorY * height,
+        this.node.flipX, this.node.flipY,
+        this.node.color.r, this.node.color.g, this.node.color.b,
+        opacity,
+      )
+      return
+    }
+
+    const drawWidth = height
+    const drawHeight = width
+    const centerX = height * (1 - t.anchorY)
+    const centerY = width * t.anchorX
+    drawTextureRegionRotated(
+      this.textureId,
+      frame.x, frame.y, frame.height, frame.width,
+      t.worldX - centerX,
+      t.worldY - centerY,
+      drawWidth, drawHeight,
+      t.worldRotation - 90,
+      centerX,
+      centerY,
+      this.node.flipX, this.node.flipY,
+      this.node.color.r, this.node.color.g, this.node.color.b,
+      opacity,
+    )
+  }
+
   private drawFilledRegion(
-    source: TextureRegion,
+    source: SpriteFrameRegion,
     dx: number,
     dy: number,
     w: number,

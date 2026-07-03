@@ -20,6 +20,16 @@ describe('SpriteFrameCache', () => {
     })
   })
 
+  test('parses TexturePacker frame strings from JSON atlas frames', () => {
+    expect(parseSpriteAtlasFrames({
+      frames: {
+        block: { frame: '{{2,4},{16,32}}', rotated: true },
+      },
+    })).toEqual({
+      block: { x: 2, y: 4, width: 16, height: 32, rotated: true },
+    })
+  })
+
   test('registers texture and atlas-backed sprite frames', () => {
     const cache = new SpriteFrameCache()
 
