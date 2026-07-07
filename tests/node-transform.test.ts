@@ -98,6 +98,28 @@ describe('Node transforms', () => {
     expect(node.localToWorld(-10, 5)).toEqual({ x: 30, y: 60 })
   })
 
+  test('converts world points into node space', () => {
+    const parent = new Node('parent')
+    parent.x = 20
+    parent.y = -10
+    parent.rotation = 90
+    parent.scale = 2
+
+    const child = new Node('child')
+    child.x = 30
+    child.y = 40
+    child.rotation = -45
+    child.scaleX = 0.5
+    child.scaleY = 3
+    parent.addChild(child)
+
+    const worldPoint = child.localToWorld(12, -8)
+    const localPoint = child.convertToNodeSpace(worldPoint)
+
+    expect(localPoint.x).toBeCloseTo(12)
+    expect(localPoint.y).toBeCloseTo(-8)
+  })
+
   test('invalidates cached world transforms when an ancestor changes', () => {
     const parent = new Node('parent')
     parent.width = 100

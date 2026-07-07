@@ -10,6 +10,14 @@ class ScheduledComponent extends ComponentX {
   }
 }
 
+class UpdatingComponent extends ComponentX {
+  updates = 0
+
+  onUpdate(): void {
+    this.updates += 1
+  }
+}
+
 describe('Node scheduling', () => {
   test('runs scheduleOnce after its delay', () => {
     const node = new Node('timer')
@@ -126,6 +134,43 @@ describe('Node scheduling', () => {
     parent.active = true
     parent._updateTree(0.16)
     expect(calls).toBe(1)
+  })
+
+  test('pauseAllActionsAndSchedule freezes scheduled callbacks until resumed', () => {
+    const node = new Node('timer')
+    let calls = 0
+
+    node.schedule(() => {
+      calls += 1
+    }, 1)
+
+    node._updateTree(0.5)
+    node.pauseAllActionsAndSchedule()
+    node._updateTree(2)
+    expect(calls).toBe(0)
+
+    node.resumeAllActionsAndSchedule()
+    node._updateTree(0.4)
+    expect(calls).toBe(0)
+
+    node._updateTree(0.1)
+    expect(calls).toBe(1)
+  })
+
+  test('pauseAllActionsAndSchedule freezes component updates until resumed', () => {
+    const node = new Node('timer')
+    const component = node.addComponent(new UpdatingComponent())
+
+    node._updateTree(0.16)
+    expect(component.updates).toBe(1)
+
+    node.pauseAllActionsAndSchedule()
+    node._updateTree(0.16)
+    expect(component.updates).toBe(1)
+
+    node.resumeAllActionsAndSchedule()
+    node._updateTree(0.16)
+    expect(component.updates).toBe(2)
   })
 
   test('clears scheduled callbacks when the node is destroyed', () => {

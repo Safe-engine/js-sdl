@@ -39,6 +39,7 @@ export class Node {
   zIndex = 0
   declare tag: Integer
   private _scheduledCallbacks: ScheduledEntry[] = []
+  private _actionsAndSchedulePaused = false
   private _eventListeners = new Map<string, EventListenerEntry[]>()
   private _childRevision = 0
 
@@ -216,6 +217,19 @@ export class Node {
     }
   }
 
+  convertToNodeSpace(point: Vec2): Vec2 {
+    const radians = this.worldRotation * Math.PI / 180
+    const cos = Math.cos(radians)
+    const sin = Math.sin(radians)
+    const x = point.x - this.worldX
+    const y = point.y - this.worldY
+
+    return {
+      x: (x * cos + y * sin) / this.worldScaleX,
+      y: (-x * sin + y * cos) / this.worldScaleY,
+    }
+  }
+
   get position(): Point {
     return { x: this.x, y: this.y }
   }
@@ -379,12 +393,22 @@ export class Node {
     this._scheduledCallbacks.length = 0
   }
 
+  pauseAllActionsAndSchedule(): void {
+    this._actionsAndSchedulePaused = true
+  }
+
+  resumeAllActionsAndSchedule(): void {
+    this._actionsAndSchedulePaused = false
+  }
+
   /** Internal: traverse update through tree. */
   _updateTree(dt: number): void {
     if (!this.active) return
-    this._updateScheduledCallbacks(dt)
-    for (let i = 0; i < this.components.length; i++) {
-      this.components[i].onUpdate(dt)
+    if (!this._actionsAndSchedulePaused) {
+      this._updateScheduledCallbacks(dt)
+      for (let i = 0; i < this.components.length; i++) {
+        this.components[i].onUpdate(dt)
+      }
     }
     for (let i = 0; i < this.children.length; i++) {
       this.children[i]._updateTree(dt)
