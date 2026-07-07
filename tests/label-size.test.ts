@@ -2,7 +2,17 @@ import { describe, expect, mock, test } from 'bun:test'
 import { Node } from '../engine/core/Node'
 
 const sdlState = globalThis as typeof globalThis & {
-  __jsSdlDrawCalls?: Array<{ id: number, x: number, y: number, width: number, height: number }>
+  __jsSdlDrawCalls?: Array<{
+    id: number
+    x: number
+    y: number
+    width: number
+    height: number
+    r?: number
+    g?: number
+    b?: number
+    a?: number
+  }>
   __jsSdlNextAssetId?: number
   __jsSdlTextureSizes?: Map<number, { width: number, height: number }>
 }
@@ -23,8 +33,17 @@ mock.module('sdl3', () => ({
     y: number,
     width: number,
     height: number,
+    _angle: number,
+    _centerX: number,
+    _centerY: number,
+    _flipX: boolean,
+    _flipY: boolean,
+    r: number,
+    g: number,
+    b: number,
+    a: number,
   ) => {
-    drawCalls.push({ id, x, y, width, height })
+    drawCalls.push({ id, x, y, width, height, r, g, b, a })
   },
   drawTextureQuad: () => {},
   getTextureHeight: (id: number) => textureSizes.get(id)?.height ?? 0,
@@ -142,5 +161,38 @@ describe('Label sizing', () => {
     expect(lastDrawCall?.y).toBe(2330)
     expect(lastDrawCall?.width).toBe(20)
     expect(lastDrawCall?.height).toBe(20)
+  })
+
+  test('draws label shadow behind the text at the requested offset', () => {
+    const label = new Label({
+      font: 'font.ttf',
+      string: 'Hi',
+      size: 20,
+      shadow: [{ r: 0, g: 0, b: 0, a: 128 }, 0, { width: 3, height: 4 }],
+    })
+    label.ensureNode('label')
+    label.node.anchorX = 0
+    label.node.anchorY = 0
+
+    drawCalls.length = 0
+    label.onRender()
+
+    expect(drawCalls).toHaveLength(2)
+    expect(drawCalls[0]).toMatchObject({
+      x: 3,
+      y: 4,
+      r: 0,
+      g: 0,
+      b: 0,
+      a: 128,
+    })
+    expect(drawCalls[1]).toMatchObject({
+      x: 0,
+      y: 0,
+      r: 255,
+      g: 255,
+      b: 255,
+      a: 255,
+    })
   })
 })

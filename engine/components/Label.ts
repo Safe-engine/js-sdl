@@ -18,7 +18,7 @@ interface LabelProps {
   align?: TextAlignment
   verticalAlign?: VerticalTextAlignment
   outline?: [Color, number]
-  // shadow?: [Color, number, Size]
+  shadow?: [Color, number, Size]
   isAdaptWithSize?: boolean
 }
 export class Label extends ComponentX<LabelProps> {
@@ -121,6 +121,15 @@ export class Label extends ComponentX<LabelProps> {
       const localX = left - t.anchorX * layoutWidth
       const localY = top + i * lineAdvance - t.anchorY * layoutHeight
 
+      if (this.props.shadow) {
+        const [shadowColor, shadowWidth, shadowOffset] = this.props.shadow
+        for (const [offsetX, offsetY] of shadowOffsets(shadowWidth)) {
+          this.drawLine(texture, t,
+            localX + shadowOffset.width + offsetX,
+            localY + shadowOffset.height + offsetY,
+            shadowColor, renderOrigin)
+        }
+      }
       if (this.props.outline) {
         const [outlineColor, outlineWidth] = this.props.outline
         for (const [offsetX, offsetY] of outlineOffsets(outlineWidth)) {
@@ -344,4 +353,9 @@ function outlineOffsets(width: number): Array<[number, number]> {
     }
   }
   return offsets
+}
+
+function shadowOffsets(width: number): Array<[number, number]> {
+  if (width <= 0) return [[0, 0]]
+  return outlineOffsets(width)
 }
