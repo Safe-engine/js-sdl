@@ -102,6 +102,7 @@ export type { WidgetProps } from './components/Widget'
 export type { BaseComponentProps } from './core/ComponentX'
 export * from './helper/Intersection'
 export * from './helper/math'
+export * from './helper/PointExtension'
 export { loadJsonAsset } from './helper/resource-load'
 export {
   box, BoxShape,
@@ -121,3 +122,4 @@ export type {
 export { Spine, SpineSkeleton } from './spine'
 export type { SpineData, SpineSkeletonProps } from './spine'
 export { SpineBonesControl } from './spine/SpineBonesControl'
+
