@@ -46,6 +46,7 @@ export { ComponentX } from './core/ComponentX'
 export { Container } from './core/Container'
 export { instantiate, loadScene } from './core/instantiate'
 export { Node } from './core/Node'
+export { NodePool } from './core/NodePool'
 export { Scene } from './core/Scene'
 export type { Orientation } from './core/Scene'
 export { Engine } from './Engine'
@@ -120,4 +121,3 @@ export type {
 export { Spine, SpineSkeleton } from './spine'
 export type { SpineData, SpineSkeletonProps } from './spine'
 export { SpineBonesControl } from './spine/SpineBonesControl'
-

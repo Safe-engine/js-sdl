@@ -437,6 +437,39 @@ static JSValue js_getViewportMetrics(
     return result;
 }
 
+/* --- Binding: getWinSize() --- */
+static void get_window_size_in_pixels(int *width, int *height)
+{
+    if (g_window && SDL_GetWindowSizeInPixels(g_window, width, height)) {
+        return;
+    }
+    if (g_window && SDL_GetWindowSize(g_window, width, height)) {
+        return;
+    }
+    *width = g_win_w;
+    *height = g_win_h;
+}
+
+static JSValue js_getWinSize(
+    JSContext *ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst *argv)
+{
+    (void)this_val;
+    (void)argc;
+    (void)argv;
+
+    int width;
+    int height;
+    get_window_size_in_pixels(&width, &height);
+
+    JSValue result = JS_NewObject(ctx);
+    JS_SetPropertyStr(ctx, result, "width", JS_NewInt32(ctx, width));
+    JS_SetPropertyStr(ctx, result, "height", JS_NewInt32(ctx, height));
+    return result;
+}
+
 static void *load_file_contents(const char *path, size_t *length)
 {
     char *resolved_path = resolve_resource_path(path);
@@ -1781,6 +1814,7 @@ static const JSCFunctionListEntry funcs[] =
 {
     JS_CFUNC_DEF("createWindow",            3, js_createWindow),
     JS_CFUNC_DEF("getViewportMetrics",      0, js_getViewportMetrics),
+    JS_CFUNC_DEF("getWinSize",              0, js_getWinSize),
     JS_CFUNC_DEF("loadTextFile",            1, js_loadTextFile),
     JS_CFUNC_DEF("loadBinaryFile",          1, js_loadBinaryFile),
     JS_CFUNC_DEF("loadTexture",             1, js_loadTexture),
@@ -2038,10 +2072,7 @@ void js_call_terminate(JSContext *ctx) { js_call_void(ctx, g_onTerminate); }
 
 void js_get_window_size(int *width, int *height)
 {
-    if (!g_window || !SDL_GetWindowSize(g_window, width, height)) {
-        *width = g_win_w;
-        *height = g_win_h;
-    }
+    get_window_size_in_pixels(width, height);
 }
 
 int js_get_win_w(void) { return g_win_w; }

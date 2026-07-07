@@ -33,6 +33,9 @@ declare module 'sdl3' {
     number, number, number, number,
   ]
 
+  /** Return the real window size in device pixels. */
+  export function getWinSize(): Size
+
   /** Load a texture from disk.  Returns a texture id (or -1 on failure). */
   export function loadTexture(path: string): number
 

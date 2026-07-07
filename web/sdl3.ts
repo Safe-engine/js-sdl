@@ -433,6 +433,12 @@ export function getViewportMetrics(): [
   ]
 }
 
+export function getWinSize(): Size {
+  if (!canvas) return { width: logicalWidth, height: logicalHeight }
+  resizeDrawingBuffer()
+  return { width: canvas.width, height: canvas.height }
+}
+
 function orientationValue(): number {
   const type = screen.orientation?.type
   if (type === 'landscape-primary') return 1
