@@ -9,15 +9,15 @@ export class Touch {
   readonly y: number
   readonly previousX: number
   readonly previousY: number
-  readonly target: ComponentX
-  currentTarget: ComponentX
+  readonly target: ComponentX | null
+  currentTarget: ComponentX | null
   propagationStopped = false
 
   constructor(
     type: InputEventType,
     x: number,
     y: number,
-    target: ComponentX,
+    target: ComponentX | null,
     previousX = x,
     previousY = y,
   ) {
@@ -62,7 +62,21 @@ export class Touch {
   }
 }
 
-export class InputEvent extends Touch {}
+export class InputEvent extends Touch {
+  declare readonly target: ComponentX
+  declare currentTarget: ComponentX
+
+  constructor(
+    type: InputEventType,
+    x: number,
+    y: number,
+    target: ComponentX,
+    previousX = x,
+    previousY = y,
+  ) {
+    super(type, x, y, target, previousX, previousY)
+  }
+}
 
 interface InputCandidate {
   component: ComponentX

@@ -6,18 +6,18 @@ import { Node } from '../engine/core/Node'
 import { TouchEventRegister } from '../engine/components/TouchEventRegister'
 
 class TouchRecorderScene extends Scene {
-  readonly log: Array<[string, number, number]> = []
+  readonly log: Array<[string, Vec2, Vec2, boolean]> = []
 
-  override onTouchStart(x: number, y: number): void {
-    this.log.push(['start', x, y])
+  override onTouchStart(event: Touch): void {
+    this.log.push(['start', event.getLocation(), event.getDelta(), event.target === null])
   }
 
-  override onTouchMove(x: number, y: number): void {
-    this.log.push(['move', x, y])
+  override onTouchMove(event: Touch): void {
+    this.log.push(['move', event.getLocation(), event.getDelta(), event.target === null])
   }
 
-  override onTouchEnd(x: number, y: number): void {
-    this.log.push(['end', x, y])
+  override onTouchEnd(event: Touch): void {
+    this.log.push(['end', event.getLocation(), event.getDelta(), event.target === null])
   }
 }
 
@@ -53,9 +53,9 @@ describe('Scene touch dispatch', () => {
     scene._dispatchTouchEnd(50, 60)
 
     expect(scene.log).toEqual([
-      ['start', 10, 20],
-      ['move', 30, 40],
-      ['end', 50, 60],
+      ['start', { x: 10, y: 20 }, { x: 0, y: 0 }, true],
+      ['move', { x: 30, y: 40 }, { x: 20, y: 20 }, true],
+      ['end', { x: 50, y: 60 }, { x: 20, y: 20 }, true],
     ])
   })
 

@@ -6,6 +6,7 @@ import {
   PhysicsWorld,
   Scene,
   Sprite,
+  Touch,
   TiledMap
 } from '../engine'
 import {
@@ -45,9 +46,10 @@ export class GameScene extends Scene {
     }
   }
 
-  onTouchStart(x: number, _y: number): void {
+  onTouchStart(event: Touch): void {
     if (!this.player) return
 
+    const x = event.getLocationX()
     this.player.node.x = clamp(x, 48, 672)
     this.shoot()
   }

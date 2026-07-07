@@ -1,4 +1,4 @@
-import { InputSystem } from '../Input'
+import { InputSystem, Touch } from '../Input'
 import { Node } from './Node'
 
 export type Orientation
@@ -17,6 +17,8 @@ export class Scene {
   readonly node: Node
   readonly input: InputSystem
   private _started = false
+  private _lastTouchX: number | null = null
+  private _lastTouchY: number | null = null
   __view?(): void
 
   constructor(nameOrProps: string | SceneProps = 'Scene') {
@@ -46,13 +48,13 @@ export class Scene {
   onRender(): void {}
 
   /** Override: called when a pointer is pressed. */
-  onTouchStart(_x: number, _y: number): void {}
+  onTouchStart(_event: Touch): void {}
 
   /** Override: called while a pressed pointer moves. */
-  onTouchMove(_x: number, _y: number): void {}
+  onTouchMove(_event: Touch): void {}
 
   /** Override: called when a pointer is released. */
-  onTouchEnd(_x: number, _y: number): void {}
+  onTouchEnd(_event: Touch): void {}
 
   /** Override: called when the platform emits committed text input. */
   onTextInput(_text: string): void {}
@@ -109,16 +111,32 @@ export class Scene {
 
   /** Engine-internal: dispatch a pointer press to components, then the scene. */
   _dispatchTouchStart(x: number, y: number): void {
-    if (!this.input.dispatchStart(x, y)) this.onTouchStart(x, y)
+    if (!this.input.dispatchStart(x, y)) {
+      this._lastTouchX = x
+      this._lastTouchY = y
+      this.onTouchStart(new Touch('start', x, y, null))
+    }
   }
 
   /** Engine-internal: dispatch pointer movement to captured components. */
   _dispatchTouchMove(x: number, y: number): void {
-    if (!this.input.dispatchMove(x, y)) this.onTouchMove(x, y)
+    if (!this.input.dispatchMove(x, y)) {
+      const previousX = this._lastTouchX ?? x
+      const previousY = this._lastTouchY ?? y
+      this._lastTouchX = x
+      this._lastTouchY = y
+      this.onTouchMove(new Touch('move', x, y, null, previousX, previousY))
+    }
   }
 
   /** Engine-internal: dispatch a pointer release to captured components. */
   _dispatchTouchEnd(x: number, y: number): void {
-    if (!this.input.dispatchEnd(x, y)) this.onTouchEnd(x, y)
+    if (!this.input.dispatchEnd(x, y)) {
+      const previousX = this._lastTouchX ?? x
+      const previousY = this._lastTouchY ?? y
+      this.onTouchEnd(new Touch('end', x, y, null, previousX, previousY))
+    }
+    this._lastTouchX = null
+    this._lastTouchY = null
   }
 }
