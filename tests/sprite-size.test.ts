@@ -243,4 +243,65 @@ describe('Sprite sizing', () => {
     expect(lastDrawCall?.centerX).toBe(25)
     expect(lastDrawCall?.centerY).toBe(15)
   })
+
+  test('renders tiled sprites with clipped edge tiles', () => {
+    const node = new Node('tiled')
+    const sprite = node.addComponent(Sprite, {
+      spriteFrame: 'Texture/UI/tile.png',
+      tiledSize: { width: 25, height: 18 },
+    })
+    textureSizes.set(sprite.textureId, { width: 10, height: 8 })
+
+    regionDrawCalls.length = 0
+    sprite.onRender()
+
+    expect(node.width).toBe(25)
+    expect(node.height).toBe(18)
+    expect(regionDrawCalls).toHaveLength(9)
+    expect(regionDrawCalls.map(call => [call.sourceWidth, call.sourceHeight, call.width, call.height])).toEqual([
+      [10, 8, 10, 8],
+      [10, 8, 10, 8],
+      [5, 8, 5, 8],
+      [10, 8, 10, 8],
+      [10, 8, 10, 8],
+      [5, 8, 5, 8],
+      [10, 2, 10, 2],
+      [10, 2, 10, 2],
+      [5, 2, 5, 2],
+    ])
+  })
+
+  test('tiles cached sprite frames from their source region', () => {
+    spriteFrameCache.addFrame('tile-frame', 'Texture/ui-atlas.png', {
+      x: 12,
+      y: 16,
+      width: 6,
+      height: 4,
+    })
+    const node = new Node('atlas-tiled')
+    const sprite = node.addComponent(Sprite, {
+      spriteFrame: 'tile-frame',
+      tiledSize: { width: 14, height: 4 },
+    })
+    textureSizes.set(sprite.textureId, { width: 64, height: 64 })
+
+    regionDrawCalls.length = 0
+    sprite.onRender()
+
+    expect(node.width).toBe(14)
+    expect(node.height).toBe(4)
+    expect(regionDrawCalls).toHaveLength(3)
+    expect(regionDrawCalls.map(call => [
+      call.sourceX,
+      call.sourceY,
+      call.sourceWidth,
+      call.sourceHeight,
+      call.width,
+      call.height,
+    ])).toEqual([
+      [12, 16, 6, 4, 6, 4],
+      [12, 16, 6, 4, 6, 4],
+      [12, 16, 2, 4, 2, 4],
+    ])
+  })
 })

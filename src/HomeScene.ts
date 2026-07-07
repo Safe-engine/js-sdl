@@ -32,7 +32,7 @@ export class HomeScene extends Scene {
   }
 
   __view() {
-    const spriteComp1 = instantiate(Sprite, { spriteFrame: sf_button })
+    const spriteComp1 = instantiate(Sprite, { spriteFrame: sf_button, tiledSize: { width: 400, height: 268 } })
     this.node.addChild(spriteComp1.node)
     spriteComp1.node.x = 360
     spriteComp1.node.y = 640

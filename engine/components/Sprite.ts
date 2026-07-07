@@ -15,7 +15,7 @@ interface SpriteProps {
   spriteFrame: string
   // type?: SpriteTypes
   capInsets?: [number, number, number, number]
-  // tiledSize?: Size
+  tiledSize?: Size
 }
 
 export interface SpriteFillOptions {
@@ -60,6 +60,15 @@ export class Sprite extends ComponentX<SpriteProps> {
     this.setTexture(frameString)
   }
 
+  get tiledSize(): Size | undefined {
+    return this.props.tiledSize
+  }
+
+  set tiledSize(size: Size | undefined) {
+    this.props.tiledSize = size
+    this.applyTiledSize()
+  }
+
   setTexture(path: string): this {
     if (this.texturePath === path && !this.atlas) return this
     this.releaseTexture()
@@ -100,8 +109,11 @@ export class Sprite extends ComponentX<SpriteProps> {
     const frame = this.getFrame()
     const naturalWidth = this.naturalWidth || frame?.width || this.texture?.width || 0
     const naturalHeight = this.naturalHeight || frame?.height || this.texture?.height || 0
-    const baseWidth = this.isSharedNode() ? naturalWidth : this.node.width || naturalWidth
-    const baseHeight = this.isSharedNode() ? naturalHeight : this.node.height || naturalHeight
+    const tiledSize = this.props.tiledSize
+    const baseWidth = tiledSize?.width
+      ?? (this.isSharedNode() ? naturalWidth : this.node.width || naturalWidth)
+    const baseHeight = tiledSize?.height
+      ?? (this.isSharedNode() ? naturalHeight : this.node.height || naturalHeight)
     const w = baseWidth * t.worldScaleX
     const h = baseHeight * t.worldScaleY
     const dx = t.worldX - t.anchorX * w
@@ -115,6 +127,16 @@ export class Sprite extends ComponentX<SpriteProps> {
         height: this.texture?.height ?? naturalHeight,
       }
       this.drawFilledRegion(source, dx, dy, w, h)
+      return
+    }
+    if (tiledSize) {
+      const source = frame ?? {
+        x: 0,
+        y: 0,
+        width: this.texture?.width ?? naturalWidth,
+        height: this.texture?.height ?? naturalHeight,
+      }
+      this.drawTiledRegion(source, dx, dy, w, h)
       return
     }
     if (frame) {
@@ -191,6 +213,8 @@ export class Sprite extends ComponentX<SpriteProps> {
     if (width > 0) this.naturalWidth = width
     if (height > 0) this.naturalHeight = height
 
+    if (this.applyTiledSize()) return
+
     if (!this.isSharedNode() && width > 0 && (this.node.width === DEFAULT_NODE_WIDTH || this.node.width === this.autoWidth)) {
       this.node.width = width
       this.autoWidth = width
@@ -203,6 +227,20 @@ export class Sprite extends ComponentX<SpriteProps> {
 
   private isSharedNode(): boolean {
     return this.node.components[0] !== this
+  }
+
+  private applyTiledSize(): boolean {
+    const size = this.props.tiledSize
+    if (!size || this.isSharedNode()) return false
+    if (size.width > 0 && (this.node.width === DEFAULT_NODE_WIDTH || this.node.width === this.autoWidth)) {
+      this.node.width = size.width
+      this.autoWidth = size.width
+    }
+    if (size.height > 0 && (this.node.height === DEFAULT_NODE_HEIGHT || this.node.height === this.autoHeight)) {
+      this.node.height = size.height
+      this.autoHeight = size.height
+    }
+    return true
   }
 
   private drawFrame(
@@ -296,6 +334,42 @@ export class Sprite extends ComponentX<SpriteProps> {
       this.node.color.r, this.node.color.g, this.node.color.b,
       this.node.opacity * (this.node.color.a ?? 255),
     )
+  }
+
+  private drawTiledRegion(
+    source: SpriteFrameRegion,
+    dx: number,
+    dy: number,
+    w: number,
+    h: number,
+  ): void {
+    if (source.width <= 0 || source.height <= 0 || w <= 0 || h <= 0) return
+
+    const t = this.node
+    const opacity = this.node.opacity * (this.node.color.a ?? 255)
+    const tileWidth = source.width * t.worldScaleX
+    const tileHeight = source.height * t.worldScaleY
+    if (tileWidth <= 0 || tileHeight <= 0) return
+
+    for (let y = 0; y < h; y += tileHeight) {
+      const drawHeight = Math.min(tileHeight, h - y)
+      const sourceHeight = source.height * (drawHeight / tileHeight)
+      for (let x = 0; x < w; x += tileWidth) {
+        const drawWidth = Math.min(tileWidth, w - x)
+        const sourceWidth = source.width * (drawWidth / tileWidth)
+        drawTextureRegionRotated(
+          this.textureId,
+          source.x, source.y, sourceWidth, sourceHeight,
+          dx + x, dy + y, drawWidth, drawHeight,
+          t.worldRotation,
+          t.anchorX * w - x,
+          t.anchorY * h - y,
+          this.node.flipX, this.node.flipY,
+          this.node.color.r, this.node.color.g, this.node.color.b,
+          opacity,
+        )
+      }
+    }
   }
 
   private releaseTexture(): void {
