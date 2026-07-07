@@ -32,12 +32,12 @@ export class HomeScene extends Scene {
   }
 
   __view() {
-    const spriteComp1 = instantiate(Sprite, { spriteFrame: sf_button, tiledSize: { width: 400, height: 268 } })
+    const spriteComp1 = instantiate(Sprite, { spriteFrame: sf_button, capInsets: [20, 20, 20, 20] })
     this.node.addChild(spriteComp1.node)
     spriteComp1.node.x = 360
     spriteComp1.node.y = 640
-    // spriteComp1.node.width = 220;
-    // spriteComp1.node.height = 68;
+    spriteComp1.node.width = 420
+    spriteComp1.node.height = 268
     const Button1 = instantiate(Button, { onPress: this.onClick })
     spriteComp1.node.resolveComponent(Button1)
     const Label1 = instantiate(Label, { string: 'PLAY', font: lilita_one_regularFont, size: 32, align: 'center', verticalAlign: 'middle' })

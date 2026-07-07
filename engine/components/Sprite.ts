@@ -139,6 +139,16 @@ export class Sprite extends ComponentX<SpriteProps> {
       this.drawTiledRegion(source, dx, dy, w, h)
       return
     }
+    if (this.props.capInsets) {
+      const source = frame ?? {
+        x: 0,
+        y: 0,
+        width: this.texture?.width ?? naturalWidth,
+        height: this.texture?.height ?? naturalHeight,
+      }
+      this.drawSlicedRegion(source, dx, dy, w, h)
+      return
+    }
     if (frame) {
       this.drawFrame(frame, w, h)
       return
@@ -370,6 +380,73 @@ export class Sprite extends ComponentX<SpriteProps> {
         )
       }
     }
+  }
+
+  private drawSlicedRegion(
+    source: SpriteFrameRegion,
+    dx: number,
+    dy: number,
+    w: number,
+    h: number,
+  ): void {
+    const capInsets = this.props.capInsets
+    if (!capInsets || source.width <= 0 || source.height <= 0 || w <= 0 || h <= 0) return
+
+    const t = this.node
+    const [top, right, bottom, left] = capInsets
+    const sourceLeft = Math.max(0, left)
+    const sourceRight = Math.max(0, right)
+    const sourceTop = Math.max(0, top)
+    const sourceBottom = Math.max(0, bottom)
+    const [leftSource, centerSourceWidth, rightSource] = this.splitInsets(source.width, sourceLeft, sourceRight)
+    const [topSource, centerSourceHeight, bottomSource] = this.splitInsets(source.height, sourceTop, sourceBottom)
+    const [leftDest, centerDestWidth, rightDest] = this.splitInsets(w, sourceLeft * t.worldScaleX, sourceRight * t.worldScaleX)
+    const [topDest, centerDestHeight, bottomDest] = this.splitInsets(h, sourceTop * t.worldScaleY, sourceBottom * t.worldScaleY)
+    const sourceColumns = [leftSource, centerSourceWidth, rightSource]
+    const sourceRows = [topSource, centerSourceHeight, bottomSource]
+    const destColumns = [leftDest, centerDestWidth, rightDest]
+    const destRows = [topDest, centerDestHeight, bottomDest]
+    const opacity = this.node.opacity * (this.node.color.a ?? 255)
+
+    let destY = dy
+    let sourceY = source.y
+    for (let row = 0; row < 3; row++) {
+      const sourceHeight = sourceRows[row]
+      const destHeight = destRows[row]
+      let destX = dx
+      let sourceX = source.x
+      for (let column = 0; column < 3; column++) {
+        const sourceWidth = sourceColumns[column]
+        const destWidth = destColumns[column]
+        if (sourceWidth > 0 && sourceHeight > 0 && destWidth > 0 && destHeight > 0) {
+          drawTextureRegionRotated(
+            this.textureId,
+            sourceX, sourceY, sourceWidth, sourceHeight,
+            destX, destY, destWidth, destHeight,
+            t.worldRotation,
+            t.anchorX * w - (destX - dx),
+            t.anchorY * h - (destY - dy),
+            this.node.flipX, this.node.flipY,
+            this.node.color.r, this.node.color.g, this.node.color.b,
+            opacity,
+          )
+        }
+        sourceX += sourceWidth
+        destX += destWidth
+      }
+      sourceY += sourceHeight
+      destY += destHeight
+    }
+  }
+
+  private splitInsets(size: number, start: number, end: number): [number, number, number] {
+    const safeStart = Math.max(0, start)
+    const safeEnd = Math.max(0, end)
+    const total = safeStart + safeEnd
+    if (total <= size) return [safeStart, size - total, safeEnd]
+    if (total <= 0) return [0, size, 0]
+    const scale = size / total
+    return [safeStart * scale, 0, safeEnd * scale]
   }
 
   private releaseTexture(): void {

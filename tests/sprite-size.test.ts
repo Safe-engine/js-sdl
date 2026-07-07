@@ -244,6 +244,42 @@ describe('Sprite sizing', () => {
     expect(lastDrawCall?.centerY).toBe(15)
   })
 
+  test('renders capInsets as 9-slice regions', () => {
+    const node = new Node('sliced')
+    node.width = 50
+    node.height = 30
+    const sprite = node.addComponent(Sprite, {
+      spriteFrame: 'Texture/UI/panel.png',
+      capInsets: [2, 3, 4, 5],
+    })
+    textureSizes.set(sprite.textureId, { width: 20, height: 10 })
+
+    regionDrawCalls.length = 0
+    sprite.onRender()
+
+    expect(regionDrawCalls).toHaveLength(9)
+    expect(regionDrawCalls.map(call => [
+      call.sourceX,
+      call.sourceY,
+      call.sourceWidth,
+      call.sourceHeight,
+      call.x,
+      call.y,
+      call.width,
+      call.height,
+    ])).toEqual([
+      [0, 0, 5, 2, -25, -15, 5, 2],
+      [5, 0, 12, 2, -20, -15, 42, 2],
+      [17, 0, 3, 2, 22, -15, 3, 2],
+      [0, 2, 5, 4, -25, -13, 5, 24],
+      [5, 2, 12, 4, -20, -13, 42, 24],
+      [17, 2, 3, 4, 22, -13, 3, 24],
+      [0, 6, 5, 4, -25, 11, 5, 4],
+      [5, 6, 12, 4, -20, 11, 42, 4],
+      [17, 6, 3, 4, 22, 11, 3, 4],
+    ])
+  })
+
   test('renders tiled sprites with clipped edge tiles', () => {
     const node = new Node('tiled')
     const sprite = node.addComponent(Sprite, {
