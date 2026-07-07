@@ -3,10 +3,12 @@ import { Node } from './core/Node'
 
 export type InputEventType = 'start' | 'move' | 'end'
 
-export class InputEvent {
+export class Touch {
   readonly type: InputEventType
   readonly x: number
   readonly y: number
+  readonly previousX: number
+  readonly previousY: number
   readonly target: ComponentX
   currentTarget: ComponentX
   propagationStopped = false
@@ -16,18 +18,51 @@ export class InputEvent {
     x: number,
     y: number,
     target: ComponentX,
+    previousX = x,
+    previousY = y,
   ) {
     this.type = type
     this.x = x
     this.y = y
+    this.previousX = previousX
+    this.previousY = previousY
     this.target = target
     this.currentTarget = target
+  }
+
+  getLocation(): Vec2 {
+    return { x: this.x, y: this.y }
+  }
+
+  getLocationX(): number {
+    return this.x
+  }
+
+  getLocationY(): number {
+    return this.y
+  }
+
+  getDelta(): Vec2 {
+    return {
+      x: this.x - this.previousX,
+      y: this.y - this.previousY,
+    }
+  }
+
+  getDeltaX(): number {
+    return this.x - this.previousX
+  }
+
+  getDeltaY(): number {
+    return this.y - this.previousY
   }
 
   stopPropagation(): void {
     this.propagationStopped = true
   }
 }
+
+export class InputEvent extends Touch {}
 
 interface InputCandidate {
   component: ComponentX
@@ -36,6 +71,8 @@ interface InputCandidate {
 
 export class InputSystem {
   private captured: ComponentX[] = []
+  private lastX: number | null = null
+  private lastY: number | null = null
 
   constructor(private readonly root: Node) {}
 
@@ -44,6 +81,8 @@ export class InputSystem {
     this.captured = []
     if (candidates.length === 0) return false
 
+    this.lastX = x
+    this.lastY = y
     const event = new InputEvent('start', x, y, candidates[0].component)
     for (const candidate of candidates) {
       const component = candidate.component
@@ -62,11 +101,15 @@ export class InputSystem {
   dispatchEnd(x: number, y: number): boolean {
     const stopped = this.dispatchCaptured('end', x, y)
     this.captured = []
+    this.lastX = null
+    this.lastY = null
     return stopped
   }
 
   reset(): void {
     this.captured = []
+    this.lastX = null
+    this.lastY = null
   }
 
   private dispatchCaptured(
@@ -79,7 +122,11 @@ export class InputSystem {
     )
     if (captured.length === 0) return false
 
-    const event = new InputEvent(type, x, y, captured[0])
+    const previousX = this.lastX ?? x
+    const previousY = this.lastY ?? y
+    const event = new InputEvent(type, x, y, captured[0], previousX, previousY)
+    this.lastX = x
+    this.lastY = y
     for (const component of captured) {
       event.currentTarget = component
       if (type === 'move') {

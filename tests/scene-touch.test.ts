@@ -1,8 +1,9 @@
 import { describe, expect, test } from 'bun:test'
-import { InputEvent } from '../engine/Input'
+import { InputEvent, Touch } from '../engine/Input'
 import { ComponentX } from '../engine/core/ComponentX'
 import { Scene } from '../engine/core/Scene'
 import { Node } from '../engine/core/Node'
+import { TouchEventRegister } from '../engine/components/TouchEventRegister'
 
 class TouchRecorderScene extends Scene {
   readonly log: Array<[string, number, number]> = []
@@ -70,6 +71,32 @@ describe('Scene touch dispatch', () => {
     scene._dispatchTouchEnd(50, 60)
 
     expect(log).toEqual(['start', 'move', 'end'])
+    expect(scene.log).toEqual([])
+  })
+
+  test('passes Touch events with location and delta to touch register callbacks', () => {
+    const scene = new TouchRecorderScene()
+    const log: Array<[string, Vec2, Vec2, boolean]> = []
+    scene.node.width = 100
+    scene.node.height = 100
+    scene.node.addComponent(TouchEventRegister, {
+      onTouchStart(event) {
+        log.push(['start', event.getLocation(), event.getDelta(), event instanceof Touch])
+      },
+      onTouchMove(event) {
+        log.push(['move', event.getLocation(), event.getDelta(), event instanceof Touch])
+      },
+    })
+
+    scene._dispatchTouchStart(10, 20)
+    scene._dispatchTouchMove(13, 25)
+    scene._dispatchTouchMove(12, 20)
+
+    expect(log).toEqual([
+      ['start', { x: 10, y: 20 }, { x: 0, y: 0 }, true],
+      ['move', { x: 13, y: 25 }, { x: 3, y: 5 }, true],
+      ['move', { x: 12, y: 20 }, { x: -1, y: -5 }, true],
+    ])
     expect(scene.log).toEqual([])
   })
 })
