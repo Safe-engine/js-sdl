@@ -253,6 +253,10 @@ export class Node {
     this.y = y
   }
 
+  get scale(): number {
+    return this.scaleX
+  }
+
   set scale(sx: number) {
     this.scaleX = sx
     this.scaleY = sx

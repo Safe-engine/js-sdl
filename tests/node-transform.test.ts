@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test'
+import { Tween } from '../engine/animation/Tween'
 import { ComponentX } from '../engine/core/ComponentX'
 import { Node } from '../engine/core/Node'
 import { Scene } from '../engine/core/Scene'
@@ -96,6 +97,25 @@ describe('Node transforms', () => {
     node.scale = 2
 
     expect(node.localToWorld(-10, 5)).toEqual({ x: 30, y: 60 })
+  })
+
+  test('exposes uniform scale for tweens', () => {
+    Tween.stopAll()
+
+    const node = new Node('node')
+    Tween.to(node, { scale: 3 }, 1)
+
+    Tween.update(0.5)
+    expect(node.scale).toBe(2)
+    expect(node.scaleX).toBe(2)
+    expect(node.scaleY).toBe(2)
+
+    Tween.update(0.5)
+    expect(node.scale).toBe(3)
+    expect(node.scaleX).toBe(3)
+    expect(node.scaleY).toBe(3)
+
+    Tween.stopAll()
   })
 
   test('converts world points into node space', () => {
