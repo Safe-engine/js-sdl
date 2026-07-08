@@ -1,3 +1,4 @@
+import { Physics } from '@esotericsoftware/spine-core'
 import { SpineSkeleton } from '.'
 import { BaseComponentProps, ComponentX } from '../core/ComponentX'
 
@@ -7,15 +8,41 @@ interface SpineBonesControlProps extends BaseComponentProps<SpineBonesControl> {
 }
 export class SpineBonesControl extends ComponentX<SpineBonesControlProps> {
   onAwake() {
-    const skel = this.node.getComponent(SpineSkeleton)
+    this.applyBonePositions()
+  }
+
+  onUpdate() {
+    this.applyBonePositions()
+  }
+
+  private applyBonePositions() {
+    const skel = this.findSpineSkeleton()
+    const skeleton = skel?.skeleton
+    if (!skeleton) return
+
     const { bonesName = [], posList = [] } = this.props
+    let updated = false
     bonesName.forEach((boneName: string, index: number) => {
-      const bone = skel.skeleton.findBone(boneName)
+      const pos = posList[index]
+      if (!pos) return
+
+      const bone = skeleton.findBone(boneName)
       if (bone) {
-        const pos = posList[index]
         bone.x = pos.x
         bone.y = pos.y
+        updated = true
       }
     })
+    if (updated) skeleton.updateWorldTransform(Physics.update)
+  }
+
+  private findSpineSkeleton(): SpineSkeleton | null {
+    let current = this.node
+    while (current) {
+      const skel = current.getComponent(SpineSkeleton)
+      if (skel) return skel
+      current = current.parent
+    }
+    return null
   }
 }
