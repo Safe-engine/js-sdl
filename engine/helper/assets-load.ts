@@ -1,5 +1,5 @@
 import { AssetGroup, AssetManager } from '../AssetManager'
-import { spriteFrameCache } from '../SpriteFrameCache'
+import { parseSpriteAtlasFrames, spriteFrameCache } from '../SpriteFrameCache'
 import { isBinaryAssetPath, loadBinaryAsset, loadTextAsset } from './resource-load'
 
 type DragonBonesAsset = {
@@ -150,4 +150,25 @@ function isSpriteFrameAtlasAsset(value: unknown): value is SpriteFrameAtlasAsset
   return typeof data.texture === 'string'
     && typeof data.atlas === 'string'
     && typeof data.skeleton !== 'string'
+}
+
+export async function loadSpriteSheet(atlasPath?: string) {
+  if (!atlasPath) return
+
+  const atlas = await fetch(atlasPath).then(response => response.json())
+  const texturePath = getTexturePath(atlasPath, atlas)
+  if (!texturePath) return
+
+  for (const [name, region] of Object.entries(parseSpriteAtlasFrames(atlas))) {
+    spriteFrameCache.addFrame(name, texturePath, region)
+  }
+}
+
+function getTexturePath(atlasPath: string, atlas: unknown): string {
+  if (!atlas || typeof atlas !== 'object') return ''
+  const metadata = (atlas as { metadata?: unknown }).metadata
+  if (!metadata || typeof metadata !== 'object') return ''
+  const textureFileName = (metadata as { textureFileName?: unknown }).textureFileName
+  if (typeof textureFileName !== 'string' || !textureFileName) return ''
+  return `${atlasPath.slice(0, atlasPath.lastIndexOf('/') + 1)}${textureFileName}`
 }

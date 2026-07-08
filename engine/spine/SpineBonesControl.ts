@@ -6,7 +6,7 @@ interface SpineBonesControlProps extends BaseComponentProps<SpineBonesControl> {
   bonesName: string[]
 }
 export class SpineBonesControl extends ComponentX<SpineBonesControlProps> {
-  start() {
+  onAwake() {
     const skel = this.node.getComponent(SpineSkeleton)
     const { bonesName = [], posList = [] } = this.props
     bonesName.forEach((boneName: string, index: number) => {

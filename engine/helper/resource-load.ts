@@ -65,8 +65,10 @@ function stripAssetQuery(path: string): string {
   const queryIndex = path.indexOf('?')
   const hashIndex = path.indexOf('#')
   const cutIndex
-    = queryIndex < 0 ? hashIndex
-      : hashIndex < 0 ? queryIndex
+    = queryIndex < 0
+      ? hashIndex
+      : hashIndex < 0
+        ? queryIndex
         : Math.min(queryIndex, hashIndex)
   return cutIndex >= 0 ? path.slice(0, cutIndex) : path
 }
