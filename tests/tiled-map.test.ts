@@ -1,13 +1,68 @@
 import { describe, expect, mock, test } from 'bun:test'
 
+const tiledMapJson = JSON.stringify({
+  width: 1,
+  height: 1,
+  tilewidth: 16,
+  tileheight: 16,
+  layers: [
+    {
+      name: 'map',
+      type: 'tilelayer',
+      width: 1,
+      height: 1,
+      data: [1],
+    },
+  ],
+  tilesets: [
+    {
+      columns: 1,
+      firstgid: 1,
+      image: 'tiles.png',
+      imageheight: 16,
+      imagewidth: 16,
+      tilecount: 1,
+      tileheight: 16,
+      tilewidth: 16,
+    },
+  ],
+})
+
 mock.module('sdl3', () => ({
   drawTextureRegionRotated: () => {},
-  loadTextFile: () => '',
+  getTextureHeight: () => 16,
+  getTextureWidth: () => 16,
+  loadTextFile: () => tiledMapJson,
+  loadTexture: () => 1,
+  releaseTexture: () => {},
 }))
 
 const { TiledMap, TiledMapLayer } = await import('../engine/components/TiledMap')
 
 describe('TiledMap compatibility helpers', () => {
+  test('shares an in-flight reload for the same map file', async () => {
+    const originalFetch = globalThis.fetch
+    ;(globalThis as any).fetch = async () => ({
+      ok: true,
+      text: async () => tiledMapJson,
+    })
+
+    try {
+      const tiledMap = new TiledMap({ mapFile: 'res/Map/Reload.json' })
+      tiledMap.ensureNode()
+
+      const firstReload = tiledMap.reload()
+      const loadingPromise = (tiledMap as any).loadingPromise
+      const secondReload = tiledMap.reload()
+
+      expect((tiledMap as any).loadingPromise).toBe(loadingPromise)
+      await Promise.all([firstReload, secondReload])
+      expect(tiledMap.getLayer('map').getTileAt(0, 0)).toBe(1)
+    } finally {
+      ;(globalThis as any).fetch = originalFetch
+    }
+  })
+
   test('returns tile positions in the tiled-map node local space', () => {
     const tiledMap = new TiledMap({ mapFile: 'res/Map/Map1.json' })
     tiledMap.ensureNode()

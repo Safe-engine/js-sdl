@@ -112,6 +112,8 @@ export class TiledMap extends ComponentX<TiledMapProps> {
   private tilesets: LoadedTileset[] = []
   private tiles: TilePlacement[] = []
   private loadVersion = 0
+  private loadingMapFile = ''
+  private loadingPromise: Promise<void> | null = null
 
   onStart(): void {
     void this.reload().catch((error) => {
@@ -173,8 +175,25 @@ export class TiledMap extends ComponentX<TiledMapProps> {
   async reload(): Promise<void> {
     const mapFile = this.props.mapFile
     if (!mapFile || mapFile === this.loadedMapFile) return
+    if (this.loadingPromise && mapFile === this.loadingMapFile) {
+      return this.loadingPromise
+    }
 
     const version = ++this.loadVersion
+    const loadingPromise = this.loadMap(mapFile, version)
+    this.loadingMapFile = mapFile
+    this.loadingPromise = loadingPromise
+    try {
+      await loadingPromise
+    } finally {
+      if (this.loadingPromise === loadingPromise) {
+        this.loadingMapFile = ''
+        this.loadingPromise = null
+      }
+    }
+  }
+
+  private async loadMap(mapFile: string, version: number): Promise<void> {
     const map = await loadMap(mapFile)
     if (version !== this.loadVersion) return
 
