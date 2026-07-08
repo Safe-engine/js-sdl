@@ -6,7 +6,9 @@ import {
   Panel,
   ProgressBar,
   Scene,
-  Sprite
+  Sprite,
+  TextAlignment,
+  VerticalTextAlignment
 } from '../engine'
 import * as allAssets from './assets'
 import {
@@ -51,8 +53,8 @@ export class LoadingScene extends Scene {
     const titleComp = instantiate(Label, {
       string: 'LOADING',
       size: 36,
-      align: 'center',
-      verticalAlign: 'middle',
+      align: TextAlignment.center,
+      verticalAlign: VerticalTextAlignment.middle,
     })
     this.node.addChild(titleComp.node)
     titleComp.node.x = 360
@@ -73,8 +75,8 @@ export class LoadingScene extends Scene {
     const percentLabel = instantiate(Label, {
       string: '0%',
       size: 28,
-      align: 'center',
-      verticalAlign: 'middle',
+      align: TextAlignment.center,
+      verticalAlign: VerticalTextAlignment.middle,
     })
     this.node.addChild(percentLabel.node)
     percentLabel.node.x = 360

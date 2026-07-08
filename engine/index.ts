@@ -71,12 +71,14 @@ export type {
 } from './Viewport'
 // Components
 export { Button } from './components/Button'
-export { Label } from './components/Label'
-export type {
+export {
+  Label,
   TextAlignment,
   VerticalTextAlignment
 } from './components/Label'
 export { ProgressBar } from './components/ProgressBar'
+export { RichText } from './components/RichText'
+export type { RichTextProps } from './components/RichText'
 export { Slider } from './components/Slider'
 export type { SliderProps } from './components/Slider'
 export { Sprite } from './components/Sprite'

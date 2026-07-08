@@ -6,8 +6,10 @@ import {
   PhysicsWorld,
   Scene,
   Sprite,
+  TextAlignment,
   Touch,
-  TiledMap
+  TiledMap,
+  VerticalTextAlignment
 } from '../engine'
 import {
   lilita_one_regularFont,
@@ -104,7 +106,13 @@ export class GameScene extends Scene {
     spriteComp2.node.height = 68
     const Button2 = instantiate(Button, { onPress: this.onClick })
     spriteComp2.node.resolveComponent(Button2)
-    const Label3 = instantiate(Label, { string: 'PLAY', font: lilita_one_regularFont, size: 32, align: 'center', verticalAlign: 'middle' })
+    const Label3 = instantiate(Label, {
+      string: 'PLAY',
+      font: lilita_one_regularFont,
+      size: 32,
+      align: TextAlignment.center,
+      verticalAlign: VerticalTextAlignment.middle,
+    })
     spriteComp2.node.resolveComponent(Label3)
   }
 }

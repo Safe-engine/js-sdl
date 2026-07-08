@@ -3,7 +3,9 @@ import {
   Label,
   Scene,
   SpineSkeleton,
-  Sprite
+  Sprite,
+  TextAlignment,
+  VerticalTextAlignment
 } from '../engine'
 import { instantiate, loadScene } from '../engine/core/instantiate'
 import { DragonBones } from '../engine/dragonbones'
@@ -40,7 +42,13 @@ export class HomeScene extends Scene {
     spriteComp1.node.height = 268
     const Button1 = instantiate(Button, { onPress: this.onClick })
     spriteComp1.node.resolveComponent(Button1)
-    const Label1 = instantiate(Label, { string: 'PLAY', font: lilita_one_regularFont, size: 32, align: 'center', verticalAlign: 'middle' })
+    const Label1 = instantiate(Label, {
+      string: 'PLAY',
+      font: lilita_one_regularFont,
+      size: 32,
+      align: TextAlignment.center,
+      verticalAlign: VerticalTextAlignment.middle,
+    })
     const dragonBonesComp1 = instantiate(DragonBones, { data: db_mecha_1004d_show, animation: 'idle', onAnimationComplete: this.onAnimationComplete.bind(this) })
     this.node.addChild(dragonBonesComp1.node)
     this.db = dragonBonesComp1

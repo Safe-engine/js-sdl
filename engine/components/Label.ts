@@ -8,8 +8,17 @@ import { ComponentX } from '../core/ComponentX'
 import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH, Node } from '../core/Node'
 import { Localization } from '../Localization'
 
-export type TextAlignment = 'left' | 'center' | 'right'
-export type VerticalTextAlignment = 'top' | 'middle' | 'bottom'
+export enum TextAlignment {
+  left,
+  center,
+  right,
+}
+
+export enum VerticalTextAlignment {
+  top,
+  middle,
+  bottom,
+}
 
 interface LabelProps {
   font?: string
@@ -52,8 +61,8 @@ export class Label extends ComponentX<LabelProps> {
     }
     this.fontSize = this.props.size ?? Label.defaultSize
     this.setFont(this.props.font || Label.defaultFont, this.fontSize)
-    this.align = this.props.align ?? 'left'
-    this.verticalAlign = this.props.verticalAlign ?? 'top'
+    this.align = this.props.align ?? TextAlignment.center
+    this.verticalAlign = this.props.verticalAlign ?? VerticalTextAlignment.middle
   }
 
   onStart(): void {
@@ -109,15 +118,15 @@ export class Label extends ComponentX<LabelProps> {
       : this.node.height > 0 ? this.node.height : textHeight
     const lineAdvance = this.fontSize * this.lineHeight
     let top = 0
-    if (this.verticalAlign === 'middle') top = (layoutHeight - textHeight) * 0.5
-    if (this.verticalAlign === 'bottom') top = layoutHeight - textHeight
+    if (this.verticalAlign === VerticalTextAlignment.middle) top = (layoutHeight - textHeight) * 0.5
+    if (this.verticalAlign === VerticalTextAlignment.bottom) top = layoutHeight - textHeight
     const renderOrigin = this.getRenderOrigin()
 
     for (let i = 0; i < this.lineTextures.length; i++) {
       const texture = this.lineTextures[i]
       let left = 0
-      if (this.align === 'center') left = (layoutWidth - texture.width) * 0.5
-      if (this.align === 'right') left = layoutWidth - texture.width
+      if (this.align === TextAlignment.center) left = (layoutWidth - texture.width) * 0.5
+      if (this.align === TextAlignment.right) left = layoutWidth - texture.width
       const localX = left - t.anchorX * layoutWidth
       const localY = top + i * lineAdvance - t.anchorY * layoutHeight
 
