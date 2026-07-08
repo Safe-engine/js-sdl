@@ -353,7 +353,10 @@ export class Sprite extends ComponentX<SpriteProps> {
     w: number,
     h: number,
   ): void {
-    if (source.width <= 0 || source.height <= 0 || w <= 0 || h <= 0) return
+    if (source.width < 32 || source.height < 32 || w < 32 || h < 32) {
+      console.warn('Tiled region is too small (<32px) to tile, rendering as a single texture instead.')
+      return
+    }
 
     const t = this.node
     const opacity = this.node.opacity * (this.node.color.a ?? 255)
