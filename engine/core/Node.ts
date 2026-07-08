@@ -315,7 +315,7 @@ export class Node {
     this.parent = null
   }
 
-  removeAllChildren(){
+  removeAllChildren() {
     for (const child of this.children) {
       child.destroy()
     }

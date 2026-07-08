@@ -47,4 +47,16 @@ describe('instantiate', () => {
     expect(parent.children).toEqual([])
     expect(shared.node).toBe(parent)
   })
+
+  test('creates a node when an unattached component adds a child component', () => {
+    class Parent extends ComponentX {}
+    class Child extends ComponentX {}
+
+    const parent = instantiate(Parent)
+    const child = parent.addComponent(Child)
+
+    expect(parent.node).toBeInstanceOf(Node)
+    expect(child.node).toBe(parent.node)
+    expect(parent.node.components).toEqual([parent, child])
+  })
 })
