@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { ComponentX } from '../engine/core/ComponentX'
+import { Container } from '../engine/core/Container'
 import { instantiate } from '../engine/core/instantiate'
 import { Node } from '../engine/core/Node'
 
@@ -33,6 +34,14 @@ describe('instantiate', () => {
 
     expect(renderable.node).toBeInstanceOf(Node)
     expect(shared.node).toBeUndefined()
+  })
+
+  test('auto-creates a node for containers', () => {
+    const container = instantiate(Container)
+
+    expect(container.node).toBeInstanceOf(Node)
+    expect(container.node.name).toBe('Container')
+    expect(container.node.components).toEqual([container])
   })
 
   test('keeps shared components attachable with resolveComponent', () => {

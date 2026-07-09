@@ -1,4 +1,5 @@
 import { ComponentX, Constructor } from './ComponentX'
+import { Container } from './Container'
 import { Node } from './Node'
 import { Scene } from './Scene'
 
@@ -43,6 +44,7 @@ function activateLoadedScene<T extends Scene>(instance: T): T {
 function shouldAutoCreateNode(instance: ComponentX): boolean {
   const prototype = Object.getPrototypeOf(instance)
 
-  return prototype.onRender !== ComponentX.prototype.onRender
+  return instance instanceof Container
+    || prototype.onRender !== ComponentX.prototype.onRender
     || prototype.onRenderEnd !== ComponentX.prototype.onRenderEnd
 }
