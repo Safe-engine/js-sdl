@@ -1,10 +1,10 @@
 import {
   drawTextureRegionRotated,
-  loadTextFile,
 } from 'sdl3'
 import { AssetManager, TextureAsset } from '../AssetManager'
 import { ComponentX } from '../core/ComponentX'
 import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH } from '../core/Node'
+import { getLoadedTextAsset, loadTextAsset } from '../helper/text-resource'
 
 export interface TiledMapProps {
   mapFile: string
@@ -115,6 +115,16 @@ export class TiledMap extends ComponentX<TiledMapProps> {
   private loadingMapFile = ''
   private loadingPromise: Promise<void> | null = null
 
+  onAwake(): void {
+    const mapFile = this.props.mapFile
+    if (!mapFile) return
+
+    const text = getLoadedTextAsset(mapFile)
+    if (text !== null) {
+      this.applyMap(mapFile, JSON.parse(text) as TiledMapData)
+    }
+  }
+
   onStart(): void {
     void this.reload().catch((error) => {
       console.error('TiledMap reload failed', error)
@@ -197,6 +207,10 @@ export class TiledMap extends ComponentX<TiledMapProps> {
     const map = await loadMap(mapFile)
     if (version !== this.loadVersion) return
 
+    this.applyMap(mapFile, map)
+  }
+
+  private applyMap(mapFile: string, map: TiledMapData): void {
     this.releaseTilesets()
     this.loadedMapFile = mapFile
     this.map = map
@@ -382,23 +396,10 @@ function getMapPixelHeightFor(map: TiledMapData): number {
 async function loadMap(path: string): Promise<TiledMapData> {
   let promise = mapCache.get(path)
   if (!promise) {
-    promise = loadText(path).then(text => JSON.parse(text) as TiledMapData)
+    promise = loadTextAsset(path, 'Tiled map').then(text => JSON.parse(text) as TiledMapData)
     mapCache.set(path, promise)
   }
   return promise
-}
-
-function loadText(path: string): Promise<string> {
-  if (typeof fetch === 'function') {
-    return fetch(path).then((response) => {
-      if (!response.ok) throw new Error(`Failed to load Tiled map: ${path}`)
-      return response.text()
-    })
-  }
-
-  const text = loadTextFile(path)
-  if (text === null) throw new Error(`Failed to load Tiled map: ${path}`)
-  return Promise.resolve(text)
 }
 
 function resolveSiblingPath(path: string, sibling: string): string {

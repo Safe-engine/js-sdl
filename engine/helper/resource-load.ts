@@ -1,8 +1,10 @@
-import { loadBinaryFile, loadTextFile } from 'sdl3'
+import { loadBinaryFile } from 'sdl3'
+import { loadTextAsset } from './text-resource'
 
-const textCache = new Map<string, Promise<string>>()
 const jsonCache = new Map<string, Promise<any>>()
 const binaryCache = new Map<string, Promise<ArrayBuffer>>()
+
+export { loadTextAsset } from './text-resource'
 
 export function isSpineBinaryPath(path: string): boolean {
   return /\.skel$/i.test(stripAssetQuery(path))
@@ -14,24 +16,6 @@ export function isDragonBonesBinaryPath(path: string): boolean {
 
 export function isBinaryAssetPath(path: string): boolean {
   return isSpineBinaryPath(path) || isDragonBonesBinaryPath(path)
-}
-
-export function loadTextAsset(path: string, label = 'text asset'): Promise<string> {
-  let promise = textCache.get(path)
-  if (!promise) {
-    if (typeof fetch === 'function') {
-      promise = fetch(path).then((response) => {
-        if (!response.ok) throw new Error(`Failed to load ${label}: ${path}`)
-        return response.text()
-      })
-    } else {
-      const text = loadTextFile(path)
-      if (text === null) throw new Error(`Failed to load ${label}: ${path}`)
-      promise = Promise.resolve(text)
-    }
-    textCache.set(path, promise)
-  }
-  return promise
 }
 
 export function loadJsonAsset<T = any>(path: string, label = 'JSON asset'): Promise<T> {

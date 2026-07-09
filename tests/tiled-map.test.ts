@@ -38,8 +38,29 @@ mock.module('sdl3', () => ({
 }))
 
 const { TiledMap, TiledMapLayer } = await import('../engine/components/TiledMap')
+const { loadTextAsset } = await import('../engine/helper/text-resource')
 
 describe('TiledMap compatibility helpers', () => {
+  test('hydrates a preloaded map before onStart', async () => {
+    const originalFetch = globalThis.fetch
+    ;(globalThis as any).fetch = async () => ({
+      ok: true,
+      text: async () => tiledMapJson,
+    })
+
+    try {
+      const mapFile = 'res/Map/Preloaded.json'
+      await loadTextAsset(mapFile)
+
+      const tiledMap = new TiledMap({ mapFile })
+      tiledMap.ensureNode()
+
+      expect(tiledMap.getLayer('map').getTileAt(0, 0)).toBe(1)
+    } finally {
+      ;(globalThis as any).fetch = originalFetch
+    }
+  })
+
   test('shares an in-flight reload for the same map file', async () => {
     const originalFetch = globalThis.fetch
     ;(globalThis as any).fetch = async () => ({
