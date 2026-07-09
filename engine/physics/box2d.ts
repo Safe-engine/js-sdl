@@ -14,10 +14,30 @@ export {
   Transform,
   type TransformValue,
   Vec2,
-  World,
 } from 'planck'
 
 export type BodyType = 0 | 1 | 2
+
+type BodyDef = Omit<planck.BodyDef, 'type'> & {
+  type?: BodyType | planck.BodyType
+}
+
+export class World extends planck.World {
+  createBody(def?: BodyDef): planck.Body
+  createBody(position: planck.Vec2Value, angle?: number): planck.Body
+  createBody(defOrPosition: BodyDef | planck.Vec2Value = {}, angle?: number): planck.Body {
+    if ('type' in defOrPosition && typeof defOrPosition.type === 'number') {
+      return super.createBody({
+        ...defOrPosition,
+        type: toPlanckBodyType(defOrPosition.type),
+      })
+    }
+    if (angle !== undefined) {
+      return super.createBody(defOrPosition as planck.Vec2Value, angle)
+    }
+    return super.createBody(defOrPosition as planck.BodyDef)
+  }
+}
 
 export interface BodyTransform extends Vec2 {
   angle: number
