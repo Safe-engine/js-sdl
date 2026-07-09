@@ -1,6 +1,6 @@
 {
   "name": "@safe-engine/sdl",
-  "version": "1.0.2",
+  "version": "1.0.5",
   "description": "safe-engine with sdl renderer support",
   "main": "lib/index.js",
   "types": "@types/package.d.ts",

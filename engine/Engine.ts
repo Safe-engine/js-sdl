@@ -27,7 +27,6 @@ import { TextInput } from './components/TextInput'
 import { setSceneActivator } from './core/instantiate'
 import { Orientation, Scene } from './core/Scene'
 import { ActiveViewport } from './Viewport'
-import type { ResolutionPolicy } from './Viewport'
 
 const ORIENTATIONS: Orientation[] = [
   'unknown',

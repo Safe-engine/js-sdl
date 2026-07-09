@@ -13,14 +13,6 @@ export type ViewportMetrics = readonly [
   safeHeight: number,
 ]
 
-export type ResolutionPolicy
-  = | 'letterbox'
-    | 'overscan'
-    | 'stretch'
-    | 'fixed-width'
-    | 'fixed-height'
-    | 'integer-scale'
-
 export class Viewport {
   logicalWidth = 1
   logicalHeight = 1

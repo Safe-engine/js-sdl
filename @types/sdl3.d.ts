@@ -207,3 +207,49 @@ declare module 'sdl3' {
   ): void
   export function onTerminate(cb: () => void): void
 }
+type VoidCallback = () => void
+type UpdateCallback = (dt: number) => void
+type TouchCallback = (x: number, y: number) => void
+type TextInputCallback = (text: string) => void
+type KeyCallback = (key: string) => void
+type InterruptionCallback = (active: boolean) => void
+type OrientationCallback = (
+  orientation: number,
+  width: number,
+  height: number,
+) => void
+type ResolutionPolicy
+  = | 'letterbox'
+    | 'overscan'
+    | 'stretch'
+    | 'fixed-width'
+    | 'fixed-height'
+    | 'integer-scale'
+
+interface TextureAsset {
+  texture: WebGLTexture | null
+  width: number
+  height: number
+  refs: number
+  key: string
+  textFontId?: number
+  text?: string
+}
+
+interface FontAsset {
+  family: string
+  path: string
+  size: number
+  refs: number
+  loaded: boolean
+}
+
+interface AudioAsset {
+  url: string
+  refs: number
+}
+
+interface AudioVoice {
+  element: HTMLAudioElement
+  ended: boolean
+}

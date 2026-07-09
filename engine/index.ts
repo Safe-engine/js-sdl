@@ -66,7 +66,6 @@ export {
 } from './SpriteFrameCache'
 export { Viewport } from './Viewport'
 export type {
-  ResolutionPolicy,
   ViewportMetrics
 } from './Viewport'
 // Components
@@ -84,10 +83,10 @@ export type { SliderProps } from './components/Slider'
 export { Sprite } from './components/Sprite'
 export { TextInput } from './components/TextInput'
 export type { TextInputProps } from './components/TextInput'
-export { TouchEventRegister } from './components/TouchEventRegister'
-export type { TouchEventRegisterProps } from './components/TouchEventRegister'
 export { TiledMap, TiledMapLayer } from './components/TiledMap'
 export type { TiledMapProps } from './components/TiledMap'
+export { TouchEventRegister } from './components/TouchEventRegister'
+export type { TouchEventRegisterProps } from './components/TouchEventRegister'
 export {
   NineSlice,
   Panel,
@@ -126,3 +125,4 @@ export type {
 export { Spine, SpineSkeleton } from './spine'
 export type { SpineData, SpineSkeletonProps } from './spine'
 export { SpineBonesControl } from './spine/SpineBonesControl'
+
