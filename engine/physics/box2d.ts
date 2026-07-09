@@ -1,11 +1,23 @@
 import * as planck from 'planck'
 
-export type BodyType = 0 | 1 | 2
+export {
+  Body,
+  BoxShape,
+  CircleShape,
+  Contact,
+  ContactImpulse,
+  EdgeShape,
+  Fixture,
+  Manifold,
+  PolygonShape,
+  Shape,
+  Transform,
+  type TransformValue,
+  Vec2,
+  World,
+} from 'planck'
 
-export interface Vec2 {
-  x: number
-  y: number
-}
+export type BodyType = 0 | 1 | 2
 
 export interface BodyTransform extends Vec2 {
   angle: number

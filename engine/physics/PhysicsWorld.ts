@@ -1,6 +1,6 @@
-import { Body, BodyType, BoxShape, CircleShape, Contact, ContactImpulse, EdgeShape, Fixture, Manifold, PolygonShape, Shape, Transform, TransformValue, Vec2, World } from 'planck'
-import * as sdl from 'sdl3'
+import { Body, BodyType, BoxShape, CircleShape, Contact, ContactImpulse, EdgeShape, Fixture, Manifold, PolygonShape, Shape, Transform, TransformValue, Vec2, World } from 'box2d'
 import type { DrawPoint } from 'sdl3'
+import * as sdl from 'sdl3'
 import {
   DEG_TO_RAD,
   PhysicsRigidBodyComponent,
