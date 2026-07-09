@@ -1,4 +1,6 @@
 import { InputSystem, Touch } from '../Input'
+import { Camera2D } from '../components/Camera2D'
+import { setActiveCamera } from './CameraRenderContext'
 import { Node } from './Node'
 
 export type Orientation
@@ -105,8 +107,40 @@ export class Scene {
 
   /** Engine-internal: render all. */
   render(): void {
-    this.node._renderTree()
+    const cameras = this.getActiveCameras()
+    if (cameras.length === 0) {
+      this.node._renderTree()
+    } else {
+      for (const camera of cameras) {
+        setActiveCamera({
+          x: camera.node.worldX,
+          y: camera.node.worldY,
+          rotation: camera.node.worldRotation,
+          zoom: camera.zoom,
+          centerX: this.node.width * 0.5,
+          centerY: this.node.height * 0.5,
+          mask: camera.mask,
+        })
+        try {
+          this.node._renderTree()
+        } finally {
+          setActiveCamera(null)
+        }
+      }
+    }
     this.onRender()
+  }
+
+  private getActiveCameras(): Camera2D[] {
+    const cameras: Camera2D[] = []
+    const visit = (node: Node): void => {
+      if (!node.active) return
+      const camera = node.getComponent(Camera2D)
+      if (camera?.enabled) cameras.push(camera)
+      for (const child of node.children) visit(child)
+    }
+    visit(this.node)
+    return cameras.sort((a, b) => a.priority - b.priority)
   }
 
   /** Engine-internal: dispatch a pointer press to components, then the scene. */

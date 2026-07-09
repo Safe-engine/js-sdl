@@ -1,4 +1,5 @@
 import { ComponentX } from './ComponentX'
+import { getActiveCamera } from './CameraRenderContext'
 
 export const DEFAULT_NODE_WIDTH = 0
 export const DEFAULT_NODE_HEIGHT = 0
@@ -36,6 +37,7 @@ export class Node {
   visible = true
   opacity = 1
   color: Color = { r: 255, g: 255, b: 255, a: 255 }
+  cameraMask = 0xffffffff
   zIndex = 0
   declare tag: Integer
   private _scheduledCallbacks: ScheduledEntry[] = []
@@ -124,27 +126,37 @@ export class Node {
 
   get worldX(): number {
     this._ensureWorldTransform()
-    return this._worldX
+    const camera = getActiveCamera()
+    if (!camera) return this._worldX
+    const radians = camera.rotation * Math.PI / 180
+    const x = this._worldX - camera.x
+    const y = this._worldY - camera.y
+    return camera.centerX + (x * Math.cos(radians) + y * Math.sin(radians)) * camera.zoom
   }
 
   get worldY(): number {
     this._ensureWorldTransform()
-    return this._worldY
+    const camera = getActiveCamera()
+    if (!camera) return this._worldY
+    const radians = camera.rotation * Math.PI / 180
+    const x = this._worldX - camera.x
+    const y = this._worldY - camera.y
+    return camera.centerY + (-x * Math.sin(radians) + y * Math.cos(radians)) * camera.zoom
   }
 
   get worldRotation(): number {
     this._ensureWorldTransform()
-    return this._worldRotation
+    return this._worldRotation - (getActiveCamera()?.rotation ?? 0)
   }
 
   get worldScaleX(): number {
     this._ensureWorldTransform()
-    return this._worldScaleX
+    return this._worldScaleX * (getActiveCamera()?.zoom ?? 1)
   }
 
   get worldScaleY(): number {
     this._ensureWorldTransform()
-    return this._worldScaleY
+    return this._worldScaleY * (getActiveCamera()?.zoom ?? 1)
   }
 
   get rotation(): number {
@@ -422,15 +434,21 @@ export class Node {
   /** Internal: traverse render through tree. */
   _renderTree(): void {
     if (!this.active || !this.visible) return
-    for (let i = 0; i < this.components.length; i++) {
-      this.components[i].onRender()
+    const camera = getActiveCamera()
+    const renderComponents = !camera || (camera.mask & this.cameraMask) !== 0
+    if (renderComponents) {
+      for (let i = 0; i < this.components.length; i++) {
+        this.components[i].onRender()
+      }
     }
     const renderChildren = this.getRenderChildren()
     for (let i = 0; i < renderChildren.length; i++) {
       renderChildren[i]._renderTree()
     }
-    for (let i = this.components.length - 1; i >= 0; i--) {
-      this.components[i].onRenderEnd()
+    if (renderComponents) {
+      for (let i = this.components.length - 1; i >= 0; i--) {
+        this.components[i].onRenderEnd()
+      }
     }
   }
 
@@ -472,17 +490,18 @@ export class Node {
       return
     }
 
-    const radians = parent.worldRotation * Math.PI / 180
+    parent._ensureWorldTransform()
+    const radians = parent._worldRotation * Math.PI / 180
     const cos = Math.cos(radians)
     const sin = Math.sin(radians)
-    const scaledX = this.x * parent.worldScaleX
-    const scaledY = this.y * parent.worldScaleY
+    const scaledX = this.x * parent._worldScaleX
+    const scaledY = this.y * parent._worldScaleY
 
-    this._worldX = parent.worldX + scaledX * cos - scaledY * sin
-    this._worldY = parent.worldY + scaledX * sin + scaledY * cos
-    this._worldRotation = parent.worldRotation + this.rotation
-    this._worldScaleX = parent.worldScaleX * this.scaleX
-    this._worldScaleY = parent.worldScaleY * this.scaleY
+    this._worldX = parent._worldX + scaledX * cos - scaledY * sin
+    this._worldY = parent._worldY + scaledX * sin + scaledY * cos
+    this._worldRotation = parent._worldRotation + this.rotation
+    this._worldScaleX = parent._worldScaleX * this.scaleX
+    this._worldScaleY = parent._worldScaleY * this.scaleY
     this._transformDirty = false
   }
 

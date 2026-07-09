@@ -70,6 +70,8 @@ export type {
 } from './Viewport'
 // Components
 export { Button } from './components/Button'
+export { Camera2D } from './components/Camera2D'
+export type { Camera2DProps } from './components/Camera2D'
 export {
   Label,
   TextAlignment,
@@ -125,4 +127,3 @@ export type {
 export { Spine, SpineSkeleton } from './spine'
 export type { SpineData, SpineSkeletonProps } from './spine'
 export { SpineBonesControl } from './spine/SpineBonesControl'
-
