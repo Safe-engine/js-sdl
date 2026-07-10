@@ -64,6 +64,91 @@ const rendererStats: RendererStats = {
   drawCalls: 0,
 }
 
+const MAX_BATCH_VERTICES = 6000
+let batchTexture: WebGLTexture | null = null
+let batchColor: [number, number, number, number] | null = null
+const batchPositions: number[] = []
+const batchUvs: number[] = []
+
+function colorToUniform(
+  red: number,
+  green: number,
+  blue: number,
+  alpha: number,
+): [number, number, number, number] {
+  return [
+    Math.max(0, Math.min(255, red)) / 255,
+    Math.max(0, Math.min(255, green)) / 255,
+    Math.max(0, Math.min(255, blue)) / 255,
+    Math.max(0, Math.min(255, alpha)) / 255,
+  ]
+}
+
+function sameBatch(
+  texture: WebGLTexture,
+  color: [number, number, number, number],
+): boolean {
+  return batchTexture === texture
+    && !!batchColor
+    && batchColor[0] === color[0]
+    && batchColor[1] === color[1]
+    && batchColor[2] === color[2]
+    && batchColor[3] === color[3]
+}
+
+function queueDraw(
+  asset: TextureAsset,
+  positions: readonly number[],
+  uvs: readonly number[],
+  color: [number, number, number, number],
+): void {
+  if (!asset.texture || !program || !positionBuffer || !uvBuffer) return
+  const vertexCount = positions.length / 2
+  if (!sameBatch(asset.texture, color)
+    || batchPositions.length / 2 + vertexCount > MAX_BATCH_VERTICES) {
+    flushDrawBatch()
+  }
+
+  batchTexture = asset.texture
+  batchColor = color
+  for (let i = 0; i < positions.length; i++) batchPositions.push(positions[i])
+  for (let i = 0; i < uvs.length; i++) batchUvs.push(uvs[i])
+}
+
+function flushDrawBatch(): void {
+  if (!batchTexture || !batchColor || batchPositions.length === 0) return
+  if (!program || !positionBuffer || !uvBuffer) {
+    batchTexture = null
+    batchColor = null
+    batchPositions.length = 0
+    batchUvs.length = 0
+    return
+  }
+
+  const context = requireGl()
+  context.useProgram(program)
+  context.uniform2f(resolutionLocation, logicalWidth, logicalHeight)
+  context.uniform1i(samplerLocation, 0)
+  context.uniform4f(colorLocation, batchColor[0], batchColor[1], batchColor[2], batchColor[3])
+  context.activeTexture(context.TEXTURE0)
+  context.bindTexture(context.TEXTURE_2D, batchTexture)
+  context.bindBuffer(context.ARRAY_BUFFER, positionBuffer)
+  context.bufferData(context.ARRAY_BUFFER, new Float32Array(batchPositions), context.STREAM_DRAW)
+  context.enableVertexAttribArray(positionLocation)
+  context.vertexAttribPointer(positionLocation, 2, context.FLOAT, false, 0, 0)
+  context.bindBuffer(context.ARRAY_BUFFER, uvBuffer)
+  context.bufferData(context.ARRAY_BUFFER, new Float32Array(batchUvs), context.STREAM_DRAW)
+  context.enableVertexAttribArray(uvLocation)
+  context.vertexAttribPointer(uvLocation, 2, context.FLOAT, false, 0, 0)
+  context.drawArrays(context.TRIANGLES, 0, batchPositions.length / 2)
+  frameDrawCalls += 1
+
+  batchTexture = null
+  batchColor = null
+  batchPositions.length = 0
+  batchUvs.length = 0
+}
+
 function ensureHiddenTextInput(): HTMLInputElement {
   if (hiddenTextInput) return hiddenTextInput
   const input = document.createElement('input')
@@ -663,6 +748,7 @@ export function loadTextTexture(fontId: number, text: string): number {
 export function releaseTexture(id: number): void {
   const asset = textures.get(id)
   if (!asset || --asset.refs > 0) return
+  if (asset.texture === batchTexture) flushDrawBatch()
   if (asset.texture && gl) gl.deleteTexture(asset.texture)
   textures.delete(id)
   textureIds.delete(asset.key)
@@ -684,6 +770,7 @@ export function getTextureHeight(id: number): number {
 }
 
 export function clear(): void {
+  flushDrawBatch()
   const context = requireGl()
   context.clearColor(9 / 255, 15 / 255, 29 / 255, 1)
   context.clear(context.COLOR_BUFFER_BIT)
@@ -711,7 +798,6 @@ function draw(
 ): void {
   const asset = textures.get(id)
   if (!asset?.texture || !program || !positionBuffer || !uvBuffer) return
-  const context = requireGl()
   const radians = angle * Math.PI / 180
   const cosine = Math.cos(radians)
   const sine = Math.sin(radians)
@@ -727,10 +813,10 @@ function draw(
   const topRight = point(width, 0)
   const bottomLeft = point(0, height)
   const bottomRight = point(width, height)
-  const positions = new Float32Array([
+  const positions = [
     ...topLeft, ...topRight, ...bottomLeft,
     ...bottomLeft, ...topRight, ...bottomRight,
-  ])
+  ]
 
   let u0 = sx / asset.width
   let v0 = sy / asset.height
@@ -738,33 +824,12 @@ function draw(
   let v1 = (sy + sh) / asset.height
   if (flipX) [u0, u1] = [u1, u0]
   if (flipY) [v0, v1] = [v1, v0]
-  const uvs = new Float32Array([
+  const uvs = [
     u0, v0, u1, v0, u0, v1,
     u0, v1, u1, v0, u1, v1,
-  ])
+  ]
 
-  context.useProgram(program)
-  context.uniform2f(resolutionLocation, logicalWidth, logicalHeight)
-  context.uniform1i(samplerLocation, 0)
-  context.uniform4f(
-    colorLocation,
-    Math.max(0, Math.min(255, red)) / 255,
-    Math.max(0, Math.min(255, green)) / 255,
-    Math.max(0, Math.min(255, blue)) / 255,
-    Math.max(0, Math.min(255, alpha)) / 255,
-  )
-  context.activeTexture(context.TEXTURE0)
-  context.bindTexture(context.TEXTURE_2D, asset.texture)
-  context.bindBuffer(context.ARRAY_BUFFER, positionBuffer)
-  context.bufferData(context.ARRAY_BUFFER, positions, context.STREAM_DRAW)
-  context.enableVertexAttribArray(positionLocation)
-  context.vertexAttribPointer(positionLocation, 2, context.FLOAT, false, 0, 0)
-  context.bindBuffer(context.ARRAY_BUFFER, uvBuffer)
-  context.bufferData(context.ARRAY_BUFFER, uvs, context.STREAM_DRAW)
-  context.enableVertexAttribArray(uvLocation)
-  context.vertexAttribPointer(uvLocation, 2, context.FLOAT, false, 0, 0)
-  context.drawArrays(context.TRIANGLES, 0, 6)
-  frameDrawCalls += 1
+  queueDraw(asset, positions, uvs, colorToUniform(red, green, blue, alpha))
 }
 
 export function drawTexture(id: number, x: number, y: number): void {
@@ -850,38 +915,16 @@ export function drawTextureQuad(
 ): void {
   const asset = textures.get(id)
   if (!asset?.texture || !program || !positionBuffer || !uvBuffer) return
-  const context = requireGl()
-  const positions = new Float32Array([
+  const positions = [
     x0, y0, x1, y1, x2, y2,
     x2, y2, x1, y1, x3, y3,
-  ])
-  const uvs = new Float32Array([
+  ]
+  const uvs = [
     u0, v0, u1, v1, u2, v2,
     u2, v2, u1, v1, u3, v3,
-  ])
+  ]
 
-  context.useProgram(program)
-  context.uniform2f(resolutionLocation, logicalWidth, logicalHeight)
-  context.uniform1i(samplerLocation, 0)
-  context.uniform4f(
-    colorLocation,
-    Math.max(0, Math.min(255, red)) / 255,
-    Math.max(0, Math.min(255, green)) / 255,
-    Math.max(0, Math.min(255, blue)) / 255,
-    Math.max(0, Math.min(255, alpha)) / 255,
-  )
-  context.activeTexture(context.TEXTURE0)
-  context.bindTexture(context.TEXTURE_2D, asset.texture)
-  context.bindBuffer(context.ARRAY_BUFFER, positionBuffer)
-  context.bufferData(context.ARRAY_BUFFER, positions, context.STREAM_DRAW)
-  context.enableVertexAttribArray(positionLocation)
-  context.vertexAttribPointer(positionLocation, 2, context.FLOAT, false, 0, 0)
-  context.bindBuffer(context.ARRAY_BUFFER, uvBuffer)
-  context.bufferData(context.ARRAY_BUFFER, uvs, context.STREAM_DRAW)
-  context.enableVertexAttribArray(uvLocation)
-  context.vertexAttribPointer(uvLocation, 2, context.FLOAT, false, 0, 0)
-  context.drawArrays(context.TRIANGLES, 0, 6)
-  frameDrawCalls += 1
+  queueDraw(asset, positions, uvs, colorToUniform(red, green, blue, alpha))
 }
 
 export function drawRect(
@@ -895,7 +938,6 @@ export function drawRect(
   alpha = 255,
 ): void {
   if (!whiteTexture || !program || !positionBuffer || !uvBuffer) return
-  const context = requireGl()
   const id = -1
   textures.set(id, {
     texture: whiteTexture,
@@ -1018,6 +1060,7 @@ export function popClipRect(): void {
 }
 
 function applyClipRect(): void {
+  flushDrawBatch()
   if (!canvas || !gl) return
   const clip = clipStack[clipStack.length - 1]
   if (!clip) {
@@ -1036,6 +1079,7 @@ function applyClipRect(): void {
 }
 
 export function present(): void {
+  flushDrawBatch()
   gl?.flush()
 }
 
