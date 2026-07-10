@@ -105,6 +105,7 @@ export type {
 export { Widget } from './components/Widget'
 export type { WidgetProps } from './components/Widget'
 export type { BaseComponentProps } from './core/ComponentX'
+export * from './dragonbones'
 export * from './helper/Intersection'
 export * from './helper/math'
 export * from './helper/PointExtension'
@@ -127,3 +128,4 @@ export type {
 export { Spine, SpineSkeleton } from './spine'
 export type { SpineData, SpineSkeletonProps } from './spine'
 export { SpineBonesControl } from './spine/SpineBonesControl'
+
