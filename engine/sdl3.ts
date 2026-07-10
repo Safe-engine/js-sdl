@@ -640,6 +640,42 @@ export function loadTexture(path: string): number {
   return id
 }
 
+export function loadTextureData(key: string, data: ArrayBuffer): number {
+  const existingId = textureIds.get(key)
+  if (existingId !== undefined) {
+    const existing = textures.get(existingId)
+    if (existing) existing.refs++
+    return existingId
+  }
+
+  const id = nextTextureId++
+  const asset: TextureAsset = {
+    texture: null,
+    width: 0,
+    height: 0,
+    refs: 1,
+    key,
+  }
+  textures.set(id, asset)
+  textureIds.set(key, id)
+
+  const objectUrl = URL.createObjectURL(new Blob([data]))
+  const image = new Image()
+  image.decoding = 'async'
+  image.onload = () => {
+    if (textures.get(id) === asset) {
+      uploadSource(asset, image, image.naturalWidth, image.naturalHeight)
+    }
+    URL.revokeObjectURL(objectUrl)
+  }
+  image.onerror = () => {
+    console.error(`Failed to load texture data: ${key}`)
+    URL.revokeObjectURL(objectUrl)
+  }
+  image.src = objectUrl
+  return id
+}
+
 export function loadTextFile(_path: string): string | null {
   throw new Error('loadTextFile is only available in the native SDL runtime.')
 }

@@ -68,6 +68,7 @@ static void test_callbacks_and_invalid_resource_paths(JSContext *ctx)
         "import {"
         "  drawTexture, drawTextureRegionRotated, drawTextureRotated,"
         "  getTextureHeight, getTextureWidth, isAudioPlaying, loadTextFile,"
+        "  loadTextureData,"
         "  onBackground, onForeground, onInit, onInterruption, onLowMemory,"
         "  onOrientationChange, onPause, onRender, onResume, onTerminate,"
         "  onTouchEnd, onTouchMove, onTouchStart, onUpdate, pauseAudio,"
@@ -79,7 +80,8 @@ static void test_callbacks_and_invalid_resource_paths(JSContext *ctx)
         "  getTextureWidth(-1),"
         "  getTextureHeight(999),"
         "  isAudioPlaying(12),"
-        "  loadTextFile('__missing__.json')"
+        "  loadTextFile('__missing__.json'),"
+        "  loadTextureData('__empty__', new ArrayBuffer(0))"
         "];"
         "releaseTexture(-1);"
         "releaseFont(-1);"
@@ -150,7 +152,7 @@ static void test_callbacks_and_invalid_resource_paths(JSContext *ctx)
     expect_string(
         "invalid resource queries return neutral values",
         invalids_json,
-        "[0,0,false,null]");
+        "[0,0,false,null,-1]");
     JS_FreeCString(ctx, invalids_json);
     JS_FreeValue(ctx, invalids);
 }

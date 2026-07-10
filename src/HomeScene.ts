@@ -2,6 +2,7 @@ import {
   Button,
   Label,
   Scene,
+  SkelForm,
   SpineSkeleton,
   Sprite,
   TextAlignment,
@@ -49,6 +50,13 @@ export class HomeScene extends Scene {
       align: TextAlignment.center,
       verticalAlign: VerticalTextAlignment.middle,
     })
+    const SkelFormdragonBonesComp1 = instantiate(SkelForm, { data: '_skellington.skf', animation: 'Run', loop: true, onAnimationComplete: this.onAnimationComplete.bind(this) })
+    this.node.addChild(SkelFormdragonBonesComp1.node)
+    SkelFormdragonBonesComp1.node.x = 460
+    SkelFormdragonBonesComp1.node.y = 240
+    SkelFormdragonBonesComp1.node.scale = 0.1
+    SkelFormdragonBonesComp1.play('Run', true)
+    console.log('SkelFormdragonBonesComp1', SkelFormdragonBonesComp1)
     const dragonBonesComp1 = instantiate(DragonBones, { data: db_mecha_1004d_show, animation: 'idle', onAnimationComplete: this.onAnimationComplete.bind(this) })
     this.node.addChild(dragonBonesComp1.node)
     this.db = dragonBonesComp1

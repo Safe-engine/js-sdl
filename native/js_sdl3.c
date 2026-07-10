@@ -598,6 +598,71 @@ static JSValue js_loadTexture(
     return JS_NewInt32(ctx, id);
 }
 
+/* --- Binding: loadTextureData(key, ArrayBuffer) -> id --- */
+static JSValue js_loadTextureData(
+    JSContext *ctx,
+    JSValueConst this_val,
+    int argc,
+    JSValueConst *argv)
+{
+    (void)this_val;
+    if (argc < 2) return JS_NewInt32(ctx, -1);
+
+    const char *key_value = JS_ToCString(ctx, argv[0]);
+    if (!key_value) return JS_EXCEPTION;
+
+    for (int i = 0; i < MAX_TEXTURES; i++) {
+        TextureAsset *asset = &g_textures[i];
+        if (asset->texture && asset->kind == TEXTURE_FILE &&
+            strcmp(asset->key, key_value) == 0) {
+            asset->refs++;
+            JS_FreeCString(ctx, key_value);
+            return JS_NewInt32(ctx, i);
+        }
+    }
+
+    size_t length = 0;
+    uint8_t *bytes = JS_GetArrayBuffer(ctx, &length, argv[1]);
+    if (!bytes || length == 0) {
+        JS_FreeCString(ctx, key_value);
+        return JS_NewInt32(ctx, -1);
+    }
+
+    int id = find_free_texture_slot();
+    if (id < 0) {
+        JS_FreeCString(ctx, key_value);
+        return JS_NewInt32(ctx, -1);
+    }
+
+    SDL_IOStream *stream = SDL_IOFromConstMem(bytes, length);
+    SDL_Texture *texture = stream
+        ? IMG_LoadTexture_IO(g_renderer, stream, true)
+        : NULL;
+    if (!texture) {
+        JS_FreeCString(ctx, key_value);
+        return JS_NewInt32(ctx, -1);
+    }
+
+    char *key = copy_string(key_value);
+    JS_FreeCString(ctx, key_value);
+    if (!key) {
+        SDL_DestroyTexture(texture);
+        return JS_NewInt32(ctx, -1);
+    }
+
+    TextureAsset *asset = &g_textures[id];
+    asset->texture = texture;
+    asset->key = key;
+    asset->refs = 1;
+    asset->kind = TEXTURE_FILE;
+    float width = 0;
+    float height = 0;
+    SDL_GetTextureSize(texture, &width, &height);
+    asset->width = (int)width;
+    asset->height = (int)height;
+    return JS_NewInt32(ctx, id);
+}
+
 static bool ensure_freetype(void)
 {
     return g_ft_library || FT_Init_FreeType(&g_ft_library) == 0;
@@ -1818,6 +1883,7 @@ static const JSCFunctionListEntry funcs[] =
     JS_CFUNC_DEF("loadTextFile",            1, js_loadTextFile),
     JS_CFUNC_DEF("loadBinaryFile",          1, js_loadBinaryFile),
     JS_CFUNC_DEF("loadTexture",             1, js_loadTexture),
+    JS_CFUNC_DEF("loadTextureData",         2, js_loadTextureData),
     JS_CFUNC_DEF("loadFont",                2, js_loadFont),
     JS_CFUNC_DEF("loadTextTexture",         2, js_loadTextTexture),
     JS_CFUNC_DEF("releaseTexture",          1, js_releaseTexture),

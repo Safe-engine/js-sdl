@@ -39,6 +39,9 @@ declare module 'sdl3' {
   /** Load a texture from disk.  Returns a texture id (or -1 on failure). */
   export function loadTexture(path: string): number
 
+  /** Load a texture from encoded image bytes. Returns a texture id (or -1 on failure). */
+  export function loadTextureData(key: string, data: ArrayBuffer): number
+
   /** Load a UTF-8 text file from disk. Returns null on failure. */
   export function loadTextFile(path: string): string | null
 

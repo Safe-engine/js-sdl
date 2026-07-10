@@ -128,4 +128,11 @@ export type {
 export { Spine, SpineSkeleton } from './spine'
 export type { SpineData, SpineSkeletonProps } from './spine'
 export { SpineBonesControl } from './spine/SpineBonesControl'
-
+export { SkelForm } from './skelform'
+export type {
+  SkelFormAnimation,
+  SkelFormArmature,
+  SkelFormData,
+  SkelFormProps,
+  SkelFormStyle,
+} from './skelform'
