@@ -2,18 +2,35 @@
   "Create class with start and render methods": {
     "prefix": "classsr",
     "body": [
-      "import { ComponentX, Container, Sprite } from \"@safe-engine/sdl\"\n",
-      "export default class ${TM_FILENAME_BASE}  extends ComponentX {",
-      "  onEnter() {",
+      "import { ComponentX, Container, Sprite } from '@safe-engine/sdl'\n",
+      "export default class ${TM_FILENAME_BASE} extends ComponentX {",
+      "  onAwake() {",
       "    // TODO: implement start logic",
       "  }",
       "",
       "  __view() {",
-      "    <Sprite spriteFrame={$1}></Sprite>;",
+      "    return <Container ></Container>;",
       "  }",
       "}"
     ],
     "description": "Create a class named after the file with start and render methods"
+  },
+  "Create class with props": {
+    "prefix": "classprops",
+    "body": [
+      "import { ComponentX, BaseComponentProps, Sprite } from '@safe-engine/sdl'\n",
+      "interface ${TM_FILENAME_BASE}Props extends BaseComponentProps<${TM_FILENAME_BASE}> {\n  spriteFrame: string\n}\n",
+      "export default class ${TM_FILENAME_BASE} extends ComponentX<${TM_FILENAME_BASE}Props> {",
+      "  onAwake() {",
+      "    // TODO: implement start logic",
+      "  }",
+      "",
+      "  __view() {",
+      "    return <Sprite spriteFrame={}></Sprite>",
+      "  }",
+      "}"
+    ],
+    "description": "Create a class named after the file with props"
   },
   "localData": {
     "prefix": "localData",
@@ -43,30 +60,30 @@
     "scope": "typescript",
     "description": "Create local storage"
   },
-  "start": {
-    "prefix": "start",
+  "onAwake": {
+    "prefix": "onAwake",
     "body": [
-      "onEnter() {",
+      "onAwake() {",
       "  ${1}",
       "}"
     ],
     "scope": "typescriptreact",
     "description": "Create start life cycle"
   },
-  "destroy": {
-    "prefix": "destroy",
+  "onDestroy": {
+    "prefix": "onDestroy",
     "body": [
-      "destroy() {",
+      "onDestroy() {",
       "  ${1}",
       "}"
     ],
     "scope": "typescriptreact",
     "description": "Create destroy life cycle"
   },
-  "update": {
-    "prefix": "update",
+  "onUpdate": {
+    "prefix": "onUpdate",
     "body": [
-      "update(dt: Float) {",
+      "onUpdate(dt: Float) {",
       "  ${1}",
       "}"
     ],
