@@ -21,6 +21,7 @@ let nextAudioId = 0
 let nextAudioVoiceId = 0
 let running = false
 let lastFrameTime = 0
+let frameDrawCalls = 0
 let pointerDown = false
 let resizeObserver: ResizeObserver | null = null
 
@@ -50,6 +51,18 @@ let lowMemoryCallback: VoidCallback | null = null
 let orientationCallback: OrientationCallback | null = null
 let terminateCallback: VoidCallback | null = null
 let hiddenTextInput: HTMLInputElement | null = null
+
+export interface RendererStats {
+  fps: number
+  frameTimeMs: number
+  drawCalls: number
+}
+
+const rendererStats: RendererStats = {
+  fps: 0,
+  frameTimeMs: 0,
+  drawCalls: 0,
+}
 
 function ensureHiddenTextInput(): HTMLInputElement {
   if (hiddenTextInput) return hiddenTextInput
@@ -411,7 +424,11 @@ function frame(time: number): void {
   const dt = lastFrameTime === 0 ? 0 : Math.min((time - lastFrameTime) / 1000, 0.1)
   lastFrameTime = time
   updateCallback?.(dt)
+  frameDrawCalls = 0
   renderCallback?.()
+  rendererStats.fps = dt > 0 ? 1 / dt : 0
+  rendererStats.frameTimeMs = dt * 1000
+  rendererStats.drawCalls = frameDrawCalls
   requestAnimationFrame(frame)
 }
 
@@ -747,6 +764,7 @@ function draw(
   context.enableVertexAttribArray(uvLocation)
   context.vertexAttribPointer(uvLocation, 2, context.FLOAT, false, 0, 0)
   context.drawArrays(context.TRIANGLES, 0, 6)
+  frameDrawCalls += 1
 }
 
 export function drawTexture(id: number, x: number, y: number): void {
@@ -863,6 +881,7 @@ export function drawTextureQuad(
   context.enableVertexAttribArray(uvLocation)
   context.vertexAttribPointer(uvLocation, 2, context.FLOAT, false, 0, 0)
   context.drawArrays(context.TRIANGLES, 0, 6)
+  frameDrawCalls += 1
 }
 
 export function drawRect(
@@ -1018,6 +1037,10 @@ function applyClipRect(): void {
 
 export function present(): void {
   gl?.flush()
+}
+
+export function getRendererStats(): RendererStats {
+  return { ...rendererStats }
 }
 
 export function onInit(callback: VoidCallback): void {

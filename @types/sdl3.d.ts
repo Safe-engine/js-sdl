@@ -60,6 +60,15 @@ declare module 'sdl3' {
   export function getTextureWidth(id: number): number
   export function getTextureHeight(id: number): number
 
+  export interface RendererStats {
+    fps: number
+    frameTimeMs: number
+    drawCalls: number
+  }
+
+  /** Return the most recently completed frame's renderer counters. */
+  export function getRendererStats(): RendererStats
+
   /** Load an audio asset. Returns an audio id (or -1 on failure). */
   export function loadAudio(path: string): number
 
