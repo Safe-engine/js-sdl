@@ -1,24 +1,23 @@
-import { ComponentX } from '../core/ComponentX'
-import { Sprite } from './Sprite'
+import { Sprite, SpriteProps } from './Sprite'
 
-export interface ProgressBarProps {
-  // spriteFrame?: string
+export interface ProgressBarProps extends SpriteProps {
   isVertical?: boolean
   fillRange?: number
   fillCenter?: Vec2
   isReverse?: boolean
 }
 
-export class ProgressBar extends ComponentX<ProgressBarProps> {
+export class ProgressBar extends Sprite<ProgressBarProps> {
   min = 0
   max = 1
-  private targetSprite: Sprite | null = null
 
   onAwake(): void {
+    super.onAwake()
     this.applyToSprite()
   }
 
   onStart(): void {
+    super.onStart()
     this.applyToSprite()
   }
 
@@ -54,17 +53,8 @@ export class ProgressBar extends ComponentX<ProgressBarProps> {
     this.applyToSprite()
   }
 
-  onNodeReassigned(): void {
-    this.targetSprite = null
-    this.applyToSprite()
-  }
-
   private applyToSprite(): void {
-    if (!this.node) return
-    const sprite = this.targetSprite ?? this.node.getComponent(Sprite)
-    if (!sprite) return
-    this.targetSprite = sprite
-    sprite.setFill({
+    this.setFill({
       fillRange: this.fillRange,
       isVertical: this.isVertical,
       isReverse: this.isReverse,

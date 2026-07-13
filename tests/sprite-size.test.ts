@@ -89,10 +89,23 @@ mock.module('sdl3', () => ({
 }))
 
 const { Sprite } = await import('../engine/components/Sprite')
+const { Button } = await import('../engine/components/Button')
 const { ProgressBar } = await import('../engine/components/ProgressBar')
 const { spriteFrameCache } = await import('../engine/SpriteFrameCache')
 
 describe('Sprite sizing', () => {
+  test('renders a Button as a Sprite', () => {
+    const node = new Node('button')
+    const button = node.addComponent(Button, { spriteFrame: 'Texture/UI/button.png' })
+    textureSizes.set(button.textureId, { width: 100, height: 20 })
+
+    drawCalls.length = 0
+    button.onRender()
+
+    expect(button).toBeInstanceOf(Sprite)
+    expect(drawCalls[drawCalls.length - 1]?.width).toBe(100)
+  })
+
   test('renders nested sprites at their own natural size without parent size scaling', () => {
     const parent = new Node('parent')
     parent.x = 563
@@ -135,15 +148,18 @@ describe('Sprite sizing', () => {
     expect(node.height).toBe(335)
   })
 
-  test('lets a ProgressBar component clamp Sprite rendering to fillRange', () => {
+  test('renders a ProgressBar using its own Sprite fillRange', () => {
     const node = new Node('progress')
-    const sprite = node.addComponent(Sprite, { spriteFrame: 'Texture/UI/progress.png' })
-    textureSizes.set(sprite.textureId, { width: 100, height: 20 })
-    node.addComponent(ProgressBar, { fillRange: 0.5 })
+    const progressBar = node.addComponent(ProgressBar, {
+      spriteFrame: 'Texture/UI/progress.png',
+      fillRange: 0.5,
+    })
+    textureSizes.set(progressBar.textureId, { width: 100, height: 20 })
 
     regionDrawCalls.length = 0
-    sprite.onRender()
+    progressBar.onRender()
 
+    expect(progressBar).toBeInstanceOf(Sprite)
     const lastDrawCall = regionDrawCalls[regionDrawCalls.length - 1]
     expect(lastDrawCall?.sourceWidth).toBe(50)
     expect(lastDrawCall?.sourceHeight).toBe(20)

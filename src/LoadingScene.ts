@@ -6,7 +6,6 @@ import {
   Panel,
   ProgressBar,
   Scene,
-  Sprite,
   TextAlignment,
   VerticalTextAlignment
 } from '../engine'
@@ -62,15 +61,16 @@ export class LoadingScene extends Scene {
     titleComp.node.width = 360
     titleComp.node.height = 48
 
-    const progressBar = instantiate(Sprite, {
+    const progressBar = instantiate(ProgressBar, {
       spriteFrame: sf_button,
+      fillRange: 0,
     })
-    this.progressBar = progressBar.addComponent(ProgressBar, { direction: 'horizontal', value: 0 })
     this.node.addChild(progressBar.node)
     progressBar.node.x = 360
     progressBar.node.y = 640
     progressBar.node.width = 480
     progressBar.node.height = 34
+    this.progressBar = progressBar
 
     const percentLabel = instantiate(Label, {
       string: '0%',

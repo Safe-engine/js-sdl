@@ -1,15 +1,13 @@
-import { ComponentX } from '../core/ComponentX'
 import { InputEvent } from '../Input'
+import { Sprite, SpriteProps } from './Sprite'
 
-interface ButtonProps {
-  // spriteFrame: string
+export interface ButtonProps extends SpriteProps {
   selectedImage?: string
   disableImage?: string
   zoomScale?: number
-  capInsets?: [number, number, number, number]
   onPress?: (target?: Button) => void
 }
-export class Button extends ComponentX<ButtonProps> {
+export class Button extends Sprite<ButtonProps> {
   inputEnabled = true
   consumeInput = true
 

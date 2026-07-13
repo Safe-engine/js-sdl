@@ -11,8 +11,8 @@ import { ComponentX } from '../core/ComponentX'
 import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH } from '../core/Node'
 import { SpriteFrameRegion, spriteFrameCache } from '../SpriteFrameCache'
 
-interface SpriteProps {
-  spriteFrame: string
+export interface SpriteProps {
+  spriteFrame?: string
   capInsets?: [number, number, number, number]
   tiled?: boolean
 }
@@ -23,7 +23,7 @@ export interface SpriteFillOptions {
   isReverse?: boolean
 }
 
-export class Sprite extends ComponentX<SpriteProps> {
+export class Sprite<Props extends SpriteProps = SpriteProps> extends ComponentX<Props> {
   texturePath = ''
   textureId = -1
   atlas: TextureAtlas | null = null
@@ -36,9 +36,9 @@ export class Sprite extends ComponentX<SpriteProps> {
   private autoHeight = DEFAULT_NODE_HEIGHT
   private naturalWidth = 0
   private naturalHeight = 0
-  private fillRange = 1
-  private fillVertical = false
-  private fillReverse = false
+  private spriteFillRange = 1
+  private spriteFillVertical = false
+  private spriteFillReverse = false
 
   onAwake(): void {
     if (this.props.spriteFrame) {
@@ -87,13 +87,13 @@ export class Sprite extends ComponentX<SpriteProps> {
 
   setFill(options: SpriteFillOptions): this {
     if (options.fillRange !== undefined) {
-      this.fillRange = Math.max(0, Math.min(1, options.fillRange))
+      this.spriteFillRange = Math.max(0, Math.min(1, options.fillRange))
     }
     if (options.isVertical !== undefined) {
-      this.fillVertical = options.isVertical
+      this.spriteFillVertical = options.isVertical
     }
     if (options.isReverse !== undefined) {
-      this.fillReverse = options.isReverse
+      this.spriteFillReverse = options.isReverse
     }
     return this
   }
@@ -114,8 +114,8 @@ export class Sprite extends ComponentX<SpriteProps> {
     const h = baseHeight * t.worldScaleY
     const dx = t.worldX - t.anchorX * w
     const dy = t.worldY - t.anchorY * h
-    if (this.fillRange <= 0) return
-    if (this.fillRange < 1) {
+    if (this.spriteFillRange <= 0) return
+    if (this.spriteFillRange < 1) {
       const source = frame ?? {
         x: 0,
         y: 0,
@@ -293,19 +293,19 @@ export class Sprite extends ComponentX<SpriteProps> {
     let width = w
     let height = h
 
-    if (this.fillVertical) {
-      sourceHeight *= this.fillRange
-      height *= this.fillRange
-      if (this.fillReverse) {
+    if (this.spriteFillVertical) {
+      sourceHeight *= this.spriteFillRange
+      height *= this.spriteFillRange
+      if (this.spriteFillReverse) {
         const sourceOffset = source.height - sourceHeight
         const destOffset = h - height
         sourceY += sourceOffset
         y += destOffset
       }
     } else {
-      sourceWidth *= this.fillRange
-      width *= this.fillRange
-      if (this.fillReverse) {
+      sourceWidth *= this.spriteFillRange
+      width *= this.spriteFillRange
+      if (this.spriteFillReverse) {
         const sourceOffset = source.width - sourceWidth
         const destOffset = w - width
         sourceX += sourceOffset
