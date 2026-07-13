@@ -3,7 +3,7 @@ import { SpineSkeleton } from '.'
 import { BaseComponentProps, ComponentX } from '../core/ComponentX'
 
 interface SpineBonesControlProps extends BaseComponentProps<SpineBonesControl> {
-  posList: Vec2[]
+  posList: number[]
   bonesName: string[]
 }
 export class SpineBonesControl extends ComponentX<SpineBonesControlProps> {
@@ -23,13 +23,10 @@ export class SpineBonesControl extends ComponentX<SpineBonesControlProps> {
     const { bonesName = [], posList = [] } = this.props
     let updated = false
     bonesName.forEach((boneName: string, index: number) => {
-      const pos = posList[index]
-      if (!pos) return
-
       const bone = skeleton.findBone(boneName)
       if (bone) {
-        bone.x = pos.x
-        bone.y = pos.y
+        bone.x = posList[index * 2]
+        bone.y = posList[index * 2 + 1]
         updated = true
       }
     })
