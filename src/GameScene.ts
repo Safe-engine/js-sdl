@@ -5,7 +5,6 @@ import {
   loadScene,
   PhysicsWorld,
   Scene,
-  Sprite,
   TextAlignment,
   Touch,
   TiledMap,
@@ -98,14 +97,12 @@ export class GameScene extends Scene {
     Label2.node.height = 40
     Label2.node.anchorX = 0
     Label2.node.anchorY = 0
-    const spriteComp2 = instantiate(Sprite, { spriteFrame: sf_button })
-    this.node.addChild(spriteComp2.node)
-    spriteComp2.node.x = 360
-    spriteComp2.node.y = 240
-    spriteComp2.node.width = 220
-    spriteComp2.node.height = 68
-    const Button2 = instantiate(Button, { onPress: this.onClick })
-    spriteComp2.node.resolveComponent(Button2)
+    const Button2 = instantiate(Button, { spriteFrame: sf_button, onPress: this.onClick })
+    this.node.addChild(Button2.node)
+    Button2.node.x = 360
+    Button2.node.y = 240
+    Button2.node.width = 220
+    Button2.node.height = 68
     const Label3 = instantiate(Label, {
       string: 'PLAY',
       font: lilita_one_regularFont,
@@ -113,7 +110,7 @@ export class GameScene extends Scene {
       align: TextAlignment.center,
       verticalAlign: VerticalTextAlignment.middle,
     })
-    spriteComp2.node.resolveComponent(Label3)
+    Button2.node.resolveComponent(Label3)
   }
 }
 

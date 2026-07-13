@@ -3,7 +3,6 @@ import {
   Label,
   Scene,
   SpineSkeleton,
-  Sprite,
   TextAlignment,
   VerticalTextAlignment
 } from '../engine'
@@ -34,14 +33,16 @@ export class HomeScene extends Scene {
   }
 
   __view() {
-    const spriteComp1 = instantiate(Sprite, { spriteFrame: sf_button, capInsets: [20, 20, 20, 20] })
-    this.node.addChild(spriteComp1.node)
-    spriteComp1.node.x = 360
-    spriteComp1.node.y = 640
-    spriteComp1.node.width = 420
-    spriteComp1.node.height = 268
-    const Button1 = instantiate(Button, { onPress: this.onClick })
-    spriteComp1.node.resolveComponent(Button1)
+    const Button1 = instantiate(Button, {
+      spriteFrame: sf_button,
+      capInsets: [20, 20, 20, 20],
+      onPress: this.onClick,
+    })
+    this.node.addChild(Button1.node)
+    Button1.node.x = 360
+    Button1.node.y = 640
+    Button1.node.width = 420
+    Button1.node.height = 268
     const Label1 = instantiate(Label, {
       string: 'PLAY',
       font: lilita_one_regularFont,
