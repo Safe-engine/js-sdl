@@ -282,9 +282,11 @@ describe('Sprite sizing', () => {
 
   test('renders tiled sprites with clipped edge tiles', () => {
     const node = new Node('tiled')
+    node.width = 25
+    node.height = 18
     const sprite = node.addComponent(Sprite, {
       spriteFrame: 'Texture/UI/tile.png',
-      tiledSize: { width: 25, height: 18 },
+      tiled: true,
     })
     textureSizes.set(sprite.textureId, { width: 10, height: 8 })
 
@@ -315,9 +317,11 @@ describe('Sprite sizing', () => {
       height: 4,
     })
     const node = new Node('atlas-tiled')
+    node.width = 14
+    node.height = 4
     const sprite = node.addComponent(Sprite, {
       spriteFrame: 'tile-frame',
-      tiledSize: { width: 14, height: 4 },
+      tiled: true,
     })
     textureSizes.set(sprite.textureId, { width: 64, height: 64 })
 

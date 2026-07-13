@@ -13,9 +13,8 @@ import { SpriteFrameRegion, spriteFrameCache } from '../SpriteFrameCache'
 
 interface SpriteProps {
   spriteFrame: string
-  // type?: SpriteTypes
   capInsets?: [number, number, number, number]
-  tiledSize?: Size
+  tiled?: boolean
 }
 
 export interface SpriteFillOptions {
@@ -60,13 +59,12 @@ export class Sprite extends ComponentX<SpriteProps> {
     this.setTexture(frameString)
   }
 
-  get tiledSize(): Size | undefined {
-    return this.props.tiledSize
+  get tiled(): boolean {
+    return this.props.tiled ?? false
   }
 
-  set tiledSize(size: Size | undefined) {
-    this.props.tiledSize = size
-    this.applyTiledSize()
+  set tiled(value: boolean) {
+    this.props.tiled = value
   }
 
   setTexture(path: string): this {
@@ -109,11 +107,9 @@ export class Sprite extends ComponentX<SpriteProps> {
     const frame = this.getFrame()
     const naturalWidth = this.naturalWidth || frame?.width || this.texture?.width || 0
     const naturalHeight = this.naturalHeight || frame?.height || this.texture?.height || 0
-    const tiledSize = this.props.tiledSize
-    const baseWidth = tiledSize?.width
-      ?? (this.isSharedNode() ? naturalWidth : this.node.width || naturalWidth)
-    const baseHeight = tiledSize?.height
-      ?? (this.isSharedNode() ? naturalHeight : this.node.height || naturalHeight)
+    const useNodeSize = this.props.tiled || !this.isSharedNode()
+    const baseWidth = useNodeSize ? this.node.width || naturalWidth : naturalWidth
+    const baseHeight = useNodeSize ? this.node.height || naturalHeight : naturalHeight
     const w = baseWidth * t.worldScaleX
     const h = baseHeight * t.worldScaleY
     const dx = t.worldX - t.anchorX * w
@@ -129,7 +125,7 @@ export class Sprite extends ComponentX<SpriteProps> {
       this.drawFilledRegion(source, dx, dy, w, h)
       return
     }
-    if (tiledSize) {
+    if (this.props.tiled) {
       const source = frame ?? {
         x: 0,
         y: 0,
@@ -223,8 +219,6 @@ export class Sprite extends ComponentX<SpriteProps> {
     if (width > 0) this.naturalWidth = width
     if (height > 0) this.naturalHeight = height
 
-    if (this.applyTiledSize()) return
-
     if (!this.isSharedNode() && width > 0 && (this.node.width === DEFAULT_NODE_WIDTH || this.node.width === this.autoWidth)) {
       this.node.width = width
       this.autoWidth = width
@@ -237,20 +231,6 @@ export class Sprite extends ComponentX<SpriteProps> {
 
   private isSharedNode(): boolean {
     return this.node.components[0] !== this
-  }
-
-  private applyTiledSize(): boolean {
-    const size = this.props.tiledSize
-    if (!size || this.isSharedNode()) return false
-    if (size.width > 0 && (this.node.width === DEFAULT_NODE_WIDTH || this.node.width === this.autoWidth)) {
-      this.node.width = size.width
-      this.autoWidth = size.width
-    }
-    if (size.height > 0 && (this.node.height === DEFAULT_NODE_HEIGHT || this.node.height === this.autoHeight)) {
-      this.node.height = size.height
-      this.autoHeight = size.height
-    }
-    return true
   }
 
   private drawFrame(
@@ -353,10 +333,7 @@ export class Sprite extends ComponentX<SpriteProps> {
     w: number,
     h: number,
   ): void {
-    if (source.width < 32 || source.height < 32 || w < 32 || h < 32) {
-      console.warn('Tiled region is too small (<32px) to tile, rendering as a single texture instead.')
-      return
-    }
+    if (source.width <= 0 || source.height <= 0 || w <= 0 || h <= 0) return
 
     const t = this.node
     const opacity = this.node.opacity * (this.node.color.a ?? 255)
