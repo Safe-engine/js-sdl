@@ -47,4 +47,34 @@ describe('Widget', () => {
     expect(node.x).toBe(360);
     expect(node.y).toBe(637);
   });
+
+  test('centers a node horizontally and vertically in the safe area', () => {
+    ActiveViewport.update([720, 1280, 720, 1280, 0, 0, 720, 1280, 10, 44, 700, 1202]);
+
+    const node = new Node('hud');
+    node.width = 120;
+    node.height = 48;
+    node.anchorX = 0;
+    node.anchorY = 1;
+    node.addComponent(Widget, { centerVertical: true, centerHorizon: true });
+
+    node._updateTree(0);
+
+    expect(node.x).toBe(300);
+    expect(node.y).toBe(669);
+  });
+
+  test('centers only the requested axis', () => {
+    ActiveViewport.update([720, 1280, 720, 1280, 0, 0, 720, 1280, 10, 44, 700, 1202]);
+
+    const node = new Node('hud');
+    node.width = 120;
+    node.height = 48;
+    node.addComponent(Widget, { top: 16, centerHorizon: true });
+
+    node._updateTree(0);
+
+    expect(node.x).toBe(360);
+    expect(node.y).toBe(84);
+  });
 });

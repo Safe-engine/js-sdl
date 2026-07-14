@@ -6,6 +6,8 @@ export interface WidgetProps {
   right?: Integer
   bottom?: Integer
   left?: Integer
+  centerVertical?: boolean
+  centerHorizon?: boolean
 }
 
 export class Widget extends ComponentX<WidgetProps> {
@@ -13,12 +15,16 @@ export class Widget extends ComponentX<WidgetProps> {
   right: number | null = null
   bottom: number | null = null
   left: number | null = null
+  centerVertical = false
+  centerHorizon = false
 
   onAwake(): void {
     this.top = normalizeInset(this.props.top)
     this.right = normalizeInset(this.props.right)
     this.bottom = normalizeInset(this.props.bottom)
     this.left = normalizeInset(this.props.left)
+    this.centerVertical = this.props.centerVertical ?? false
+    this.centerHorizon = this.props.centerHorizon ?? false
   }
 
   onUpdate(_dt: number): void {
@@ -30,6 +36,8 @@ export class Widget extends ComponentX<WidgetProps> {
     if (insets.right !== undefined) this.right = normalizeInset(insets.right)
     if (insets.bottom !== undefined) this.bottom = normalizeInset(insets.bottom)
     if (insets.left !== undefined) this.left = normalizeInset(insets.left)
+    if (insets.centerVertical !== undefined) this.centerVertical = insets.centerVertical
+    if (insets.centerHorizon !== undefined) this.centerHorizon = insets.centerHorizon
     return this
   }
 
@@ -50,14 +58,20 @@ export class Widget extends ComponentX<WidgetProps> {
       this.node.height = Math.max(0, safeArea.height - this.top! - this.bottom!)
     }
 
-    if (hasLeft) {
+    if (this.centerHorizon) {
+      transform.x = safeArea.x + safeArea.width / 2
+        + this.node.width * (transform.anchorX - 0.5)
+    } else if (hasLeft) {
       transform.x = safeArea.x + this.left! + this.node.width * transform.anchorX
     } else if (hasRight) {
       transform.x = safeArea.x + safeArea.width - this.right!
         - this.node.width * (1 - transform.anchorX)
     }
 
-    if (hasTop) {
+    if (this.centerVertical) {
+      transform.y = safeArea.y + safeArea.height / 2
+        + this.node.height * (transform.anchorY - 0.5)
+    } else if (hasTop) {
       transform.y = safeArea.y + this.top! + this.node.height * transform.anchorY
     } else if (hasBottom) {
       transform.y = safeArea.y + safeArea.height - this.bottom!

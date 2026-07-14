@@ -398,7 +398,8 @@ topBar.active = false;
 `Widget` pins a node to the current safe-area border, so HUD controls stay
 inside phone notches/system bars and resize with any window size. Supplying
 both sides on an axis stretches the node on that axis; supplying one side keeps
-the node's existing size and pins it to that border.
+the node's existing size and pins it to that border. Set `centerHorizon` or
+`centerVertical` to center the node on that safe-area axis.
 
 Set `node.active = false` to pause updates, rendering, input, and descendant
 traversal for that node's whole subtree until it is re-enabled.
