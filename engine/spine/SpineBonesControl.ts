@@ -16,7 +16,7 @@ export class SpineBonesControl extends ComponentX<SpineBonesControlProps> {
   }
 
   private applyBonePositions() {
-    const skel = this.findSpineSkeleton()
+    const skel = this.getComponent(SpineSkeleton)
     const skeleton = skel?.skeleton
     if (!skeleton) return
 
@@ -24,22 +24,14 @@ export class SpineBonesControl extends ComponentX<SpineBonesControlProps> {
     let updated = false
     bonesName.forEach((boneName: string, index: number) => {
       const bone = skeleton.findBone(boneName)
-      if (bone) {
-        bone.x = posList[index * 2]
-        bone.y = posList[index * 2 + 1]
+      const x = posList[index * 2]
+      const y = posList[index * 2 + 1]
+      if (bone && x !== undefined && y !== undefined) {
+        bone.x = x
+        bone.y = y
         updated = true
       }
     })
     if (updated) skeleton.updateWorldTransform(Physics.update)
-  }
-
-  private findSpineSkeleton(): SpineSkeleton | null {
-    let current = this.node
-    while (current) {
-      const skel = current.getComponent(SpineSkeleton)
-      if (skel) return skel
-      current = current.parent
-    }
-    return null
   }
 }

@@ -21,7 +21,7 @@ describe('SpineBonesControl', () => {
     const child = new Node('control')
     const control = child.addComponent(new SpineBonesControl({
       bonesName: ['head', 'missing'],
-      posList: [{ x: 12, y: 34 } as Vec2, { x: 56, y: 78 } as Vec2],
+      posList: [12, 34, 56, 78],
     }))
     parent.addChild(child)
 
