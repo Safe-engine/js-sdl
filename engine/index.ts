@@ -72,14 +72,14 @@ export type {
 export { Button } from './components/Button'
 export { Camera2D } from './components/Camera2D'
 export type { Camera2DProps } from './components/Camera2D'
+export { CircleProgress } from './components/CircleProgress'
+export type { CircleProgressProps } from './components/CircleProgress'
 export {
   Label,
   TextAlignment,
   VerticalTextAlignment
 } from './components/Label'
 export { ProgressBar } from './components/ProgressBar'
-export { CircleProgress } from './components/CircleProgress'
-export type { CircleProgressProps } from './components/CircleProgress'
 export { RichText } from './components/RichText'
 export type { RichTextProps } from './components/RichText'
 export { Slider } from './components/Slider'
@@ -92,13 +92,10 @@ export type { TiledMapProps } from './components/TiledMap'
 export { TouchEventRegister } from './components/TouchEventRegister'
 export type { TouchEventRegisterProps } from './components/TouchEventRegister'
 export {
-  NineSlice,
-  Panel,
   ScrollView,
   Toggle,
   UIContainer,
-  UIElement,
-  UIImage
+  UILayout
 } from './components/UI'
 export type {
   LayoutAlignment,
@@ -130,3 +127,4 @@ export type {
 export { Spine, SpineSkeleton } from './spine'
 export type { SpineData, SpineSkeletonProps } from './spine'
 export { SpineBonesControl } from './spine/SpineBonesControl'
+

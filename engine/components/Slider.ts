@@ -1,7 +1,8 @@
 import * as sdl from 'sdl3'
 import { white } from '../helper/constants'
 import type { InputEvent } from '../Input'
-import { UIElement } from './UI'
+import { ComponentX } from '../core/ComponentX'
+import { containsPoint, worldRect } from './UI'
 
 export interface SliderProps {
   min?: number
@@ -12,7 +13,7 @@ export interface SliderProps {
   onChange?: (value: number, target: Slider) => void
 }
 
-export class Slider extends UIElement<SliderProps> {
+export class Slider extends ComponentX<SliderProps> {
   min = 0
   max = 1
   value = 0
@@ -35,7 +36,7 @@ export class Slider extends UIElement<SliderProps> {
   }
 
   hitTest(x: number, y: number): boolean {
-    return !this.disabled && this.containsPoint(x, y)
+    return !this.disabled && containsPoint(this.node, x, y)
   }
 
   onPointerStart(event: InputEvent): void {
@@ -77,7 +78,7 @@ export class Slider extends UIElement<SliderProps> {
   }
 
   onRender(): void {
-    const rect = this.worldRect()
+    const rect = worldRect(this.node)
     const ratio = this.valueRatio()
     sdl.drawRect(rect.x, rect.y, rect.width, rect.height,
       this.trackColor.r, this.trackColor.g, this.trackColor.b,
@@ -115,7 +116,7 @@ export class Slider extends UIElement<SliderProps> {
   }
 
   private updateFromPointer(x: number, y: number, emit: boolean): void {
-    const rect = this.worldRect()
+    const rect = worldRect(this.node)
     if (rect.width <= 0 || rect.height <= 0) return
 
     const ratio = this.vertical

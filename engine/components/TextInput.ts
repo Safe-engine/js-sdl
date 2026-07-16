@@ -13,7 +13,8 @@ import {
 } from '../AssetManager'
 import type { InputEvent } from '../Input'
 import { Label } from './Label'
-import { UIElement } from './UI'
+import { containsPoint, worldRect } from './UI'
+import { ComponentX } from '../core/ComponentX'
 
 export interface TextInputProps {
   font?: string
@@ -29,7 +30,7 @@ export interface TextInputProps {
   onSubmit?: (value: string, target: TextInput) => void
 }
 
-export class TextInput extends UIElement<TextInputProps> {
+export class TextInput extends ComponentX<TextInputProps> {
   static focused: TextInput | null = null
 
   value = ''
@@ -81,7 +82,7 @@ export class TextInput extends UIElement<TextInputProps> {
 
   onRender(): void {
     this.ensureAssets()
-    const rect = this.worldRect()
+    const rect = worldRect(this.node)
     const isFocused = this.isFocused()
     const background = isFocused
       ? this.focusedBackgroundColor
@@ -150,7 +151,7 @@ export class TextInput extends UIElement<TextInputProps> {
   }
 
   hitTest(x: number, y: number): boolean {
-    return this.containsPoint(x, y)
+    return containsPoint(this.node, x, y)
   }
 
   onPointerStart(event: InputEvent): void {
@@ -196,7 +197,7 @@ export class TextInput extends UIElement<TextInputProps> {
 
   static handleGlobalPointerStart(x: number, y: number): void {
     const active = TextInput.focused
-    if (active && !active.containsPoint(x, y)) active.blur()
+    if (active && !containsPoint(active.node, x, y)) active.blur()
   }
 
   static handleTextInput(text: string): void {

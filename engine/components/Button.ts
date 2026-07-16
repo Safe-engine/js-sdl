@@ -2,6 +2,7 @@ import { InputEvent } from '../Input'
 import { Sprite, SpriteProps } from './Sprite'
 
 export interface ButtonProps extends SpriteProps {
+  spriteFrame: string
   selectedImage?: string
   disableImage?: string
   zoomScale?: number

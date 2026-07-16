@@ -1,6 +1,7 @@
 import { Sprite, SpriteProps } from './Sprite'
 
 export interface ProgressBarProps extends SpriteProps {
+  spriteFrame: string
   isVertical?: boolean
   fillRange?: number
   fillCenter?: Vec2

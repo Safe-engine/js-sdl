@@ -1,515 +1,282 @@
 import * as sdl from 'sdl3'
-import { AssetManager, TextureAsset } from '../AssetManager'
 import { ComponentX } from '../core/ComponentX'
 import type { Node } from '../core/Node'
-import { white, zeroInsets } from '../helper/constants'
+import { white } from '../helper/constants'
 import type { InputEvent } from '../Input'
 
-export type LayoutDirection = 'none' | 'horizontal' | 'vertical'
+export type LayoutDirection = 'none' | 'horizontal' | 'vertical' | 'grid'
 export type LayoutAlignment = 'start' | 'center' | 'end' | 'stretch'
 
-export class UIElement<Props = unknown> extends ComponentX<Props> {
-  private _width = 100
-  private _height = 100
-  private _minWidth = 0
-  private _minHeight = 0
-  private _maxWidth = Number.POSITIVE_INFINITY
-  private _maxHeight = Number.POSITIVE_INFINITY
-  private _flex = 0
-  private _margin: Insets = zeroInsets()
-  private _anchorMinX: number | null = null
-  private _anchorMinY: number | null = null
-  private _anchorMaxX: number | null = null
-  private _anchorMaxY: number | null = null
-  private _offsetLeft = 0
-  private _offsetTop = 0
-  private _offsetRight = 0
-  private _offsetBottom = 0
-  private _layoutDirty = true
-  private _layoutVersion = 0
-  private _lastParentLayoutVersion = -1
-
-  onUpdate(_dt: number): void {
-    if (!this.needsLayout()) return
-    this.applyAnchors()
-    this.clampSize()
-    this.clearLayoutDirty()
-  }
-
-  get width(): number {
-    return this._width
-  }
-
-  set width(value: number) {
-    if (this._width === value) return
-    this._width = value
-    this.markLayoutDirty()
-  }
-
-  get height(): number {
-    return this._height
-  }
-
-  set height(value: number) {
-    if (this._height === value) return
-    this._height = value
-    this.markLayoutDirty()
-  }
-
-  get minWidth(): number {
-    return this._minWidth
-  }
-
-  set minWidth(value: number) {
-    if (this._minWidth === value) return
-    this._minWidth = value
-    this.markLayoutDirty()
-  }
-
-  get minHeight(): number {
-    return this._minHeight
-  }
-
-  set minHeight(value: number) {
-    if (this._minHeight === value) return
-    this._minHeight = value
-    this.markLayoutDirty()
-  }
-
-  get maxWidth(): number {
-    return this._maxWidth
-  }
-
-  set maxWidth(value: number) {
-    if (this._maxWidth === value) return
-    this._maxWidth = value
-    this.markLayoutDirty()
-  }
-
-  get maxHeight(): number {
-    return this._maxHeight
-  }
-
-  set maxHeight(value: number) {
-    if (this._maxHeight === value) return
-    this._maxHeight = value
-    this.markLayoutDirty()
-  }
-
-  get flex(): number {
-    return this._flex
-  }
-
-  set flex(value: number) {
-    if (this._flex === value) return
-    this._flex = value
-    this.markLayoutDirty()
-  }
-
-  get margin(): Insets {
-    return this._margin
-  }
-
-  set margin(value: Insets) {
-    if (this._margin === value) return
-    this._margin = value
-    this.markLayoutDirty()
-  }
-
-  get anchorMinX(): number | null {
-    return this._anchorMinX
-  }
-
-  set anchorMinX(value: number | null) {
-    if (this._anchorMinX === value) return
-    this._anchorMinX = value
-    this.markLayoutDirty()
-  }
-
-  get anchorMinY(): number | null {
-    return this._anchorMinY
-  }
-
-  set anchorMinY(value: number | null) {
-    if (this._anchorMinY === value) return
-    this._anchorMinY = value
-    this.markLayoutDirty()
-  }
-
-  get anchorMaxX(): number | null {
-    return this._anchorMaxX
-  }
-
-  set anchorMaxX(value: number | null) {
-    if (this._anchorMaxX === value) return
-    this._anchorMaxX = value
-    this.markLayoutDirty()
-  }
-
-  get anchorMaxY(): number | null {
-    return this._anchorMaxY
-  }
-
-  set anchorMaxY(value: number | null) {
-    if (this._anchorMaxY === value) return
-    this._anchorMaxY = value
-    this.markLayoutDirty()
-  }
-
-  get offsetLeft(): number {
-    return this._offsetLeft
-  }
-
-  set offsetLeft(value: number) {
-    if (this._offsetLeft === value) return
-    this._offsetLeft = value
-    this.markLayoutDirty()
-  }
-
-  get offsetTop(): number {
-    return this._offsetTop
-  }
-
-  set offsetTop(value: number) {
-    if (this._offsetTop === value) return
-    this._offsetTop = value
-    this.markLayoutDirty()
-  }
-
-  get offsetRight(): number {
-    return this._offsetRight
-  }
-
-  set offsetRight(value: number) {
-    if (this._offsetRight === value) return
-    this._offsetRight = value
-    this.markLayoutDirty()
-  }
-
-  get offsetBottom(): number {
-    return this._offsetBottom
-  }
-
-  set offsetBottom(value: number) {
-    if (this._offsetBottom === value) return
-    this._offsetBottom = value
-    this.markLayoutDirty()
-  }
-
-  get layoutDirty(): boolean {
-    return this._layoutDirty
-  }
-
-  get layoutVersion(): number {
-    return this._layoutVersion
-  }
-
-  setSize(width: number, height: number): this {
-    this.width = width
-    this.height = height
-    return this
-  }
-
-  setAnchors(
-    minX: number,
-    minY: number,
-    maxX: number = minX,
-    maxY: number = minY,
-  ): this {
-    this.anchorMinX = minX
-    this.anchorMinY = minY
-    this.anchorMaxX = maxX
-    this.anchorMaxY = maxY
-    return this
-  }
-
-  protected markLayoutDirty(): void {
-    this._layoutDirty = true
-  }
-
-  protected needsLayout(): boolean {
-    return this._layoutDirty
-      || this.parentLayoutVersion !== this._lastParentLayoutVersion
-  }
-
-  protected applyAnchors(): void {
-    if (this.anchorMinX === null || this.anchorMinY === null || !this.node) return
-    const parent = findUIElement(this.node.parent)
-    if (!parent) return
-
-    const maxX = this.anchorMaxX ?? this.anchorMinX
-    const maxY = this.anchorMaxY ?? this.anchorMinY
-    const parentTransform = parent.node
-    const originX = -parentTransform.anchorX * parent.width
-    const originY = -parentTransform.anchorY * parent.height
-    const left = originX + parent.width * this.anchorMinX + this.offsetLeft
-    const top = originY + parent.height * this.anchorMinY + this.offsetTop
-    const right = originX + parent.width * maxX - this.offsetRight
-    const bottom = originY + parent.height * maxY - this.offsetBottom
-    const transform = this.node
-
-    if (maxX !== this.anchorMinX) this.width = right - left
-    if (maxY !== this.anchorMinY) this.height = bottom - top
-    transform.x = left + this.width * transform.anchorX
-    transform.y = top + this.height * transform.anchorY
-  }
-
-  protected clampSize(): void {
-    this.width = Math.max(this.minWidth, Math.min(this.maxWidth, this.width))
-    this.height = Math.max(this.minHeight, Math.min(this.maxHeight, this.height))
-  }
-
-  protected clearLayoutDirty(): void {
-    const parentLayoutVersion = this.parentLayoutVersion
-    if (this._layoutDirty || this._lastParentLayoutVersion !== parentLayoutVersion) {
-      this._layoutVersion += 1
-    }
-    this._layoutDirty = false
-    this._lastParentLayoutVersion = parentLayoutVersion
-  }
-
-  private get parentLayoutVersion(): number {
-    return findUIElement(this.node?.parent ?? null)?.layoutVersion ?? -1
-  }
-
-  protected worldRect(): { x: number, y: number, width: number, height: number } {
-    const t = this.node
-    const width = this.width * Math.abs(t.worldScaleX)
-    const height = this.height * Math.abs(t.worldScaleY)
-    return {
-      x: t.worldX - t.anchorX * width,
-      y: t.worldY - t.anchorY * height,
-      width,
-      height,
-    }
-  }
-
-  protected containsPoint(x: number, y: number): boolean {
-    const rect = this.worldRect()
-    return x >= rect.x && x <= rect.x + rect.width
-      && y >= rect.y && y <= rect.y + rect.height
-  }
+// Attach to child nodes to control flex and margin in layout containers
+export class LayoutChild extends ComponentX {
+  flex = 0
+  margin: [number, number, number, number] = [0, 0, 0, 0]
 }
 
-export class UIContainer<T = unknown> extends UIElement<T> {
-  private _direction: LayoutDirection = 'none'
-  private _gap = 0
-  private _padding: Insets = zeroInsets()
+function getLayoutChild(node: Node): LayoutChild | null {
+  return node.getComponent(LayoutChild)
+}
+
+function marginLeft(c: LayoutChild | null): number { return c ? c.margin[3] : 0 }
+function marginRight(c: LayoutChild | null): number { return c ? c.margin[1] : 0 }
+function marginTop(c: LayoutChild | null): number { return c ? c.margin[0] : 0 }
+function marginBottom(c: LayoutChild | null): number { return c ? c.margin[2] : 0 }
+
+// --- UIContainer: horizontal / vertical layout --------------------------------
+
+interface UIContainerProps {
+  direction?: LayoutDirection
+  gap?: number
+  padding?: [number, number, number, number]
+}
+
+export class UIContainer<Props = UIContainerProps> extends ComponentX<Props> {
   private _align: LayoutAlignment = 'start'
   private _lastChildRevision = -1
 
-  get direction(): LayoutDirection {
-    return this._direction
+  private get _p(): Required<UIContainerProps> {
+    return { direction: 'none', gap: 0, padding: [0, 0, 0, 0], ...this.props as any }
   }
 
-  set direction(value: LayoutDirection) {
-    if (this._direction === value) return
-    this._direction = value
-    this.markLayoutDirty()
-  }
+  get align(): LayoutAlignment { return this._align }
+  set align(v: LayoutAlignment) { this._align = v }
 
-  get gap(): number {
-    return this._gap
-  }
-
-  set gap(value: number) {
-    if (this._gap === value) return
-    this._gap = value
-    this.markLayoutDirty()
-  }
-
-  get padding(): Insets {
-    return this._padding
-  }
-
-  set padding(value: Insets) {
-    if (this._padding === value) return
-    this._padding = value
-    this.markLayoutDirty()
-  }
-
-  get align(): LayoutAlignment {
-    return this._align
-  }
-
-  set align(value: LayoutAlignment) {
-    if (this._align === value) return
-    this._align = value
-    this.markLayoutDirty()
-  }
-
-  onUpdate(dt: number): void {
-    const ownLayoutNeeded = this.needsLayout()
-    if (ownLayoutNeeded) {
-      super.onUpdate(dt)
-    }
-    if (this.direction !== 'none' && (ownLayoutNeeded || this.needsChildLayout())) {
+  onUpdate(_dt: number): void {
+    const dir = this._p.direction
+    if (dir !== 'none' && this.needsChildLayout()) {
       this.layoutChildren()
       this._lastChildRevision = this.node?.childRevision ?? -1
     }
   }
 
+  private needsChildLayout(): boolean {
+    return this.node?.childRevision !== this._lastChildRevision
+  }
+
   layoutChildren(): void {
-    if (!this.node) return
-    const horizontal = this.direction === 'horizontal'
-    const originX = -this.node.anchorX * this.width
-    const originY = -this.node.anchorY * this.height
-    const items = this.node.children
-      .map(node => ({ node, element: findUIElement(node) }))
-      .filter((item): item is { node: Node, element: UIElement } => !!item.element)
-    if (items.length === 0) return
+    const n = this.node
+    if (!n) return
+    const p = this._p
+    const horizontal = p.direction === 'horizontal'
+    const ox = -n.anchorX * n.width
+    const oy = -n.anchorY * n.height
+    const kids = n.children
+    if (kids.length === 0) return
 
-    const mainSize = horizontal ? this.width : this.height
-    const leading = horizontal ? this.padding.left : this.padding.top
-    const trailing = horizontal ? this.padding.right : this.padding.bottom
-    const fixed = items.reduce((sum, { element }) => {
-      const size = horizontal ? element.width : element.height
-      const margin = horizontal
-        ? element.margin.left + element.margin.right
-        : element.margin.top + element.margin.bottom
-      return sum + (element.flex > 0 ? margin : size + margin)
-    }, this.gap * Math.max(0, items.length - 1))
-    const totalFlex = items.reduce((sum, item) => sum + item.element.flex, 0)
-    const remaining = Math.max(0, mainSize - leading - trailing - fixed)
-    let cursor = leading
+    const [pt, _pr, pb, pl] = p.padding
+    const mainSize = horizontal ? n.width : n.height
+    const leading = horizontal ? pl : pt
+    const trailing = horizontal ? p.padding[1] : pb
 
-    for (const { node, element } of items) {
-      const marginBefore = horizontal ? element.margin.left : element.margin.top
-      const marginAfter = horizontal ? element.margin.right : element.margin.bottom
-      cursor += marginBefore
-      if (element.flex > 0 && totalFlex > 0) {
-        if (horizontal) element.width = remaining * element.flex / totalFlex
-        else element.height = remaining * element.flex / totalFlex
-      }
-
-      const crossStart = horizontal ? this.padding.top : this.padding.left
-      const crossEnd = horizontal ? this.padding.bottom : this.padding.right
-      const crossAvailable = (horizontal ? this.height : this.width)
-        - crossStart - crossEnd
-      const crossSize = horizontal ? element.height : element.width
-      let cross = crossStart
-      if (this.align === 'center') cross += (crossAvailable - crossSize) * 0.5
-      if (this.align === 'end') cross += crossAvailable - crossSize
-      if (this.align === 'stretch') {
-        if (horizontal) element.height = crossAvailable
-        else element.width = crossAvailable
-      }
-
-      const t = node
-      if (horizontal) {
-        t.x = originX + cursor + element.width * t.anchorX
-        t.y = originY + cross + element.height * t.anchorY
-        cursor += element.width + marginAfter + this.gap
+    let fixed = 0
+    let totalFlex = 0
+    const margins: { before: number; after: number }[] = []
+    for (const child of kids) {
+      const lc = getLayoutChild(child)
+      margins.push({
+        before: horizontal ? marginLeft(lc) : marginTop(lc),
+        after: horizontal ? marginRight(lc) : marginBottom(lc),
+      })
+      const size = horizontal ? child.width : child.height
+      const marginSum = margins[margins.length - 1].before + margins[margins.length - 1].after
+      if (lc && lc.flex > 0) {
+        totalFlex += lc.flex
+        fixed += marginSum
       } else {
-        t.x = originX + cross + element.width * t.anchorX
-        t.y = originY + cursor + element.height * t.anchorY
-        cursor += element.height + marginAfter + this.gap
+        fixed += size + marginSum
       }
+    }
+    fixed += p.gap * Math.max(0, kids.length - 1)
+    const remaining = Math.max(0, mainSize - leading - trailing - fixed)
+
+    let cursor = leading
+    for (let i = 0; i < kids.length; i++) {
+      const child = kids[i]
+      const lc = getLayoutChild(child)
+      const m = margins[i]
+      cursor += m.before
+      if (lc && lc.flex > 0 && totalFlex > 0) {
+        if (horizontal) child.width = remaining * lc.flex / totalFlex
+        else child.height = remaining * lc.flex / totalFlex
+      }
+
+      const crossSize = horizontal ? child.height : child.width
+      const crossW = horizontal ? n.height : n.width
+      const crossStart = horizontal ? pt : pl
+      const crossEnd = horizontal ? pb : p.padding[1]
+      const crossAvail = crossW - crossStart - crossEnd
+      let cross = crossStart
+      if (this._align === 'center') cross += (crossAvail - crossSize) * 0.5
+      if (this._align === 'end') cross += crossAvail - crossSize
+      if (this._align === 'stretch') {
+        if (horizontal) child.height = crossAvail
+        else child.width = crossAvail
+      }
+
+      if (horizontal) {
+        child.x = ox + cursor + child.width * child.anchorX
+        child.y = oy + cross + child.height * child.anchorY
+        cursor += child.width + m.after + p.gap
+      } else {
+        child.x = ox + cross + child.width * child.anchorX
+        child.y = oy + cursor + child.height * child.anchorY
+        cursor += child.height + m.after + p.gap
+      }
+    }
+  }
+}
+
+// --- UILayout: horizontal / vertical / grid (props-based) ---------------------
+
+interface UILayoutProps {
+  direction?: LayoutDirection
+  gap?: number
+  padding?: [number, number, number, number]
+}
+
+export class UILayout extends ComponentX<UILayoutProps> {
+  private _lastChildRevision = -1
+  private _childSizes = new WeakMap<Node, { w: number; h: number }>()
+
+  private get _p(): Required<UILayoutProps> {
+    return { direction: 'horizontal', gap: 0, padding: [0, 0, 0, 0], ...this.props }
+  }
+
+  onRender() { }
+
+  onUpdate(_dt: number): void {
+    const dir = this._p.direction
+    if (dir !== 'none' && this.needsChildLayout()) {
+      this.layoutChildren()
+      this._snapshotChildSizes()
+      this._lastChildRevision = this.node?.childRevision ?? -1
+    }
+  }
+
+  private _snapshotChildSizes(): void {
+    for (const child of this.node?.children ?? []) {
+      this._childSizes.set(child, { w: child.width, h: child.height })
     }
   }
 
   private needsChildLayout(): boolean {
-    if (!this.node) return false
-    if (this.node.childRevision !== this._lastChildRevision) return true
-    for (const child of this.node.children) {
-      const element = findUIElement(child)
-      if (element?.layoutDirty) return true
+    const n = this.node
+    if (!n) return false
+    if (n.childRevision !== this._lastChildRevision) return true
+    for (const child of n.children) {
+      const prev = this._childSizes.get(child)
+      if (!prev || prev.w !== child.width || prev.h !== child.height) return true
     }
     return false
   }
-}
 
-export class Panel extends UIContainer {
-  color: Color = { r: 30, g: 41, b: 59, a: 255 }
-  opacity = 1
+  layoutChildren(): void {
+    const n = this.node
+    if (!n) return
+    const p = this._p
+    const ox = -n.anchorX * n.width
+    const oy = -n.anchorY * n.height
+    const kids = n.children
+    if (kids.length === 0) return
 
-  onRender(): void {
-    const rect = this.worldRect()
-    sdl.drawRect(rect.x, rect.y, rect.width, rect.height,
-      this.color.r, this.color.g, this.color.b,
-      this.opacity * (this.color.a ?? 255))
-  }
-}
+    const [pt, pr, pb, pl] = p.padding
 
-export class NineSlice extends UIElement {
-  texturePath = ''
-  region: TextureRegion | null = null
-  border: Insets = { top: 12, right: 12, bottom: 12, left: 12 }
-  color: Color = white()
-  opacity = 1
-  private texture: TextureAsset | null = null
-  private loadedPath = ''
-
-  setTexture(path: string, region: TextureRegion | null = null): this {
-    if (path !== this.texturePath) this.releaseTexture()
-    this.texturePath = path
-    this.region = region
-    return this
+    if (p.direction === 'horizontal')
+      this.layoutH(kids, ox, oy, pt, pr, pb, pl, p)
+    else if (p.direction === 'vertical')
+      this.layoutV(kids, ox, oy, pt, pr, pb, pl, p)
+    else if (p.direction === 'grid')
+      this.layoutG(kids, ox, oy, pt, pr, pb, pl, p)
   }
 
-  onRender(): void {
-    this.ensureTexture()
-    if (!this.texture) return
-    const source = this.region ?? {
-      x: 0, y: 0, width: this.texture.width, height: this.texture.height,
+  private layoutH(
+    kids: Node[], ox: number, oy: number,
+    _pt: number, _pr: number, _pb: number, pl: number,
+    p: Required<UILayoutProps>,
+  ): void {
+    const availW = nWidth(this.node) - pl - p.padding[1]
+    let fixed = 0
+    let totalF = 0
+    for (const child of kids) {
+      const lc = getLayoutChild(child)
+      if (lc && lc.flex > 0) { totalF += lc.flex; fixed += 0 }
+      else fixed += child.width
     }
-    const rect = this.worldRect()
-    const sourceW = splitSize(source.width, this.border.left, this.border.right)
-    const sourceH = splitSize(source.height, this.border.top, this.border.bottom)
-    const sourceX = [source.x, source.x + sourceW[0],
-      source.x + source.width - sourceW[2]]
-    const sourceY = [source.y, source.y + sourceH[0],
-      source.y + source.height - sourceH[2]]
-    const destW = splitSize(rect.width, sourceW[0], sourceW[2])
-    const destH = splitSize(rect.height, sourceH[0], sourceH[2])
-    let dy = rect.y
-    for (let row = 0; row < 3; row++) {
-      let dx = rect.x
-      for (let column = 0; column < 3; column++) {
-        if (sourceW[column] > 0 && sourceH[row] > 0
-          && destW[column] > 0 && destH[row] > 0) {
-          sdl.drawTextureRegionRotated(
-            this.texture.id,
-            sourceX[column], sourceY[row], sourceW[column], sourceH[row],
-            dx, dy, destW[column], destH[row],
-            0, 0, 0, false, false,
-            this.color.r, this.color.g, this.color.b,
-            this.opacity * (this.color.a ?? 255),
-          )
-        }
-        dx += destW[column]
-      }
-      dy += destH[row]
+    fixed += p.gap * (kids.length - 1)
+    let cursor = pl
+    for (const child of kids) {
+      const lc = getLayoutChild(child)
+      if (lc && lc.flex > 0 && totalF > 0)
+        child.width = (availW - fixed) * lc.flex / totalF
+      child.x = ox + cursor + child.width * child.anchorX
+      child.y = oy + _pt + child.height * child.anchorY
+      cursor += child.width + p.gap
     }
   }
 
-  onDestroy(): void {
-    this.releaseTexture()
-  }
-
-  private ensureTexture(): void {
-    if (!this.texturePath) {
-      this.releaseTexture()
-      return
+  private layoutV(
+    kids: Node[], ox: number, oy: number,
+    pt: number, _pr: number, pb: number, _pl: number,
+    p: Required<UILayoutProps>,
+  ): void {
+    const availH = nHeight(this.node) - pt - pb
+    let fixed = 0
+    let totalF = 0
+    for (const child of kids) {
+      const lc = getLayoutChild(child)
+      if (lc && lc.flex > 0) { totalF += lc.flex; fixed += 0 }
+      else fixed += child.height
     }
-    if (this.texture && this.loadedPath === this.texturePath) return
-    this.releaseTexture()
-    this.texture = AssetManager.acquireTexture(this.texturePath)
-    this.loadedPath = this.texturePath
+    fixed += p.gap * (kids.length - 1)
+    let cursor = pt
+    for (const child of kids) {
+      const lc = getLayoutChild(child)
+      if (lc && lc.flex > 0 && totalF > 0)
+        child.height = (availH - fixed) * lc.flex / totalF
+      child.x = ox + p.padding[3] + child.width * child.anchorX
+      child.y = oy + cursor + child.height * child.anchorY
+      cursor += child.height + p.gap
+    }
   }
 
-  private releaseTexture(): void {
-    this.texture?.release()
-    this.texture = null
-    this.loadedPath = ''
+  private layoutG(
+    kids: Node[], ox: number, oy: number,
+    pt: number, pr: number, pb: number, pl: number,
+    p: Required<UILayoutProps>,
+  ): void {
+    const availW = nWidth(this.node) - pl - pr
+    const availH = nHeight(this.node) - pt - pb
+    const cols = Math.max(1, Math.round(Math.sqrt(kids.length * availW / Math.max(1, availH))))
+    const rows = Math.ceil(kids.length / cols)
+    const cellW = (availW - p.gap * (cols - 1)) / cols
+    const cellH = (availH - p.gap * (rows - 1)) / rows
+    for (let i = 0; i < kids.length; i++) {
+      const child = kids[i]
+      const col = i % cols
+      const row = Math.floor(i / cols)
+      child.x = ox + pl + col * (cellW + p.gap) + child.width * child.anchorX
+      child.y = oy + pt + row * (cellH + p.gap) + child.height * child.anchorY
+    }
   }
 }
 
-export class UIImage extends NineSlice {
-  border: Insets = zeroInsets()
+function nWidth(node: Node | null): number { return node?.width ?? 0 }
+function nHeight(node: Node | null): number { return node?.height ?? 0 }
+
+export function worldRect(n: Node): { x: number; y: number; width: number; height: number } {
+  const w = n.width * Math.abs(n.worldScaleX)
+  const h = n.height * Math.abs(n.worldScaleY)
+  return { x: n.worldX - n.anchorX * w, y: n.worldY - n.anchorY * h, width: w, height: h }
 }
 
-export class Toggle extends UIElement {
+export function containsPoint(n: Node, x: number, y: number): boolean {
+  const r = worldRect(n)
+  return x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height
+}
+
+// --- Toggle ------------------------------------------------------------------
+
+export class Toggle extends ComponentX {
   checked = false
   disabled = false
   onChange: ((checked: boolean) => void) | null = null
@@ -518,6 +285,14 @@ export class Toggle extends UIElement {
   thumbColor: Color = white()
   inputEnabled = true
   private pressed = false
+
+  private worldRect(): { x: number; y: number; width: number; height: number } {
+    return worldRect(this.node)
+  }
+
+  private containsPoint(x: number, y: number): boolean {
+    return containsPoint(this.node, x, y)
+  }
 
   hitTest(x: number, y: number): boolean {
     return !this.disabled && this.containsPoint(x, y)
@@ -550,6 +325,8 @@ export class Toggle extends UIElement {
   }
 }
 
+// --- ScrollView --------------------------------------------------------------
+
 interface ScrollViewProps {
   viewSize: Size
   contentSize: Size
@@ -559,6 +336,7 @@ interface ScrollViewProps {
   isBounced?: boolean
   onScroll?: (offset: Vec2) => void
 }
+
 export class ScrollView extends UIContainer<ScrollViewProps> {
   scrollX = 0
   scrollY = 0
@@ -571,22 +349,24 @@ export class ScrollView extends UIContainer<ScrollViewProps> {
   private dragged = false
 
   onUpdate(dt: number): void {
-    this.setSize(this.props.viewSize.width, this.props.viewSize.height)
+    const n = this.node
+    n.width = this.props.viewSize.width
+    n.height = this.props.viewSize.height
     super.onUpdate(dt)
     this.syncContentNodeSize()
     this.clampScroll()
-    const content = this.node?.children[0]
+    const content = n.children[0]
     if (content) {
-      content.x = -this.node!.anchorX * this.props.viewSize.width
-        - this.scrollX
-      content.y = -this.node!.anchorY * this.props.viewSize.height
-        - this.scrollY
+      content.x = -n.anchorX * this.props.viewSize.width - this.scrollX
+      content.y = -n.anchorY * this.props.viewSize.height - this.scrollY
     }
   }
 
   onRender(): void {
-    const rect = this.worldRect()
-    sdl.pushClipRect(rect.x, rect.y, rect.width, rect.height)
+    const n = this.node
+    const x = n.worldX - n.anchorX * n.width * Math.abs(n.worldScaleX)
+    const y = n.worldY - n.anchorY * n.height * Math.abs(n.worldScaleY)
+    sdl.pushClipRect(x, y, n.width * Math.abs(n.worldScaleX), n.height * Math.abs(n.worldScaleY))
   }
 
   onRenderEnd(): void {
@@ -594,11 +374,16 @@ export class ScrollView extends UIContainer<ScrollViewProps> {
   }
 
   hitTest(x: number, y: number): boolean {
-    return this.containsPoint(x, y)
+    const n = this.node
+    const w = n.width * Math.abs(n.worldScaleX)
+    const h = n.height * Math.abs(n.worldScaleY)
+    const rx = n.worldX - n.anchorX * w
+    const ry = n.worldY - n.anchorY * h
+    return x >= rx && x <= rx + w && y >= ry && y <= ry + h
   }
 
   allowsDescendantInput(x: number, y: number): boolean {
-    return this.containsPoint(x, y)
+    return this.hitTest(x, y)
   }
 
   onPointerStart(event: InputEvent): void {
@@ -648,21 +433,4 @@ export class ScrollView extends UIContainer<ScrollViewProps> {
     this.scrollY = Math.max(0, Math.min(
       Math.max(0, this.props.contentSize.height - this.props.viewSize.height), this.scrollY))
   }
-}
-
-function findUIElement(node: Node | null): UIElement | null {
-  if (!node) return null
-  for (const component of node.components) {
-    if (component instanceof UIElement) return component
-  }
-  return null
-}
-
-function splitSize(total: number, leading: number, trailing: number):
-[number, number, number] {
-  const edgeTotal = leading + trailing
-  if (edgeTotal <= total) return [leading, total - edgeTotal, trailing]
-  if (edgeTotal <= 0) return [0, total, 0]
-  const scale = total / edgeTotal
-  return [leading * scale, 0, trailing * scale]
 }
