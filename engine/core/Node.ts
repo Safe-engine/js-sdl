@@ -332,7 +332,7 @@ export class Node {
   }
 
   removeAllChildren() {
-    for (const child of this.children) {
+    for (const child of [...this.children]) {
       child.destroy()
     }
   }
