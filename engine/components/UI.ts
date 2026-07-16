@@ -27,7 +27,10 @@ function marginBottom(c: LayoutChild | null): number { return c ? c.margin[2] : 
 interface UIContainerProps {
   direction?: LayoutDirection
   gap?: number
-  padding?: [number, number, number, number]
+  paddingTop?: number
+  paddingLeft?: number
+  paddingRight?: number
+  paddingBottom?: number
 }
 
 export class UIContainer<Props = UIContainerProps> extends ComponentX<Props> {
@@ -35,7 +38,7 @@ export class UIContainer<Props = UIContainerProps> extends ComponentX<Props> {
   private _lastChildRevision = -1
 
   private get _p(): Required<UIContainerProps> {
-    return { direction: 'none', gap: 0, padding: [0, 0, 0, 0], ...this.props as any }
+    return { direction: 'none', gap: 0, paddingTop: 0, paddingLeft: 0, paddingRight: 0, paddingBottom: 0, ...this.props as any }
   }
 
   get align(): LayoutAlignment { return this._align }
@@ -63,10 +66,10 @@ export class UIContainer<Props = UIContainerProps> extends ComponentX<Props> {
     const kids = n.children
     if (kids.length === 0) return
 
-    const [pt, _pr, pb, pl] = p.padding
+    const { paddingTop: pt, paddingRight: pr, paddingBottom: pb, paddingLeft: pl } = p
     const mainSize = horizontal ? n.width : n.height
     const leading = horizontal ? pl : pt
-    const trailing = horizontal ? p.padding[1] : pb
+    const trailing = horizontal ? pr : pb
 
     let fixed = 0
     let totalFlex = 0
@@ -103,7 +106,7 @@ export class UIContainer<Props = UIContainerProps> extends ComponentX<Props> {
       const crossSize = horizontal ? child.height : child.width
       const crossW = horizontal ? n.height : n.width
       const crossStart = horizontal ? pt : pl
-      const crossEnd = horizontal ? pb : p.padding[1]
+      const crossEnd = horizontal ? pb : pr
       const crossAvail = crossW - crossStart - crossEnd
       let cross = crossStart
       if (this._align === 'center') cross += (crossAvail - crossSize) * 0.5
@@ -131,7 +134,10 @@ export class UIContainer<Props = UIContainerProps> extends ComponentX<Props> {
 interface UILayoutProps {
   direction?: LayoutDirection
   gap?: number
-  padding?: [number, number, number, number]
+  paddingTop?: number
+  paddingLeft?: number
+  paddingRight?: number
+  paddingBottom?: number
 }
 
 export class UILayout extends ComponentX<UILayoutProps> {
@@ -139,7 +145,7 @@ export class UILayout extends ComponentX<UILayoutProps> {
   private _childSizes = new WeakMap<Node, { w: number; h: number }>()
 
   private get _p(): Required<UILayoutProps> {
-    return { direction: 'horizontal', gap: 0, padding: [0, 0, 0, 0], ...this.props }
+    return { direction: 'horizontal', gap: 0, paddingTop: 0, paddingLeft: 0, paddingRight: 0, paddingBottom: 0, ...this.props }
   }
 
   onRender() { }
@@ -179,7 +185,7 @@ export class UILayout extends ComponentX<UILayoutProps> {
     const kids = n.children
     if (kids.length === 0) return
 
-    const [pt, pr, pb, pl] = p.padding
+    const { paddingTop: pt, paddingRight: pr, paddingBottom: pb, paddingLeft: pl } = p
 
     if (p.direction === 'horizontal')
       this.layoutH(kids, ox, oy, pt, pr, pb, pl, p)
@@ -191,10 +197,10 @@ export class UILayout extends ComponentX<UILayoutProps> {
 
   private layoutH(
     kids: Node[], ox: number, oy: number,
-    _pt: number, _pr: number, _pb: number, pl: number,
+    _pt: number, pr: number, _pb: number, pl: number,
     p: Required<UILayoutProps>,
   ): void {
-    const availW = nWidth(this.node) - pl - p.padding[1]
+    const availW = nWidth(this.node) - pl - pr
     let fixed = 0
     let totalF = 0
     for (const child of kids) {
@@ -233,7 +239,7 @@ export class UILayout extends ComponentX<UILayoutProps> {
       const lc = getLayoutChild(child)
       if (lc && lc.flex > 0 && totalF > 0)
         child.height = (availH - fixed) * lc.flex / totalF
-      child.x = ox + p.padding[3] + child.width * child.anchorX
+      child.x = ox + p.paddingLeft + child.width * child.anchorX
       child.y = oy + cursor + child.height * child.anchorY
       cursor += child.height + p.gap
     }
