@@ -3,8 +3,6 @@ import {
   Label,
   Scene,
   SpineSkeleton,
-  TextAlignment,
-  VerticalTextAlignment
 } from '../engine'
 import { instantiate, loadScene } from '../engine/core/instantiate'
 import { DragonBones } from '../engine/dragonbones'
@@ -47,8 +45,8 @@ export class HomeScene extends Scene {
       string: 'PLAY',
       font: lilita_one_regularFont,
       size: 32,
-      align: TextAlignment.center,
-      verticalAlign: VerticalTextAlignment.middle,
+      align: 'center',
+      verticalAlign: 'middle',
     })
     const dragonBonesComp1 = instantiate(DragonBones, { data: db_mecha_1004d_show, animation: 'idle', onAnimationComplete: this.onAnimationComplete.bind(this) })
     this.node.addChild(dragonBonesComp1.node)

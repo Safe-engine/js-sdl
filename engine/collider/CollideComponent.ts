@@ -23,12 +23,12 @@ export interface PolygonColliderProps extends ColliderProps {
   points: Array<Vec2 | [number, number]>
 }
 
-export enum CollisionType {
-  NONE,
-  ENTER,
-  STAY,
-  EXIT,
-}
+export const CollisionType = {
+  NONE: 0,
+  ENTER: 1,
+  STAY: 2,
+  EXIT: 3,
+} as const
 
 export class Collider<Props extends ColliderProps = ColliderProps> extends ComponentX<Props> {
   tag = 0
@@ -191,7 +191,7 @@ export class Contact {
     return this.touching
   }
 
-  updateState(): CollisionType {
+  updateState() {
     const hit = this.test()
     if (hit && !this.touching) {
       this.touching = true
@@ -205,7 +205,7 @@ export class Contact {
     return CollisionType.NONE
   }
 
-  test(): boolean {
+  test() {
     return testCollision(this.collider1, this.collider2)
   }
 }
@@ -218,7 +218,7 @@ function isPolygonCollider(collider: Collider): collider is BoxCollider | Polygo
   return collider instanceof BoxCollider || collider instanceof PolygonCollider
 }
 
-export function testCollision(a: Collider, b: Collider): boolean {
+export function testCollision(a: Collider, b: Collider) {
   if (!a.enabled || !b.enabled) return false
   if (!rectIntersectsRect(a.getAABB(), b.getAABB())) return false
 

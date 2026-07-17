@@ -5,10 +5,8 @@ import {
   loadScene,
   PhysicsWorld,
   Scene,
-  TextAlignment,
   Touch,
   TiledMap,
-  VerticalTextAlignment
 } from '../engine'
 import {
   lilita_one_regularFont,
@@ -107,8 +105,8 @@ export class GameScene extends Scene {
       string: 'PLAY',
       font: lilita_one_regularFont,
       size: 32,
-      align: TextAlignment.center,
-      verticalAlign: VerticalTextAlignment.middle,
+      align: 'center',
+      verticalAlign: 'middle',
     })
     Button2.node.resolveComponent(Label3)
   }

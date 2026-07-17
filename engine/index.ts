@@ -74,11 +74,8 @@ export { Camera2D } from './components/Camera2D'
 export type { Camera2DProps } from './components/Camera2D'
 export { CircleProgress } from './components/CircleProgress'
 export type { CircleProgressProps } from './components/CircleProgress'
-export {
-  Label,
-  TextAlignment,
-  VerticalTextAlignment
-} from './components/Label'
+export { Label } from './components/Label'
+export type { TextAlignment, VerticalTextAlignment } from './components/Label'
 export { ProgressBar } from './components/ProgressBar'
 export { RichText } from './components/RichText'
 export type { RichTextProps } from './components/RichText'

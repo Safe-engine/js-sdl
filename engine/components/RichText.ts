@@ -16,7 +16,7 @@ export interface RichTextProps {
   lineHeight?: number
   maxWidth?: number
   align?: TextAlignment
-  horizontalAlign?: TextAlignment | number
+  horizontalAlign?: TextAlignment
 }
 
 interface RichTextOutline {
@@ -141,8 +141,8 @@ export class RichText extends ComponentX<RichTextProps> {
 
     for (const line of this.lines) {
       let left = 0
-      if (this.align === TextAlignment.center) left = (layoutWidth - line.width) * 0.5
-      if (this.align === TextAlignment.right) left = layoutWidth - line.width
+      if (this.align === 'center') left = (layoutWidth - line.width) * 0.5
+      if (this.align === 'right') left = layoutWidth - line.width
       for (const segment of line.segments) {
         const localX = left + segment.x - t.anchorX * layoutWidth
         const localY = line.y - t.anchorY * layoutHeight
@@ -648,12 +648,8 @@ function splitWrapUnits(text: string): string[] {
 }
 
 function normalizeAlign(value: RichTextProps['horizontalAlign']): TextAlignment {
-  if (value === 1) return TextAlignment.center
-  if (value === 2) return TextAlignment.right
-  if (value === TextAlignment.left
-    || value === TextAlignment.center
-    || value === TextAlignment.right) return value
-  return TextAlignment.center
+  if (value === 'center' || value === 'left' || value === 'right') return value
+  return 'center'
 }
 
 function cloneStyle(style: RichTextStyle): RichTextStyle {

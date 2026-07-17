@@ -81,7 +81,7 @@ export class CollideSystem extends ComponentX<CollideSystemProps> {
     }
   }
 
-  private dispatch(type: CollisionType, a: Collider, b: Collider): void {
+  private dispatch(type: typeof CollisionType[keyof typeof CollisionType], a: Collider, b: Collider): void {
     if (type === CollisionType.ENTER) {
       a.props.onCollisionEnter?.(b)
       b.props.onCollisionEnter?.(a)
