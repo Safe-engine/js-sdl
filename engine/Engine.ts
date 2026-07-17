@@ -51,12 +51,13 @@ class EngineImpl {
     width: number,
     height: number,
     resolutionPolicy: ResolutionPolicy = 'letterbox',
+    canvasId: string = 'sdl-canvas',
   ): void {
     if (this._initialized) return
     this._initialized = true
 
     onInit(() => {
-      createWindow(title, width, height, resolutionPolicy)
+      createWindow(title, width, height, resolutionPolicy, canvasId)
       this.refreshViewport()
       this._ready = true
       const scene = this._currentScene

@@ -241,10 +241,7 @@ function requireGl(): WebGLRenderingContext {
 
 function assetUrl(path: string): string {
   const normalized = path.replace(/\\/g, '/').replace(/^\.?\//, '')
-  const publicPath = normalized.startsWith('res/')
-    ? normalized.slice('res/'.length)
-    : normalized
-  return `${import.meta.env.BASE_URL}${publicPath}`
+  return normalized
 }
 
 export function loadAudio(path: string): number {
@@ -313,7 +310,7 @@ export function pauseAudio(voiceId: number): void {
 export function resumeAudio(voiceId: number): void {
   const voice = audioVoices.get(voiceId)
   if (!voice || voice.ended) return
-  void voice.element.play().catch(() => {})
+  void voice.element.play().catch(() => { })
 }
 
 export function setAudioVolume(voiceId: number, volume: number): void {
@@ -410,13 +407,13 @@ function fitCanvasToViewport(): void {
   } else if (resolutionPolicy !== 'stretch') {
     const scale = resolutionPolicy === 'overscan'
       ? Math.max(
-          window.innerWidth / logicalWidth,
-          window.innerHeight / logicalHeight,
-        )
+        window.innerWidth / logicalWidth,
+        window.innerHeight / logicalHeight,
+      )
       : Math.min(
-          window.innerWidth / logicalWidth,
-          window.innerHeight / logicalHeight,
-        )
+        window.innerWidth / logicalWidth,
+        window.innerHeight / logicalHeight,
+      )
     const finalScale = resolutionPolicy === 'integer-scale'
       ? Math.max(1, Math.floor(scale))
       : scale
@@ -529,6 +526,7 @@ export function createWindow(
   width: number,
   height: number,
   policy: ResolutionPolicy = 'letterbox',
+  canvasId: string = 'sdl-canvas',
 ): void {
   document.title = title
   designedLogicalWidth = width
@@ -537,10 +535,10 @@ export function createWindow(
   logicalHeight = designedLogicalHeight
   resolutionPolicy = policy
 
-  canvas = document.querySelector<HTMLCanvasElement>('#sdl-canvas')
+  canvas = document.getElementById(canvasId) as HTMLCanvasElement
   if (!canvas) {
     canvas = document.createElement('canvas')
-    canvas.id = 'sdl-canvas'
+    canvas.id = canvasId
     document.body.appendChild(canvas)
   }
   canvas.width = width

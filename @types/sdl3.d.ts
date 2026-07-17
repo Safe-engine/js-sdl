@@ -21,6 +21,7 @@ declare module 'sdl3' {
     w: number,
     h: number,
     resolutionPolicy?: ResolutionPolicy,
+    canvasId?: string,
   ): void
 
   /**
