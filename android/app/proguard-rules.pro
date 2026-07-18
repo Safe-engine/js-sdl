@@ -1,2 +1,0 @@
--keep class org.libsdl.app.** { *; }
--keep class com.safeengine.jssdl.** { *; }
