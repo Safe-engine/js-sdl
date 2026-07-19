@@ -2,9 +2,13 @@ import { Physics } from '@esotericsoftware/spine-core'
 import { SpineSkeleton } from '.'
 import { BaseComponentProps, ComponentX } from '../core/ComponentX'
 
+type BoneControl = [
+  name: string,
+  x: number,
+  y: number,
+]
 interface SpineBonesControlProps extends BaseComponentProps<SpineBonesControl> {
-  posList: number[]
-  bonesName: string[]
+  bones: BoneControl[]
 }
 export class SpineBonesControl extends ComponentX<SpineBonesControlProps> {
   onAwake() {
@@ -20,13 +24,11 @@ export class SpineBonesControl extends ComponentX<SpineBonesControlProps> {
     const skeleton = skel?.skeleton
     if (!skeleton) return
 
-    const { bonesName = [], posList = [] } = this.props
+    const { bones } = this.props
     let updated = false
-    bonesName.forEach((boneName: string, index: number) => {
-      const bone = skeleton.findBone(boneName)
-      const x = posList[index * 2]
-      const y = posList[index * 2 + 1]
-      if (bone && x !== undefined && y !== undefined) {
+    bones.forEach(([name, x, y]) => {
+      const bone = skeleton.findBone(name)
+      if (bone) {
         bone.x = x
         bone.y = y
         updated = true

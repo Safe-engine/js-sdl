@@ -20,8 +20,7 @@ describe('SpineBonesControl', () => {
 
     const child = new Node('control')
     const control = child.addComponent(new SpineBonesControl({
-      bonesName: ['head', 'missing'],
-      posList: [12, 34, 56, 78],
+      bones: [['head', 12, 34], ['missing', 56, 78]],
     }))
     parent.addChild(child)
 
