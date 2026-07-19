@@ -77,4 +77,18 @@ describe('Widget', () => {
     expect(node.x).toBe(360);
     expect(node.y).toBe(84);
   });
+
+  test('uses the full device window when inSafeArea is false', () => {
+    ActiveViewport.update([720, 1280, 720, 1280, 0, 0, 720, 1280, 10, 44, 700, 1202]);
+
+    const node = new Node('hud');
+    node.width = 120;
+    node.height = 48;
+    node.addComponent(Widget, { right: 24, bottom: 16, inSafeArea: false });
+
+    node._updateTree(0);
+
+    expect(node.x).toBe(636);
+    expect(node.y).toBe(1240);
+  });
 });
