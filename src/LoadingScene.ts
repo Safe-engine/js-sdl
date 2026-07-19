@@ -3,7 +3,6 @@ import {
   Label,
   loadAll,
   loadScene,
-  Panel,
   ProgressBar,
   Scene,
 } from '../engine'
@@ -39,14 +38,6 @@ export class LoadingScene extends Scene {
   }
 
   __view() {
-    const backgroundComp = instantiate(Panel, {})
-    this.node.addChild(backgroundComp.node)
-    backgroundComp.node.x = 360
-    backgroundComp.node.y = 640
-    backgroundComp.node.width = 720
-    backgroundComp.node.height = 1280
-    backgroundComp.color = { r: 15, g: 23, b: 42, a: 255 }
-
     const titleComp = instantiate(Label, {
       string: 'LOADING',
       size: 36,

@@ -39,11 +39,11 @@ const ORIENTATIONS: Orientation[] = [
 class EngineImpl {
   readonly viewport = ActiveViewport
   private _currentScene: Scene | null = null
-  private _initialized = false
   private _ready = false
   private _paused = false
   private _backgrounded = false
   private _interrupted = false
+  private _startPromise: Promise<void> | null = null
 
   /** Create window and register main loop. */
   start(
@@ -52,19 +52,21 @@ class EngineImpl {
     height: number,
     resolutionPolicy: ResolutionPolicy = 'letterbox',
     canvasId: string = 'sdl-canvas',
-  ): void {
-    if (this._initialized) return
-    this._initialized = true
+  ): Promise<void> {
+    if (this._startPromise) return this._startPromise
 
-    onInit(() => {
-      createWindow(title, width, height, resolutionPolicy, canvasId)
-      this.refreshViewport()
-      this._ready = true
-      const scene = this._currentScene
-      if (scene) {
-        this._resizeSceneToViewport(scene)
-        this._activateScene(scene)
-      }
+    this._startPromise = new Promise((resolve) => {
+      onInit(() => {
+        createWindow(title, width, height, resolutionPolicy, canvasId)
+        this.refreshViewport()
+        this._ready = true
+        const scene = this._currentScene
+        if (scene) {
+          this._resizeSceneToViewport(scene)
+          this._activateScene(scene)
+        }
+        resolve()
+      })
     })
 
     onUpdate((dt: number) => {
@@ -160,6 +162,8 @@ class EngineImpl {
       Audio.stopAll()
       this._currentScene?.onSaveProgress()
     })
+
+    return this._startPromise
   }
 
   /** Refresh screen, letterbox, and safe-area measurements from the platform. */
