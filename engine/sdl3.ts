@@ -925,6 +925,32 @@ export function drawTextureQuad(
   queueDraw(asset, positions, uvs, colorToUniform(red, green, blue, alpha))
 }
 
+export function drawTextureMesh(
+  id: number,
+  positions: Float32Array,
+  uvs: Float32Array,
+  indices: Uint16Array,
+  red = 255,
+  green = 255,
+  blue = 255,
+  alpha = 255,
+): void {
+  const asset = textures.get(id)
+  if (!asset?.texture || positions.length !== uvs.length || indices.length % 3 !== 0) return
+
+  const trianglePositions = new Array<number>(indices.length * 2)
+  const triangleUvs = new Array<number>(indices.length * 2)
+  for (let i = 0; i < indices.length; i++) {
+    const index = indices[i] * 2
+    if (index + 1 >= positions.length) return
+    trianglePositions[i * 2] = positions[index]
+    trianglePositions[i * 2 + 1] = positions[index + 1]
+    triangleUvs[i * 2] = uvs[index]
+    triangleUvs[i * 2 + 1] = uvs[index + 1]
+  }
+  queueDraw(asset, trianglePositions, triangleUvs, colorToUniform(red, green, blue, alpha))
+}
+
 export function drawRect(
   x: number,
   y: number,

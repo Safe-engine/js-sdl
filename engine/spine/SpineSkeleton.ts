@@ -11,7 +11,7 @@ import {
   type TextureRegion,
   type TrackEntry,
 } from '@esotericsoftware/spine-core'
-import { drawTextureQuad } from 'sdl3'
+import { drawTextureMesh, drawTextureQuad } from 'sdl3'
 import type { TextureAsset } from '../AssetManager'
 import { ComponentX } from '../core/ComponentX'
 import { loadSpineData } from './loadSpineData'
@@ -25,6 +25,9 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
   private loadedKey = ''
   private loadVersion = 0
   private worldVertices = new Float32Array(8)
+  private meshVertices = new Float32Array(8)
+  private readonly meshUvs = new WeakMap<MeshAttachment, Float32Array>()
+  private readonly meshIndices = new WeakMap<MeshAttachment, Uint16Array>()
 
   onStart(): void {
     void this.reload().catch((error) => {
@@ -190,42 +193,31 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
     texture: TextureAsset,
   ): void {
     const vertices = this.worldVertices
-    const uvs = attachment.uvs
     const color = this.multiplyColors(slot.color, attachment.color)
-    const triangles = attachment.triangles
-
-    for (let i = 0; i < triangles.length; i += 3) {
-      const i0 = triangles[i] * 2
-      const i1 = triangles[i + 1] * 2
-      const i2 = triangles[i + 2] * 2
-      const p0 = transformPoint(this, vertices[i0], vertices[i0 + 1])
-      const p1 = transformPoint(this, vertices[i1], vertices[i1 + 1])
-      const p2 = transformPoint(this, vertices[i2], vertices[i2 + 1])
-
-      drawTextureQuad(
-        texture.id,
-        p0.x,
-        p0.y,
-        uvs[i0],
-        uvs[i0 + 1],
-        p1.x,
-        p1.y,
-        uvs[i1],
-        uvs[i1 + 1],
-        p2.x,
-        p2.y,
-        uvs[i2],
-        uvs[i2 + 1],
-        p2.x,
-        p2.y,
-        uvs[i2],
-        uvs[i2 + 1],
-        color.red,
-        color.green,
-        color.blue,
-        color.alpha,
-      )
+    const indices = this.getMeshIndices(attachment)
+    if (!indices) return
+    const transformed = this.ensureMeshVertices(vertices.length)
+    const node = this.node
+    const radians = node.worldRotation * Math.PI / 180
+    const cos = Math.cos(radians)
+    const sin = Math.sin(radians)
+    for (let i = 0; i < vertices.length; i += 2) {
+      const x = vertices[i] * node.worldScaleX
+      const y = vertices[i + 1] * node.worldScaleY
+      transformed[i] = node.worldX + x * cos - y * sin
+      transformed[i + 1] = node.worldY + x * sin + y * cos
     }
+
+    drawTextureMesh(
+      texture.id,
+      transformed,
+      this.getMeshUvs(attachment),
+      indices,
+      color.red,
+      color.green,
+      color.blue,
+      color.alpha,
+    )
   }
 
   private disposeSkeleton(): void {
@@ -246,6 +238,30 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
       this.worldVertices = new Float32Array(length)
     }
     return this.worldVertices
+  }
+
+  private ensureMeshVertices(length: number): Float32Array {
+    if (this.meshVertices.length < length) this.meshVertices = new Float32Array(length)
+    return this.meshVertices.subarray(0, length)
+  }
+
+  private getMeshUvs(attachment: MeshAttachment): Float32Array {
+    let uvs = this.meshUvs.get(attachment)
+    if (!uvs) {
+      uvs = new Float32Array(attachment.uvs)
+      this.meshUvs.set(attachment, uvs)
+    }
+    return uvs
+  }
+
+  private getMeshIndices(attachment: MeshAttachment): Uint16Array | null {
+    let indices = this.meshIndices.get(attachment)
+    if (indices) return indices
+    const triangles = attachment.triangles
+    if (triangles.length % 3 !== 0 || attachment.worldVerticesLength / 2 > 0xffff) return null
+    indices = new Uint16Array(triangles)
+    this.meshIndices.set(attachment, indices)
+    return indices
   }
 
   private multiplyColors(

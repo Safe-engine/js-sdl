@@ -129,6 +129,15 @@ declare module 'sdl3' {
     red?: number, green?: number, blue?: number, alpha?: number,
   ): void
 
+  /** Draw an indexed textured mesh using logical coordinates and normalized UVs. */
+  export function drawTextureMesh(
+    id: number,
+    positions: Float32Array,
+    uvs: Float32Array,
+    indices: Uint16Array,
+    red?: number, green?: number, blue?: number, alpha?: number,
+  ): void
+
   /** Draw a filled rectangle in logical coordinates. */
   export function drawRect(
     x: number, y: number, width: number, height: number,
