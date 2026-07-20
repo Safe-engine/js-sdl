@@ -2,6 +2,7 @@ import {
   clear,
   createWindow,
   getViewportMetrics,
+  getRendererStats,
   onBackground,
   onForeground,
   onInit,
@@ -23,6 +24,8 @@ import {
 } from 'sdl3'
 import { Tween } from './animation/Tween'
 import { Audio } from './Audio'
+import { Label } from './components/Label'
+import { Node } from './core/Node'
 import { TextInput } from './components/TextInput'
 import { setSceneActivator } from './core/instantiate'
 import { Orientation, Scene } from './core/Scene'
@@ -38,12 +41,19 @@ const ORIENTATIONS: Orientation[] = [
 
 class EngineImpl {
   readonly viewport = ActiveViewport
+  /** Root for nodes that must remain alive while scenes are replaced. */
+  readonly persistentNode = new Node('persistent')
   private _currentScene: Scene | null = null
   private _ready = false
   private _paused = false
   private _backgrounded = false
   private _interrupted = false
   private _startPromise: Promise<void> | null = null
+  private _persistentStarted = false
+  private _statsLabel: Label | null = null
+  private _statsUpdateElapsed = 0
+  private _fps = 0
+  private _frameTimeMs = 0
 
   /** Create window and register main loop. */
   start(
@@ -59,6 +69,7 @@ class EngineImpl {
       onInit(() => {
         createWindow(title, width, height, resolutionPolicy, canvasId)
         this.refreshViewport()
+        this._resizePersistentNode()
         this._ready = true
         const scene = this._currentScene
         if (scene) {
@@ -70,11 +81,14 @@ class EngineImpl {
     })
 
     onUpdate((dt: number) => {
+      this._fps = dt > 0 ? 1 / dt : 0
+      this._frameTimeMs = dt * 1000
       Audio._update(dt)
       if (!this._paused && !this._backgrounded && this._currentScene) {
         Tween.update(dt)
         this._currentScene.tick(dt)
       }
+      this._tickPersistentNode(dt)
     })
 
     onRender(() => {
@@ -82,6 +96,7 @@ class EngineImpl {
       if (this._currentScene) {
         this._currentScene.render()
       }
+      this.persistentNode._renderTree()
       present()
     })
 
@@ -169,6 +184,34 @@ class EngineImpl {
   /** Refresh screen, letterbox, and safe-area measurements from the platform. */
   refreshViewport(): void {
     this.viewport.update(getViewportMetrics())
+    this._resizePersistentNode()
+  }
+
+  /** Add a node that remains alive when the active scene changes. */
+  addPersistentNode(node: Node): Node {
+    this.persistentNode.addChild(node)
+    if (this._persistentStarted) node._startTree()
+    return node
+  }
+
+  /** Show or hide the persistent FPS and draw-call overlay. */
+  showStats(visible = true): void {
+    if (!this._statsLabel) {
+      const node = this.addPersistentNode(new Node('renderer-stats'))
+      node.x = 12
+      node.anchorX = 0
+      node.anchorY = 1
+      node.zIndex = Number.MAX_SAFE_INTEGER
+      this._statsLabel = node.addComponent(Label, {
+        string: 'FPS: 0\nFrame time: 0.0 ms\nGL verts: 0\nDraw calls: 0',
+        size: 28,
+        align: 'left',
+        verticalAlign: 'top',
+        outline: [{ r: 0, g: 0, b: 0, a: 255 }, 2],
+      })
+      this._positionStatsLabel()
+    }
+    this._statsLabel.node.visible = visible
   }
 
   /** Convert window/client coordinates into logical game coordinates. */
@@ -215,6 +258,31 @@ class EngineImpl {
   private _resizeSceneToViewport(scene: Scene): void {
     scene.node.width = this.viewport.logicalWidth
     scene.node.height = this.viewport.logicalHeight
+  }
+
+  private _resizePersistentNode(): void {
+    this.persistentNode.width = this.viewport.logicalWidth
+    this.persistentNode.height = this.viewport.logicalHeight
+    this._positionStatsLabel()
+  }
+
+  private _positionStatsLabel(): void {
+    if (!this._statsLabel) return
+    this._statsLabel.node.y = this.persistentNode.height - 12
+  }
+
+  private _tickPersistentNode(dt: number): void {
+    if (!this._persistentStarted) {
+      this.persistentNode._startTree()
+      this._persistentStarted = true
+    }
+    this._statsUpdateElapsed += dt
+    if (this._statsLabel && this._statsUpdateElapsed >= 0.25) {
+      const { drawCalls, vertices } = getRendererStats()
+      this._statsLabel.string = `FPS: ${Math.round(this._fps)}\nFrame time: ${this._frameTimeMs.toFixed(1)} ms\nGL verts: ${vertices}\nDraw calls: ${drawCalls}`
+      this._statsUpdateElapsed = 0
+    }
+    this.persistentNode._updateTree(dt)
   }
 
   private _activateScene(scene: Scene): void {

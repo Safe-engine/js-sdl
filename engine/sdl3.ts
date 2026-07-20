@@ -22,6 +22,7 @@ let nextAudioVoiceId = 0
 let running = false
 let lastFrameTime = 0
 let frameDrawCalls = 0
+let frameVertices = 0
 let pointerDown = false
 let resizeObserver: ResizeObserver | null = null
 
@@ -56,12 +57,14 @@ export interface RendererStats {
   fps: number
   frameTimeMs: number
   drawCalls: number
+  vertices: number
 }
 
 const rendererStats: RendererStats = {
   fps: 0,
   frameTimeMs: 0,
   drawCalls: 0,
+  vertices: 0,
 }
 
 const MAX_BATCH_VERTICES = 6000
@@ -104,6 +107,7 @@ function queueDraw(
 ): void {
   if (!asset.texture || !program || !positionBuffer || !uvBuffer) return
   const vertexCount = positions.length / 2
+  frameVertices += vertexCount
   if (!sameBatch(asset.texture, color)
     || batchPositions.length / 2 + vertexCount > MAX_BATCH_VERTICES) {
     flushDrawBatch()
@@ -507,10 +511,12 @@ function frame(time: number): void {
   lastFrameTime = time
   updateCallback?.(dt)
   frameDrawCalls = 0
+  frameVertices = 0
   renderCallback?.()
   rendererStats.fps = dt > 0 ? 1 / dt : 0
   rendererStats.frameTimeMs = dt * 1000
   rendererStats.drawCalls = frameDrawCalls
+  rendererStats.vertices = frameVertices
   requestAnimationFrame(frame)
 }
 

@@ -65,6 +65,7 @@ declare module 'sdl3' {
     fps: number
     frameTimeMs: number
     drawCalls: number
+    vertices: number
   }
 
   /** Return the most recently completed frame's renderer counters. */
