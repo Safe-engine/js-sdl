@@ -11,7 +11,7 @@ import {
   type TextureRegion,
   type TrackEntry,
 } from '@esotericsoftware/spine-core'
-import { drawTextureMesh, drawTextureQuad } from 'sdl3'
+import { drawTextureMesh } from 'sdl3'
 import type { TextureAsset } from '../AssetManager'
 import { ComponentX } from '../core/ComponentX'
 import { loadSpineData } from './loadSpineData'
@@ -28,6 +28,13 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
   private meshVertices = new Float32Array(8)
   private readonly meshUvs = new WeakMap<MeshAttachment, Float32Array>()
   private readonly meshIndices = new WeakMap<MeshAttachment, Uint16Array>()
+  private batchTexture: TextureAsset | null = null
+  private batchColor: { red: number, green: number, blue: number, alpha: number } | null = null
+  private batchPositions = new Float32Array(0)
+  private batchUvs = new Float32Array(0)
+  private batchIndices = new Uint16Array(0)
+  private batchVertexCount = 0
+  private batchIndexCount = 0
 
   onStart(): void {
     void this.reload().catch((error) => {
@@ -47,6 +54,7 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
   onRender(): void {
     if (!this.node?.visible || !this.skeleton) return
 
+    this.resetBatch()
     const drawOrder = this.skeleton.drawOrder
     for (let i = 0; i < drawOrder.length; i++) {
       const slot = drawOrder[i]
@@ -63,7 +71,7 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
         const region = attachment.region as TextureRegion | null
         const texture = region?.texture as SdlSpineTexture | null | undefined
         if (!region || !texture) continue
-        this.renderRegion(attachment, slot, texture.asset)
+        this.appendRegion(attachment, slot, texture.asset)
       } else if (attachment instanceof MeshAttachment) {
         const vertices = this.ensureWorldVertices(attachment.worldVerticesLength)
         attachment.computeWorldVertices(
@@ -77,9 +85,10 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
         const region = attachment.region as TextureRegion | null
         const texture = region?.texture as SdlSpineTexture | null | undefined
         if (!region || !texture) continue
-        this.renderMesh(attachment, slot, texture.asset)
+        this.appendMesh(attachment, slot, texture.asset)
       }
     }
+    this.flushBatch()
   }
 
   onDestroy(): void {
@@ -138,17 +147,18 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
     this.state.setAnimation(0, animation, loop ?? true)
   }
 
-  private renderRegion(
+  private appendRegion(
     attachment: RegionAttachment,
     slot: any,
     texture: TextureAsset,
   ): void {
     const vertices = this.worldVertices
     const uvs = attachment.uvs
-    const bottomRight = transformPoint(this, vertices[0], vertices[1])
-    const bottomLeft = transformPoint(this, vertices[2], vertices[3])
-    const topLeft = transformPoint(this, vertices[4], vertices[5])
-    const topRight = transformPoint(this, vertices[6], vertices[7])
+    const transform = getTransform(this)
+    const bottomRight = transformPoint(transform, vertices[0], vertices[1])
+    const bottomLeft = transformPoint(transform, vertices[2], vertices[3])
+    const topLeft = transformPoint(transform, vertices[4], vertices[5])
+    const topRight = transformPoint(transform, vertices[6], vertices[7])
 
     const skeletonColor = this.skeleton?.color
     const slotColor = slot.color
@@ -162,32 +172,20 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
       * attachmentColor.a
       * (this.node?.opacity ?? 1)
 
-    drawTextureQuad(
-      texture.id,
-      topLeft.x,
-      topLeft.y,
-      uvs[4],
-      uvs[5],
-      topRight.x,
-      topRight.y,
-      uvs[6],
-      uvs[7],
-      bottomLeft.x,
-      bottomLeft.y,
-      uvs[2],
-      uvs[3],
-      bottomRight.x,
-      bottomRight.y,
-      uvs[0],
-      uvs[1],
-      red,
-      green,
-      blue,
-      alpha,
-    )
+    this.appendToBatch(texture, { red, green, blue, alpha }, [
+      topLeft.x, topLeft.y,
+      topRight.x, topRight.y,
+      bottomLeft.x, bottomLeft.y,
+      bottomRight.x, bottomRight.y,
+    ], [
+      uvs[4], uvs[5],
+      uvs[6], uvs[7],
+      uvs[2], uvs[3],
+      uvs[0], uvs[1],
+    ], QUAD_INDICES)
   }
 
-  private renderMesh(
+  private appendMesh(
     attachment: MeshAttachment,
     slot: any,
     texture: TextureAsset,
@@ -197,27 +195,80 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
     const indices = this.getMeshIndices(attachment)
     if (!indices) return
     const transformed = this.ensureMeshVertices(vertices.length)
-    const node = this.node
-    const radians = node.worldRotation * Math.PI / 180
-    const cos = Math.cos(radians)
-    const sin = Math.sin(radians)
+    const transform = getTransform(this)
     for (let i = 0; i < vertices.length; i += 2) {
-      const x = vertices[i] * node.worldScaleX
-      const y = vertices[i + 1] * node.worldScaleY
-      transformed[i] = node.worldX + x * cos - y * sin
-      transformed[i + 1] = node.worldY + x * sin + y * cos
+      const x = vertices[i] * transform.scaleX
+      const y = vertices[i + 1] * transform.scaleY
+      transformed[i] = transform.x + x * transform.cos - y * transform.sin
+      transformed[i + 1] = transform.y + x * transform.sin + y * transform.cos
     }
 
+    this.appendToBatch(texture, color, transformed, this.getMeshUvs(attachment), indices)
+  }
+
+  private resetBatch(): void {
+    this.batchTexture = null
+    this.batchColor = null
+    this.batchVertexCount = 0
+    this.batchIndexCount = 0
+  }
+
+  private appendToBatch(
+    texture: TextureAsset,
+    color: { red: number, green: number, blue: number, alpha: number },
+    positions: ArrayLike<number>,
+    uvs: ArrayLike<number>,
+    indices: ArrayLike<number>,
+  ): void {
+    if (this.batchTexture && (this.batchTexture !== texture || !sameColor(this.batchColor!, color))) {
+      this.flushBatch()
+    }
+
+    const vertexCount = positions.length / 2
+    if (!Number.isInteger(vertexCount) || uvs.length !== positions.length || vertexCount > 0xffff) return
+    if (this.batchVertexCount + vertexCount > 0xffff) this.flushBatch()
+    this.ensureBatchCapacity(this.batchVertexCount + vertexCount, this.batchIndexCount + indices.length)
+    const vertexOffset = this.batchVertexCount
+    this.batchPositions.set(positions, vertexOffset * 2)
+    this.batchUvs.set(uvs, vertexOffset * 2)
+    for (let i = 0; i < indices.length; i++) {
+      this.batchIndices[this.batchIndexCount + i] = indices[i] + vertexOffset
+    }
+    this.batchTexture = texture
+    this.batchColor = color
+    this.batchVertexCount += vertexCount
+    this.batchIndexCount += indices.length
+  }
+
+  private flushBatch(): void {
+    if (!this.batchTexture || !this.batchColor || this.batchIndexCount === 0) return
     drawTextureMesh(
-      texture.id,
-      transformed,
-      this.getMeshUvs(attachment),
-      indices,
-      color.red,
-      color.green,
-      color.blue,
-      color.alpha,
+      this.batchTexture.id,
+      this.batchPositions.subarray(0, this.batchVertexCount * 2),
+      this.batchUvs.subarray(0, this.batchVertexCount * 2),
+      this.batchIndices.subarray(0, this.batchIndexCount),
+      this.batchColor.red,
+      this.batchColor.green,
+      this.batchColor.blue,
+      this.batchColor.alpha,
     )
+    this.resetBatch()
+  }
+
+  private ensureBatchCapacity(vertices: number, indices: number): void {
+    if (this.batchPositions.length < vertices * 2) {
+      const positions = new Float32Array(nextCapacity(this.batchPositions.length, vertices * 2))
+      const uvs = new Float32Array(positions.length)
+      positions.set(this.batchPositions)
+      uvs.set(this.batchUvs)
+      this.batchPositions = positions
+      this.batchUvs = uvs
+    }
+    if (this.batchIndices.length < indices) {
+      const nextIndices = new Uint16Array(nextCapacity(this.batchIndices.length, indices))
+      nextIndices.set(this.batchIndices)
+      this.batchIndices = nextIndices
+    }
   }
 
   private disposeSkeleton(): void {
@@ -282,17 +333,48 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
   }
 }
 
-function transformPoint(root: SpineSkeleton, x: number, y: number): { x: number, y: number } {
-  const node = root.node
-  if (!node) return { x, y }
+const QUAD_INDICES = new Uint16Array([0, 1, 2, 2, 1, 3])
 
+function sameColor(
+  left: { red: number, green: number, blue: number, alpha: number },
+  right: { red: number, green: number, blue: number, alpha: number },
+): boolean {
+  return left.red === right.red && left.green === right.green
+    && left.blue === right.blue && left.alpha === right.alpha
+}
+
+function nextCapacity(current: number, required: number): number {
+  return Math.max(required, current === 0 ? 64 : current * 2)
+}
+
+interface SpineTransform {
+  x: number
+  y: number
+  scaleX: number
+  scaleY: number
+  cos: number
+  sin: number
+}
+
+function getTransform(root: SpineSkeleton): SpineTransform {
+  const node = root.node
+  if (!node) return { x: 0, y: 0, scaleX: 1, scaleY: 1, cos: 1, sin: 0 }
   const radians = node.worldRotation * Math.PI / 180
-  const cos = Math.cos(radians)
-  const sin = Math.sin(radians)
-  const scaledX = x * node.worldScaleX
-  const scaledY = y * node.worldScaleY
   return {
-    x: node.worldX + scaledX * cos - scaledY * sin,
-    y: node.worldY + scaledX * sin + scaledY * cos,
+    x: node.worldX,
+    y: node.worldY,
+    scaleX: node.worldScaleX,
+    scaleY: node.worldScaleY,
+    cos: Math.cos(radians),
+    sin: Math.sin(radians),
+  }
+}
+
+function transformPoint(transform: SpineTransform, x: number, y: number): { x: number, y: number } {
+  const scaledX = x * transform.scaleX
+  const scaledY = y * transform.scaleY
+  return {
+    x: transform.x + scaledX * transform.cos - scaledY * transform.sin,
+    y: transform.y + scaledX * transform.sin + scaledY * transform.cos,
   }
 }

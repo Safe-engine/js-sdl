@@ -2,6 +2,7 @@ import { describe, expect, mock, test } from 'bun:test'
 import { Node } from '../engine/core/Node'
 
 mock.module('sdl3', () => ({
+  drawTextureMesh: () => {},
   drawTextureQuad: () => {},
   getTextureHeight: () => 0,
   getTextureWidth: () => 0,

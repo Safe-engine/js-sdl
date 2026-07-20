@@ -1,5 +1,5 @@
 import {
-  drawTextureRegionRotated,
+  drawTextureMesh,
 } from 'sdl3'
 import { AssetManager, TextureAsset } from '../AssetManager'
 import { ComponentX } from '../core/ComponentX'
@@ -69,6 +69,16 @@ interface TilePlacement {
   flipY: boolean
 }
 
+interface TileBatch {
+  texture: TextureAsset
+  opacity: number
+  positions: Float32Array
+  uvs: Float32Array
+  flippedUvs: Float32Array
+  indices: Uint16Array
+  transformed: Float32Array
+}
+
 export class TiledMapLayer {
   constructor(
     private readonly node: { anchorX: number, anchorY: number },
@@ -106,11 +116,81 @@ const GID_MASK = ~(FLIPPED_HORIZONTALLY_FLAG | FLIPPED_VERTICALLY_FLAG | FLIPPED
 
 const mapCache = new Map<string, Promise<TiledMapData>>()
 
+function buildTileBatches(tiles: TilePlacement[]): TileBatch[] {
+  const batches: TileBatch[] = []
+  let start = 0
+  while (start < tiles.length) {
+    const first = tiles[start]
+    let end = start + 1
+    while (end < tiles.length && tiles[end].texture === first.texture
+      && tiles[end].opacity === first.opacity && end - start < 0x3fff) {
+      end++
+    }
+
+    const count = end - start
+    const positions = new Float32Array(count * 8)
+    const uvs = new Float32Array(count * 8)
+    const indices = new Uint16Array(count * 6)
+    for (let i = 0; i < count; i++) {
+      const tile = tiles[start + i]
+      const position = i * 8
+      const index = i * 6
+      const { x, y, width, height } = tile.source
+      positions.set([
+        tile.x, tile.y,
+        tile.x + width, tile.y,
+        tile.x, tile.y + height,
+        tile.x + width, tile.y + height,
+      ], position)
+      let u0 = x / tile.texture.width
+      let v0 = y / tile.texture.height
+      let u1 = (x + width) / tile.texture.width
+      let v1 = (y + height) / tile.texture.height
+      if (tile.flipX) [u0, u1] = [u1, u0]
+      if (tile.flipY) [v0, v1] = [v1, v0]
+      uvs.set([u0, v0, u1, v0, u0, v1, u1, v1], position)
+      const vertex = i * 4
+      indices.set([vertex, vertex + 1, vertex + 2, vertex + 2, vertex + 1, vertex + 3], index)
+    }
+    batches.push({
+      texture: first.texture,
+      opacity: first.opacity,
+      positions,
+      uvs,
+      flippedUvs: new Float32Array(uvs.length),
+      indices,
+      transformed: new Float32Array(positions.length),
+    })
+    start = end
+  }
+  return batches
+}
+
+function flipTileUvs(
+  source: Float32Array,
+  target: Float32Array,
+  flipX: boolean,
+  flipY: boolean,
+): Float32Array {
+  for (let i = 0; i < source.length; i += 8) {
+    target[i] = source[i + (flipX ? 2 : 0)]
+    target[i + 1] = source[i + (flipY ? 4 : 0) + 1]
+    target[i + 2] = source[i + (flipX ? 0 : 2)]
+    target[i + 3] = source[i + (flipY ? 4 : 0) + 3]
+    target[i + 4] = source[i + (flipX ? 6 : 4)]
+    target[i + 5] = source[i + (flipY ? 0 : 4) + 1]
+    target[i + 6] = source[i + (flipX ? 4 : 6)]
+    target[i + 7] = source[i + (flipY ? 0 : 4) + 3]
+  }
+  return target
+}
+
 export class TiledMap extends ComponentX<TiledMapProps> {
   private loadedMapFile = ''
   private map: TiledMapData | null = null
   private tilesets: LoadedTileset[] = []
   private tiles: TilePlacement[] = []
+  private tileBatches: TileBatch[] = []
   private loadVersion = 0
   private loadingMapFile = ''
   private loadingPromise: Promise<void> | null = null
@@ -143,36 +223,32 @@ export class TiledMap extends ComponentX<TiledMapProps> {
     const sin = Math.sin(radians)
     const scaleX = this.node.worldScaleX
     const scaleY = this.node.worldScaleY
+    const worldX = this.node.worldX
+    const worldY = this.node.worldY
     const red = this.node.color.r
     const green = this.node.color.g
     const blue = this.node.color.b
     const alpha = this.node.opacity * (this.node.color.a ?? 255)
 
-    for (const tile of this.tiles) {
-      const localX = (originX + tile.x) * scaleX
-      const localY = (originY + tile.y) * scaleY
-      const x = this.node.worldX + localX * cos - localY * sin
-      const y = this.node.worldY + localX * sin + localY * cos
-
-      drawTextureRegionRotated(
-        tile.texture.id,
-        tile.source.x,
-        tile.source.y,
-        tile.source.width,
-        tile.source.height,
-        x,
-        y,
-        tile.source.width * scaleX,
-        tile.source.height * scaleY,
-        this.node.worldRotation,
-        0,
-        0,
-        this.node.flipX !== tile.flipX,
-        this.node.flipY !== tile.flipY,
+    for (const batch of this.tileBatches) {
+      const uvs = this.node.flipX || this.node.flipY
+        ? flipTileUvs(batch.uvs, batch.flippedUvs, this.node.flipX, this.node.flipY)
+        : batch.uvs
+      for (let i = 0; i < batch.positions.length; i += 2) {
+        const localX = (originX + batch.positions[i]) * scaleX
+        const localY = (originY + batch.positions[i + 1]) * scaleY
+        batch.transformed[i] = worldX + localX * cos - localY * sin
+        batch.transformed[i + 1] = worldY + localX * sin + localY * cos
+      }
+      drawTextureMesh(
+        batch.texture.id,
+        batch.transformed,
+        uvs,
+        batch.indices,
         red,
         green,
         blue,
-        alpha * tile.opacity,
+        alpha * batch.opacity,
       )
     }
   }
@@ -227,6 +303,7 @@ export class TiledMap extends ComponentX<TiledMapProps> {
       })
       .sort((a, b) => a.firstgid - b.firstgid)
     this.tiles = this.buildTiles()
+    this.tileBatches = buildTileBatches(this.tiles)
     this.fitDefaultNodeSize()
   }
 
@@ -316,6 +393,7 @@ export class TiledMap extends ComponentX<TiledMapProps> {
     for (const tileset of this.tilesets) tileset.texture.release()
     this.tilesets = []
     this.tiles = []
+    this.tileBatches = []
     this.map = null
     this.loadedMapFile = ''
   }

@@ -29,6 +29,7 @@ const tiledMapJson = JSON.stringify({
 })
 
 mock.module('sdl3', () => ({
+  drawTextureMesh: () => {},
   drawTextureRegionRotated: () => {},
   getTextureHeight: () => 16,
   getTextureWidth: () => 16,
