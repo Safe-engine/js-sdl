@@ -340,6 +340,7 @@ function uploadSource(
   source: TexImageSource,
   width: number,
   height: number,
+  pma = asset.pma ?? false,
 ): void {
   const context = requireGl()
   const texture = asset.texture ?? context.createTexture()
@@ -348,7 +349,7 @@ function uploadSource(
   asset.width = width
   asset.height = height
   context.bindTexture(context.TEXTURE_2D, texture)
-  context.pixelStorei(context.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1)
+  context.pixelStorei(context.UNPACK_PREMULTIPLY_ALPHA_WEBGL, pma ? 0 : 1)
   context.texParameteri(context.TEXTURE_2D, context.TEXTURE_WRAP_S, context.CLAMP_TO_EDGE)
   context.texParameteri(context.TEXTURE_2D, context.TEXTURE_WRAP_T, context.CLAMP_TO_EDGE)
   context.texParameteri(context.TEXTURE_2D, context.TEXTURE_MIN_FILTER, context.LINEAR)
@@ -624,8 +625,9 @@ export function createWindow(
   })
 }
 
-export function loadTexture(path: string): number {
-  const existingId = textureIds.get(path)
+export function loadTexture(path: string, pma = false): number {
+  const cacheKey = pma ? `${path}\0pma` : path
+  const existingId = textureIds.get(cacheKey)
   if (existingId !== undefined) {
     const existing = textures.get(existingId)
     if (existing) existing.refs++
@@ -638,16 +640,17 @@ export function loadTexture(path: string): number {
     width: 0,
     height: 0,
     refs: 1,
-    key: path,
+    key: cacheKey,
+    pma,
   }
   textures.set(id, asset)
-  textureIds.set(path, id)
+  textureIds.set(cacheKey, id)
 
   const image = new Image()
   image.decoding = 'async'
   image.onload = () => {
     if (textures.get(id) === asset) {
-      uploadSource(asset, image, image.naturalWidth, image.naturalHeight)
+      uploadSource(asset, image, image.naturalWidth, image.naturalHeight, pma)
     }
   }
   image.onerror = () => console.error(`Failed to load texture: ${path}`)

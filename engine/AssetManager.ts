@@ -213,8 +213,10 @@ export class AssetManager {
   private static fonts = new Map<string, FontRecord>()
   private static textTextures = new Map<string, TextureRecord>()
 
-  static acquireTexture(path: string): TextureAsset {
-    return this.acquireTextureRecord(this.textures, path, () => sdl.loadTexture(path))
+  static acquireTexture(path: string, options?: { pma?: boolean }): TextureAsset {
+    const pma = options?.pma ?? false
+    const key = pma ? `${path}\0pma` : path
+    return this.acquireTextureRecord(this.textures, key, () => sdl.loadTexture(path, pma))
   }
 
   static acquireFont(path: string, size: number): FontAsset {

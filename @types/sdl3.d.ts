@@ -41,7 +41,7 @@ declare module 'sdl3' {
   export function getWinSize(): Size
 
   /** Load a texture from disk.  Returns a texture id (or -1 on failure). */
-  export function loadTexture(path: string): number
+  export function loadTexture(path: string, pma?: boolean): number
 
   /** Load a UTF-8 text file from disk. Returns null on failure. */
   export function loadTextFile(path: string): string | null
@@ -268,6 +268,7 @@ interface TextureAsset {
   height: number
   refs: number
   key: string
+  pma?: boolean
   textFontId?: number
   text?: string
 }

@@ -26,7 +26,7 @@ export async function loadSpineData(data: SpineData): Promise<LoadedSpineData> {
   const atlas = new TextureAtlas(atlasText)
   const textures = atlas.pages.map((page) => {
     const path = data.texture ?? resolveSiblingPath(data.atlas, page.name)
-    const texture = new SdlSpineTexture(AssetManager.acquireTexture(path))
+    const texture = new SdlSpineTexture(AssetManager.acquireTexture(path, { pma: page.pma }))
     page.setTexture(texture)
     return texture
   })
