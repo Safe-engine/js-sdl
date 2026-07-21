@@ -506,20 +506,29 @@ function emitOrientation(): void {
   orientationCallback?.(orientationValue(), logicalWidth, logicalHeight)
 }
 
+const TARGET_FPS = 60
+const FRAME_INTERVAL_MS = 1000 / TARGET_FPS
+
 function frame(time: number): void {
   if (!running) return
+  requestAnimationFrame(frame)
+
+  const elapsed = lastFrameTime === 0 ? FRAME_INTERVAL_MS : time - lastFrameTime
+  if (lastFrameTime !== 0 && elapsed < FRAME_INTERVAL_MS - 1.5) {
+    return
+  }
+
   resizeDrawingBuffer()
-  const dt = lastFrameTime === 0 ? 0 : Math.min((time - lastFrameTime) / 1000, 0.1)
+  const dt = lastFrameTime === 0 ? 1 / TARGET_FPS : Math.min(elapsed / 1000, 0.1)
   lastFrameTime = time
   updateCallback?.(dt)
   frameDrawCalls = 0
   frameVertices = 0
   renderCallback?.()
-  rendererStats.fps = dt > 0 ? 1 / dt : 0
+  rendererStats.fps = dt > 0 ? 1 / dt : TARGET_FPS
   rendererStats.frameTimeMs = dt * 1000
   rendererStats.drawCalls = frameDrawCalls
   rendererStats.vertices = frameVertices
-  requestAnimationFrame(frame)
 }
 
 function startLoop(): void {

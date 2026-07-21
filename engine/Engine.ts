@@ -82,7 +82,7 @@ class EngineImpl {
     })
 
     onUpdate((dt: number) => {
-      this._fps = dt > 0 ? 1 / dt : 0
+      this._fps = dt > 0 ? 1 / dt : 60
       this._frameTimeMs = dt * 1000
       Audio._update(dt)
       if (!this._paused && !this._backgrounded && this._currentScene) {
