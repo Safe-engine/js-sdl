@@ -44,7 +44,6 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
 
   onUpdate(dt: number): void {
     if (!this.skeleton || !this.state) return
-    if (!this.state.getCurrent(0)) return
     this.state.timeScale = this.props.timeScale ?? 1
     this.state.update(dt)
     this.state.apply(this.skeleton)
@@ -99,54 +98,79 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
 
   setSkeletonData(data: SpineData) {
     this.props.data = data
-    this.reload()
+    void this.reload().catch((error) => {
+      console.error('Spine reload failed', error)
+    })
   }
 
   async reload(): Promise<void> {
+    this.disposeSkeleton()
     const data = this.props.data
     if (!data) return
 
-    const version = ++this.loadVersion
-    const loaded = await loadSpineData(data)
+    const version = this.loadVersion
+    let loaded
+    try {
+      loaded = await loadSpineData(data)
+    } catch (error) {
+      console.error('Failed to load spine data', error)
+      return
+    }
     if (version !== this.loadVersion) {
       loaded.atlas.dispose()
       return
     }
 
-    this.disposeSkeleton()
     this.loadedKey = loaded.key
     this.textures = loaded.textures
 
-    Skeleton.yDown = true
-    const loader = new AtlasAttachmentLoader(loaded.atlas)
-    const parser = loaded.skeleton instanceof ArrayBuffer
-      ? new SkeletonBinary(loader)
-      : new SkeletonJson(loader)
-    const skeletonData = parser.readSkeletonData(loaded.skeleton)
+    try {
+      Skeleton.yDown = true
+      const loader = new AtlasAttachmentLoader(loaded.atlas)
+      const parser = loaded.skeleton instanceof ArrayBuffer
+        ? new SkeletonBinary(loader)
+        : new SkeletonJson(loader)
+      const skeletonData = parser.readSkeletonData(loaded.skeleton)
 
-    this.skeleton = new Skeleton(skeletonData)
-    if (this.props.skin) this.skeleton.setSkinByName(this.props.skin)
-    this.skeleton.setToSetupPose()
+      this.skeleton = new Skeleton(skeletonData)
+      if (this.props.skin && skeletonData.findSkin(this.props.skin)) {
+        this.skeleton.setSkinByName(this.props.skin)
+      }
+      this.skeleton.setToSetupPose()
 
-    this.state = new AnimationState(new AnimationStateData(skeletonData))
-    this.state.addListener({
-      complete: (entry: TrackEntry) => {
-        this.props.onAnimationComplete?.call(
-          this,
-          entry.animation?.name,
-          Math.floor(entry.trackTime / Math.max(entry.animationEnd - entry.animationStart, 1e-6)),
-        )
-      },
-    })
-    this.play(this.props.animation, this.props.loop)
+      this.state = new AnimationState(new AnimationStateData(skeletonData))
+      this.state.addListener({
+        complete: (entry: TrackEntry) => {
+          this.props.onAnimationComplete?.call(
+            this,
+            entry.animation?.name,
+            Math.floor(entry.trackTime / Math.max(entry.animationEnd - entry.animationStart, 1e-6)),
+          )
+        },
+      })
+      this.play(this.props.animation, this.props.loop)
 
-    this.state.apply(this.skeleton)
-    this.skeleton.updateWorldTransform(Physics.update)
+      this.state.apply(this.skeleton)
+      this.skeleton.updateWorldTransform(Physics.update)
+    } catch (error) {
+      console.error('Failed to initialize Spine skeleton', error)
+      this.disposeSkeleton()
+    }
   }
 
   play(animation = this.props.animation, loop = this.props.loop): void {
-    if (!this.state || !animation) return
-    this.state.setAnimation(0, animation, loop ?? true)
+    if (!this.state || !this.skeleton) return
+    let targetAnim = animation ? this.skeleton.data.findAnimation(animation)?.name : undefined
+    if (!targetAnim && this.skeleton.data.animations.length > 0) {
+      targetAnim = this.skeleton.data.animations[0].name
+    }
+    if (targetAnim) {
+      try {
+        this.state.setAnimation(0, targetAnim, loop ?? true)
+      } catch (e) {
+        console.warn('Spine play animation failed:', e)
+      }
+    }
   }
 
   private appendRegion(
@@ -157,15 +181,15 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
     const vertices = this.worldVertices
     const uvs = attachment.uvs
     const skeletonColor = this.skeleton?.color
-    const slotColor = slot.color
-    const attachmentColor = attachment.color
-    const red = 255 * (skeletonColor?.r ?? 1) * slotColor.r * attachmentColor.r
-    const green = 255 * (skeletonColor?.g ?? 1) * slotColor.g * attachmentColor.g
-    const blue = 255 * (skeletonColor?.b ?? 1) * slotColor.b * attachmentColor.b
+    const slotColor = slot?.color
+    const attachmentColor = attachment?.color
+    const red = 255 * (skeletonColor?.r ?? 1) * (slotColor?.r ?? 1) * (attachmentColor?.r ?? 1)
+    const green = 255 * (skeletonColor?.g ?? 1) * (slotColor?.g ?? 1) * (attachmentColor?.g ?? 1)
+    const blue = 255 * (skeletonColor?.b ?? 1) * (slotColor?.b ?? 1) * (attachmentColor?.b ?? 1)
     const alpha = 255
       * (skeletonColor?.a ?? 1)
-      * slotColor.a
-      * attachmentColor.a
+      * (slotColor?.a ?? 1)
+      * (attachmentColor?.a ?? 1)
       * (this.node?.opacity ?? 1)
 
     this.appendToBatch(texture, { red, green, blue, alpha }, [
@@ -186,8 +210,8 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
     slot: any,
     texture: TextureAsset,
   ): void {
-    const vertices = this.worldVertices
-    const color = this.multiplyColors(slot.color, attachment.color)
+    const vertices = this.worldVertices.subarray(0, attachment.worldVerticesLength)
+    const color = this.multiplyColors(slot?.color, attachment?.color)
     const indices = this.getMeshIndices(attachment)
     if (!indices) return
     this.appendToBatch(texture, color, vertices, this.getMeshUvs(attachment), indices)
@@ -305,18 +329,18 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
   }
 
   private multiplyColors(
-    slotColor: { r: number, g: number, b: number, a: number },
-    attachmentColor: { r: number, g: number, b: number, a: number },
+    slotColor: { r: number, g: number, b: number, a: number } | null | undefined,
+    attachmentColor: { r: number, g: number, b: number, a: number } | null | undefined,
   ): { red: number, green: number, blue: number, alpha: number } {
     const skeletonColor = this.skeleton?.color
     return {
-      red: 255 * (skeletonColor?.r ?? 1) * slotColor.r * attachmentColor.r,
-      green: 255 * (skeletonColor?.g ?? 1) * slotColor.g * attachmentColor.g,
-      blue: 255 * (skeletonColor?.b ?? 1) * slotColor.b * attachmentColor.b,
+      red: 255 * (skeletonColor?.r ?? 1) * (slotColor?.r ?? 1) * (attachmentColor?.r ?? 1),
+      green: 255 * (skeletonColor?.g ?? 1) * (slotColor?.g ?? 1) * (attachmentColor?.g ?? 1),
+      blue: 255 * (skeletonColor?.b ?? 1) * (slotColor?.b ?? 1) * (attachmentColor?.b ?? 1),
       alpha: 255
         * (skeletonColor?.a ?? 1)
-        * slotColor.a
-        * attachmentColor.a
+        * (slotColor?.a ?? 1)
+        * (attachmentColor?.a ?? 1)
         * (this.node?.opacity ?? 1),
     }
   }
