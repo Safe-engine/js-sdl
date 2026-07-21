@@ -14,6 +14,19 @@ mock.module('sdl3', () => ({
   loadTextFile: () => null,
   loadTexture: () => nextTextureId++,
   releaseTexture: () => {},
+  submitCommandBuffer: (buf: any) => {
+    if (!buf) return
+    const { commands, uintBuffer } = buf
+    let cmdIdx = 0, uintIdx = 0
+    while (cmdIdx < commands.length) {
+      const op = commands[cmdIdx++]
+      if (op === 0) break
+      if (op === 2) {
+        quads.push(uintBuffer[uintIdx++])
+        uintIdx++
+      }
+    }
+  },
 }))
 
 const { CircleProgress } = await import('../engine/components/CircleProgress')

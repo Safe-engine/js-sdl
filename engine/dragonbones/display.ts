@@ -10,7 +10,7 @@ import {
   type IArmatureProxy,
   type Matrix,
 } from 'dragonbones-es'
-import { drawTextureQuad, drawTextureRegionRotated } from 'sdl3'
+import { globalCommandBuffer } from '../render/RenderCommandBuffer'
 import type { TextureAsset } from '../AssetManager'
 import { composeMatrix, composeRootMatrix, transformPoint } from './math'
 import type { DragonBonesRenderRoot } from './types'
@@ -197,7 +197,7 @@ export class SdlSlot extends Slot {
     const centerX = display.pivotX * scaleX
     const centerY = display.pivotY * scaleY
 
-    drawTextureRegionRotated(
+    globalCommandBuffer.pushRegion(
       texture.id,
       region.x,
       region.y,
@@ -338,7 +338,7 @@ export class SdlSlot extends Slot {
       const p1 = transformPoint(matrix, vertices[i1], vertices[i1 + 1])
       const p2 = transformPoint(matrix, vertices[i2], vertices[i2 + 1])
 
-      drawTextureQuad(
+      globalCommandBuffer.pushQuad(
         textureId,
         p0.x,
         p0.y,
@@ -359,7 +359,7 @@ export class SdlSlot extends Slot {
         display.red,
         display.green,
         display.blue,
-        root.node.opacity * display.alpha * 255,
+        display.alpha * 255,
       )
     }
   }

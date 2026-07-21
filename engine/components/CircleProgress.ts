@@ -1,4 +1,5 @@
 import * as sdl from 'sdl3'
+import { globalCommandBuffer } from '../render/RenderCommandBuffer'
 import { spriteFrameCache } from '../SpriteFrameCache'
 import { Sprite } from './Sprite'
 
@@ -70,7 +71,7 @@ export class CircleProgress extends Sprite {
         sourceX, sourceY, sourceWidth, sourceHeight, textureWidth, textureHeight)
       const secondUv = this.uvAt(0.5 + Math.cos(end) * 0.5, 0.5 + Math.sin(end) * 0.5,
         sourceX, sourceY, sourceWidth, sourceHeight, textureWidth, textureHeight)
-      sdl.drawTextureQuad(
+      globalCommandBuffer.pushQuad(
         this.textureId,
         center.x, center.y, centerUv.u, centerUv.v,
         first.x, first.y, firstUv.u, firstUv.v,

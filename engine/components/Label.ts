@@ -1,4 +1,4 @@
-import { drawTextureRotated } from 'sdl3'
+import { globalCommandBuffer } from '../render/RenderCommandBuffer'
 import {
   AssetManager,
   FontAsset,
@@ -163,7 +163,7 @@ export class Label extends ComponentX<LabelProps> {
       + scaledX * Math.cos(radians) - scaledY * Math.sin(radians)
     const y = originY
       + scaledX * Math.sin(radians) + scaledY * Math.cos(radians)
-    drawTextureRotated(
+    globalCommandBuffer.pushSprite(
       texture.id,
       x,
       y,

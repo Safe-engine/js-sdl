@@ -1,6 +1,4 @@
-import {
-  drawTextureMesh,
-} from 'sdl3'
+import { globalCommandBuffer } from '../render/RenderCommandBuffer'
 import { AssetManager, TextureAsset } from '../AssetManager'
 import { ComponentX } from '../core/ComponentX'
 import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH } from '../core/Node'
@@ -234,7 +232,7 @@ export class TiledMap extends ComponentX<TiledMapProps> {
       const uvs = this.node.flipX || this.node.flipY
         ? flipTileUvs(batch.uvs, batch.flippedUvs, this.node.flipX, this.node.flipY)
         : batch.uvs
-      drawTextureMesh(
+      globalCommandBuffer.pushMesh(
         batch.texture.id,
         batch.positions,
         uvs,

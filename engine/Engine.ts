@@ -23,6 +23,7 @@ import {
   present,
 } from 'sdl3'
 import { Tween } from './animation/Tween'
+import { globalCommandBuffer } from './render/RenderCommandBuffer'
 import { Audio } from './Audio'
 import { Label } from './components/Label'
 import { Node } from './core/Node'
@@ -93,10 +94,12 @@ class EngineImpl {
 
     onRender(() => {
       clear()
+      globalCommandBuffer.beginFrame()
       if (this._currentScene) {
         this._currentScene.render()
       }
       this.persistentNode._renderTree()
+      globalCommandBuffer.submit()
       present()
     })
 

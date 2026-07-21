@@ -1,7 +1,4 @@
-import {
-  drawTextureRegionRotated,
-  drawTextureRotated,
-} from 'sdl3'
+import { globalCommandBuffer } from '../render/RenderCommandBuffer'
 import {
   AssetManager,
   TextureAsset,
@@ -150,7 +147,7 @@ export class Sprite<Props extends SpriteProps = SpriteProps> extends ComponentX<
       return
     }
 
-    drawTextureRotated(
+    globalCommandBuffer.pushSprite(
       this.textureId,
       dx, dy,
       w, h,
@@ -241,7 +238,7 @@ export class Sprite<Props extends SpriteProps = SpriteProps> extends ComponentX<
     const t = this.node
     const opacity = this.node.opacity * (this.node.color.a ?? 255)
     if (!frame.rotated) {
-      drawTextureRegionRotated(
+      globalCommandBuffer.pushRegion(
         this.textureId,
         frame.x, frame.y, frame.width, frame.height,
         t.worldX - t.anchorX * width,
@@ -261,7 +258,7 @@ export class Sprite<Props extends SpriteProps = SpriteProps> extends ComponentX<
     const drawHeight = width
     const centerX = height * (1 - t.anchorY)
     const centerY = width * t.anchorX
-    drawTextureRegionRotated(
+    globalCommandBuffer.pushRegion(
       this.textureId,
       frame.x, frame.y, frame.height, frame.width,
       t.worldX - centerX,
@@ -313,7 +310,7 @@ export class Sprite<Props extends SpriteProps = SpriteProps> extends ComponentX<
       }
     }
 
-    drawTextureRegionRotated(
+    globalCommandBuffer.pushRegion(
       this.textureId,
       sourceX, sourceY, sourceWidth, sourceHeight,
       x, y, width, height,
@@ -347,7 +344,7 @@ export class Sprite<Props extends SpriteProps = SpriteProps> extends ComponentX<
       for (let x = 0; x < w; x += tileWidth) {
         const drawWidth = Math.min(tileWidth, w - x)
         const sourceWidth = source.width * (drawWidth / tileWidth)
-        drawTextureRegionRotated(
+        globalCommandBuffer.pushRegion(
           this.textureId,
           source.x, source.y, sourceWidth, sourceHeight,
           dx + x, dy + y, drawWidth, drawHeight,
@@ -399,7 +396,7 @@ export class Sprite<Props extends SpriteProps = SpriteProps> extends ComponentX<
         const sourceWidth = sourceColumns[column]
         const destWidth = destColumns[column]
         if (sourceWidth > 0 && sourceHeight > 0 && destWidth > 0 && destHeight > 0) {
-          drawTextureRegionRotated(
+          globalCommandBuffer.pushRegion(
             this.textureId,
             sourceX, sourceY, sourceWidth, sourceHeight,
             destX, destY, destWidth, destHeight,

@@ -1,11 +1,11 @@
 import {
   drawRect,
-  drawTextureRotated,
   popClipRect,
   pushClipRect,
   startTextInput,
   stopTextInput,
 } from 'sdl3'
+import { globalCommandBuffer } from '../render/RenderCommandBuffer'
 import {
   AssetManager,
   FontAsset,
@@ -283,7 +283,7 @@ export class TextInput extends ComponentX<TextInputProps> {
     const transform = this.node
     const localX = (x - transform.worldX) / transform.worldScaleX
     const localY = (y - transform.worldY) / transform.worldScaleY
-    drawTextureRotated(
+    globalCommandBuffer.pushSprite(
       texture.id,
       transform.worldX + localX * transform.worldScaleX,
       transform.worldY + localY * transform.worldScaleY,

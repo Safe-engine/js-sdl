@@ -1,4 +1,4 @@
-import { drawTextureRotated } from 'sdl3'
+import { globalCommandBuffer } from '../render/RenderCommandBuffer'
 import {
   AssetManager,
   FontAsset,
@@ -192,7 +192,7 @@ export class RichText extends ComponentX<RichTextProps> {
     const y = originY
       + scaledX * Math.sin(radians) + scaledY * Math.cos(radians)
 
-    drawTextureRotated(
+    globalCommandBuffer.pushSprite(
       segment.texture.id,
       x,
       y,

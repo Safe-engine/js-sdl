@@ -11,9 +11,9 @@ import {
   type TextureRegion,
   type TrackEntry,
 } from '@esotericsoftware/spine-core'
-import { drawTextureMesh } from 'sdl3'
 import type { TextureAsset } from '../AssetManager'
 import { ComponentX } from '../core/ComponentX'
+import { globalCommandBuffer } from '../render/RenderCommandBuffer'
 import { loadSpineData } from './loadSpineData'
 import { SdlSpineTexture } from './SdlSpineTexture'
 import type { SpineData, SpineSkeletonProps } from './types'
@@ -230,7 +230,7 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
   private flushBatch(): void {
     if (!this.batchTexture || !this.batchColor || this.batchIndexCount === 0) return
     const transform = this.renderTransform
-    drawTextureMesh(
+    globalCommandBuffer.pushMesh(
       this.batchTexture.id,
       this.batchPositions.subarray(0, this.batchVertexCount * 2),
       this.batchUvs.subarray(0, this.batchVertexCount * 2),

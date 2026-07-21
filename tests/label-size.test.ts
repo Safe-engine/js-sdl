@@ -18,6 +18,7 @@ const sdlState = globalThis as typeof globalThis & {
 }
 const textureSizes = sdlState.__jsSdlTextureSizes ??= new Map()
 const drawCalls = sdlState.__jsSdlDrawCalls ??= []
+;(globalThis as any).__labelDrawCalls = drawCalls
 
 function nextAssetId(): number {
   const id = sdlState.__jsSdlNextAssetId ?? 1
@@ -43,7 +44,7 @@ mock.module('sdl3', () => ({
     b: number,
     a: number,
   ) => {
-    drawCalls.push({ id, x, y, width, height, r, g, b, a })
+    ;((globalThis as any).__labelDrawCalls ?? drawCalls).push({ id, x, y, width, height, r, g, b, a })
   },
   drawTextureQuad: () => {},
   getTextureHeight: (id: number) => textureSizes.get(id)?.height ?? 0,
@@ -62,6 +63,33 @@ mock.module('sdl3', () => ({
   },
   releaseFont: () => {},
   releaseTexture: () => {},
+  submitCommandBuffer: (buf: any) => {
+    if (!buf) return
+    const { commands, floatBuffer, uintBuffer } = buf
+    let cmdIdx = 0, floatIdx = 0, uintIdx = 0
+    while (cmdIdx < commands.length) {
+      const op = commands[cmdIdx++]
+      if (op === 0) break
+      if (op === 1) {
+        const id = uintBuffer[uintIdx++]
+        const c = uintBuffer[uintIdx++]
+        const x = floatBuffer[floatIdx++]
+        const y = floatBuffer[floatIdx++]
+        const width = floatBuffer[floatIdx++]
+        const height = floatBuffer[floatIdx++]
+        const _angle = floatBuffer[floatIdx++]
+        const _centerX = floatBuffer[floatIdx++]
+        const _centerY = floatBuffer[floatIdx++]
+        const _flipX = floatBuffer[floatIdx++] !== 0
+        const _flipY = floatBuffer[floatIdx++] !== 0
+        const r = (c >>> 24) & 0xff
+        const g = (c >>> 16) & 0xff
+        const b = (c >>> 8) & 0xff
+        const a = c & 0xff
+        ;((globalThis as any).__labelDrawCalls ?? drawCalls).push({ id, x, y, width, height, r, g, b, a })
+      }
+    }
+  },
 }))
 
 const { Label } = await import('../engine/components/Label')

@@ -1094,6 +1094,157 @@ export function pushClipRect(
   applyClipRect()
 }
 
+export interface SpriteBatchBuffer {
+  commands: Int32Array
+  floatBuffer: Float32Array
+  uintBuffer: Uint32Array
+  shortBuffer?: Uint16Array
+}
+
+export function submitCommandBuffer(buffer: SpriteBatchBuffer): void {
+  const { commands, floatBuffer, uintBuffer, shortBuffer } = buffer
+  let cmdIdx = 0
+  let floatIdx = 0
+  let uintIdx = 0
+  let shortIdx = 0
+
+  const numCmds = commands.length
+
+  while (cmdIdx < numCmds) {
+    const op = commands[cmdIdx++]
+    if (op === 0) break
+
+    if (op === 1) { // CMD_DRAW_SPRITE
+      const id = uintBuffer[uintIdx++]
+      const c = uintBuffer[uintIdx++]
+      const x = floatBuffer[floatIdx++]
+      const y = floatBuffer[floatIdx++]
+      const w = floatBuffer[floatIdx++]
+      const h = floatBuffer[floatIdx++]
+      const angle = floatBuffer[floatIdx++]
+      const cx = floatBuffer[floatIdx++]
+      const cy = floatBuffer[floatIdx++]
+      const flipX = floatBuffer[floatIdx++] !== 0
+      const flipY = floatBuffer[floatIdx++] !== 0
+
+      const r = (c >>> 24) & 0xff
+      const g = (c >>> 16) & 0xff
+      const b = (c >>> 8) & 0xff
+      const a = c & 0xff
+
+      drawTextureRotated(id, x, y, w, h, angle, cx, cy, flipX, flipY, r, g, b, a)
+    } else if (op === 8) { // CMD_DRAW_REGION
+      const id = uintBuffer[uintIdx++]
+      const c = uintBuffer[uintIdx++]
+      const sx = floatBuffer[floatIdx++]
+      const sy = floatBuffer[floatIdx++]
+      const sw = floatBuffer[floatIdx++]
+      const sh = floatBuffer[floatIdx++]
+      const dx = floatBuffer[floatIdx++]
+      const dy = floatBuffer[floatIdx++]
+      const dw = floatBuffer[floatIdx++]
+      const dh = floatBuffer[floatIdx++]
+      const angle = floatBuffer[floatIdx++]
+      const cx = floatBuffer[floatIdx++]
+      const cy = floatBuffer[floatIdx++]
+      const flipX = floatBuffer[floatIdx++] !== 0
+      const flipY = floatBuffer[floatIdx++] !== 0
+
+      const r = (c >>> 24) & 0xff
+      const g = (c >>> 16) & 0xff
+      const b = (c >>> 8) & 0xff
+      const a = c & 0xff
+
+      drawTextureRegionRotated(
+        id, sx, sy, sw, sh, dx, dy, dw, dh, angle, cx, cy, flipX, flipY, r, g, b, a,
+      )
+    } else if (op === 2) { // CMD_DRAW_QUAD
+      const id = uintBuffer[uintIdx++]
+      const c = uintBuffer[uintIdx++]
+      const x0 = floatBuffer[floatIdx++], y0 = floatBuffer[floatIdx++]
+      const u0 = floatBuffer[floatIdx++], v0 = floatBuffer[floatIdx++]
+      const x1 = floatBuffer[floatIdx++], y1 = floatBuffer[floatIdx++]
+      const u1 = floatBuffer[floatIdx++], v1 = floatBuffer[floatIdx++]
+      const x2 = floatBuffer[floatIdx++], y2 = floatBuffer[floatIdx++]
+      const u2 = floatBuffer[floatIdx++], v2 = floatBuffer[floatIdx++]
+      const x3 = floatBuffer[floatIdx++], y3 = floatBuffer[floatIdx++]
+      const u3 = floatBuffer[floatIdx++], v3 = floatBuffer[floatIdx++]
+
+      const r = (c >>> 24) & 0xff
+      const g = (c >>> 16) & 0xff
+      const b = (c >>> 8) & 0xff
+      const a = c & 0xff
+
+      drawTextureQuad(
+        id, x0, y0, u0, v0, x1, y1, u1, v1, x2, y2, u2, v2, x3, y3, u3, v3, r, g, b, a,
+      )
+    } else if (op === 3) { // CMD_DRAW_MESH
+      const id = uintBuffer[uintIdx++]
+      const c = uintBuffer[uintIdx++]
+      const vCount = uintBuffer[uintIdx++]
+      const iCount = uintBuffer[uintIdx++]
+
+      const positions = floatBuffer.subarray(floatIdx, floatIdx + vCount * 2)
+      floatIdx += vCount * 2
+
+      const uvs = floatBuffer.subarray(floatIdx, floatIdx + vCount * 2)
+      floatIdx += vCount * 2
+
+      const tx = floatBuffer[floatIdx++]
+      const ty = floatBuffer[floatIdx++]
+      const sx = floatBuffer[floatIdx++]
+      const sy = floatBuffer[floatIdx++]
+      const cos = floatBuffer[floatIdx++]
+      const sin = floatBuffer[floatIdx++]
+
+      const indices = shortBuffer ? shortBuffer.subarray(shortIdx, shortIdx + iCount) : new Uint16Array(0)
+      shortIdx += iCount
+
+      const r = (c >>> 24) & 0xff
+      const g = (c >>> 16) & 0xff
+      const b = (c >>> 8) & 0xff
+      const a = c & 0xff
+
+      drawTextureMesh(id, positions, uvs, indices, r, g, b, a, tx, ty, sx, sy, cos, sin)
+    } else if (op === 4) { // CMD_DRAW_RECT
+      const c = uintBuffer[uintIdx++]
+      const x = floatBuffer[floatIdx++]
+      const y = floatBuffer[floatIdx++]
+      const w = floatBuffer[floatIdx++]
+      const h = floatBuffer[floatIdx++]
+
+      const r = (c >>> 24) & 0xff
+      const g = (c >>> 16) & 0xff
+      const b = (c >>> 8) & 0xff
+      const a = c & 0xff
+
+      drawRect(x, y, w, h, r, g, b, a)
+    } else if (op === 5) { // CMD_DRAW_LINE
+      const c = uintBuffer[uintIdx++]
+      const x1 = floatBuffer[floatIdx++]
+      const y1 = floatBuffer[floatIdx++]
+      const x2 = floatBuffer[floatIdx++]
+      const y2 = floatBuffer[floatIdx++]
+
+      const r = (c >>> 24) & 0xff
+      const g = (c >>> 16) & 0xff
+      const b = (c >>> 8) & 0xff
+      const a = c & 0xff
+
+      drawLine(x1, y1, x2, y2, r, g, b, a)
+    } else if (op === 6) { // CMD_PUSH_CLIP
+      const x = floatBuffer[floatIdx++]
+      const y = floatBuffer[floatIdx++]
+      const w = floatBuffer[floatIdx++]
+      const h = floatBuffer[floatIdx++]
+
+      pushClipRect(x, y, w, h)
+    } else if (op === 7) { // CMD_POP_CLIP
+      popClipRect()
+    }
+  }
+}
+
 export function popClipRect(): void {
   clipStack.pop()
   applyClipRect()

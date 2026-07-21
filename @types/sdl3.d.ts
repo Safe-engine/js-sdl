@@ -96,6 +96,16 @@ declare module 'sdl3' {
   /** Perform platform audio maintenance, including native loop refills. */
   export function updateAudio(): void
 
+  export interface SpriteBatchBuffer {
+    commands: Int32Array
+    floatBuffer: Float32Array
+    uintBuffer: Uint32Array
+    shortBuffer?: Uint16Array
+  }
+
+  /** Submit a render command buffer for native batching. */
+  export function submitCommandBuffer(buffer: SpriteBatchBuffer): void
+
   /** Clear the screen with the default background colour. */
   export function clear(): void
 

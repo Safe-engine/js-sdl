@@ -86,6 +86,59 @@ mock.module('sdl3', () => ({
   },
   releaseFont: () => {},
   releaseTexture: () => {},
+  submitCommandBuffer: (buf: any) => {
+    if (!buf) return
+    const { commands, floatBuffer, uintBuffer } = buf
+    let cmdIdx = 0, floatIdx = 0, uintIdx = 0
+    while (cmdIdx < commands.length) {
+      const op = commands[cmdIdx++]
+      if (op === 0) break
+      if (op === 1) { // CMD_DRAW_SPRITE
+        const id = uintBuffer[uintIdx++]
+        const _c = uintBuffer[uintIdx++]
+        const x = floatBuffer[floatIdx++]
+        const y = floatBuffer[floatIdx++]
+        const width = floatBuffer[floatIdx++]
+        const height = floatBuffer[floatIdx++]
+        const _angle = floatBuffer[floatIdx++]
+        const _centerX = floatBuffer[floatIdx++]
+        const _centerY = floatBuffer[floatIdx++]
+        const _flipX = floatBuffer[floatIdx++] !== 0
+        const _flipY = floatBuffer[floatIdx++] !== 0
+        drawCalls.push({ id, x, y, width, height })
+      } else if (op === 8) { // CMD_DRAW_REGION
+        const id = uintBuffer[uintIdx++]
+        const _c = uintBuffer[uintIdx++]
+        const sourceX = floatBuffer[floatIdx++]
+        const sourceY = floatBuffer[floatIdx++]
+        const sourceWidth = floatBuffer[floatIdx++]
+        const sourceHeight = floatBuffer[floatIdx++]
+        const x = floatBuffer[floatIdx++]
+        const y = floatBuffer[floatIdx++]
+        const width = floatBuffer[floatIdx++]
+        const height = floatBuffer[floatIdx++]
+        const angle = floatBuffer[floatIdx++]
+        const centerX = floatBuffer[floatIdx++]
+        const centerY = floatBuffer[floatIdx++]
+        const _flipX = floatBuffer[floatIdx++] !== 0
+        const _flipY = floatBuffer[floatIdx++] !== 0
+        regionDrawCalls.push({
+          id,
+          sourceX,
+          sourceY,
+          sourceWidth,
+          sourceHeight,
+          x,
+          y,
+          width,
+          height,
+          angle,
+          centerX,
+          centerY,
+        })
+      }
+    }
+  },
 }))
 
 const { Sprite } = await import('../engine/components/Sprite')
