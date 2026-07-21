@@ -7,6 +7,9 @@
  */
 
 declare module 'sdl3' {
+  /** Whether the active backend is the native SDL/QuickJS runtime. */
+  export const isNative: boolean
+
   export type ResolutionPolicy
     = | 'letterbox'
       | 'overscan'
@@ -137,6 +140,9 @@ declare module 'sdl3' {
     uvs: Float32Array,
     indices: Uint16Array,
     red?: number, green?: number, blue?: number, alpha?: number,
+    translateX?: number, translateY?: number,
+    scaleX?: number, scaleY?: number,
+    cosine?: number, sine?: number,
   ): void
 
   /** Draw a filled rectangle in logical coordinates. */

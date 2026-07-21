@@ -25,7 +25,6 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
   private loadedKey = ''
   private loadVersion = 0
   private worldVertices = new Float32Array(8)
-  private meshVertices = new Float32Array(8)
   private readonly meshUvs = new WeakMap<MeshAttachment, Float32Array>()
   private readonly meshIndices = new WeakMap<MeshAttachment, Uint16Array>()
   private batchTexture: TextureAsset | null = null
@@ -35,6 +34,7 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
   private batchIndices = new Uint16Array(0)
   private batchVertexCount = 0
   private batchIndexCount = 0
+  private renderTransform: SpineTransform = IDENTITY_TRANSFORM
 
   onStart(): void {
     void this.reload().catch((error) => {
@@ -44,6 +44,7 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
 
   onUpdate(dt: number): void {
     if (!this.skeleton || !this.state) return
+    if (!this.state.getCurrent(0)) return
     this.state.timeScale = this.props.timeScale ?? 1
     this.state.update(dt)
     this.state.apply(this.skeleton)
@@ -55,6 +56,7 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
     if (!this.node?.visible || !this.skeleton) return
 
     this.resetBatch()
+    this.renderTransform = getTransform(this)
     const drawOrder = this.skeleton.drawOrder
     for (let i = 0; i < drawOrder.length; i++) {
       const slot = drawOrder[i]
@@ -154,12 +156,6 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
   ): void {
     const vertices = this.worldVertices
     const uvs = attachment.uvs
-    const transform = getTransform(this)
-    const bottomRight = transformPoint(transform, vertices[0], vertices[1])
-    const bottomLeft = transformPoint(transform, vertices[2], vertices[3])
-    const topLeft = transformPoint(transform, vertices[4], vertices[5])
-    const topRight = transformPoint(transform, vertices[6], vertices[7])
-
     const skeletonColor = this.skeleton?.color
     const slotColor = slot.color
     const attachmentColor = attachment.color
@@ -173,10 +169,10 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
       * (this.node?.opacity ?? 1)
 
     this.appendToBatch(texture, { red, green, blue, alpha }, [
-      topLeft.x, topLeft.y,
-      topRight.x, topRight.y,
-      bottomLeft.x, bottomLeft.y,
-      bottomRight.x, bottomRight.y,
+      vertices[4], vertices[5],
+      vertices[6], vertices[7],
+      vertices[2], vertices[3],
+      vertices[0], vertices[1],
     ], [
       uvs[4], uvs[5],
       uvs[6], uvs[7],
@@ -194,16 +190,7 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
     const color = this.multiplyColors(slot.color, attachment.color)
     const indices = this.getMeshIndices(attachment)
     if (!indices) return
-    const transformed = this.ensureMeshVertices(vertices.length)
-    const transform = getTransform(this)
-    for (let i = 0; i < vertices.length; i += 2) {
-      const x = vertices[i] * transform.scaleX
-      const y = vertices[i + 1] * transform.scaleY
-      transformed[i] = transform.x + x * transform.cos - y * transform.sin
-      transformed[i + 1] = transform.y + x * transform.sin + y * transform.cos
-    }
-
-    this.appendToBatch(texture, color, transformed, this.getMeshUvs(attachment), indices)
+    this.appendToBatch(texture, color, vertices, this.getMeshUvs(attachment), indices)
   }
 
   private resetBatch(): void {
@@ -242,6 +229,7 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
 
   private flushBatch(): void {
     if (!this.batchTexture || !this.batchColor || this.batchIndexCount === 0) return
+    const transform = this.renderTransform
     drawTextureMesh(
       this.batchTexture.id,
       this.batchPositions.subarray(0, this.batchVertexCount * 2),
@@ -251,6 +239,12 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
       this.batchColor.green,
       this.batchColor.blue,
       this.batchColor.alpha,
+      transform.x,
+      transform.y,
+      transform.scaleX,
+      transform.scaleY,
+      transform.cos,
+      transform.sin,
     )
     this.resetBatch()
   }
@@ -289,11 +283,6 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
       this.worldVertices = new Float32Array(length)
     }
     return this.worldVertices
-  }
-
-  private ensureMeshVertices(length: number): Float32Array {
-    if (this.meshVertices.length < length) this.meshVertices = new Float32Array(length)
-    return this.meshVertices.subarray(0, length)
   }
 
   private getMeshUvs(attachment: MeshAttachment): Float32Array {
@@ -356,6 +345,15 @@ interface SpineTransform {
   sin: number
 }
 
+const IDENTITY_TRANSFORM: SpineTransform = {
+  x: 0,
+  y: 0,
+  scaleX: 1,
+  scaleY: 1,
+  cos: 1,
+  sin: 0,
+}
+
 function getTransform(root: SpineSkeleton): SpineTransform {
   const node = root.node
   if (!node) return { x: 0, y: 0, scaleX: 1, scaleY: 1, cos: 1, sin: 0 }
@@ -367,14 +365,5 @@ function getTransform(root: SpineSkeleton): SpineTransform {
     scaleY: node.worldScaleY,
     cos: Math.cos(radians),
     sin: Math.sin(radians),
-  }
-}
-
-function transformPoint(transform: SpineTransform, x: number, y: number): { x: number, y: number } {
-  const scaledX = x * transform.scaleX
-  const scaledY = y * transform.scaleY
-  return {
-    x: transform.x + scaledX * transform.cos - scaledY * transform.sin,
-    y: transform.y + scaledX * transform.sin + scaledY * transform.cos,
   }
 }

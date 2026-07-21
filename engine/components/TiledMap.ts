@@ -76,7 +76,6 @@ interface TileBatch {
   uvs: Float32Array
   flippedUvs: Float32Array
   indices: Uint16Array
-  transformed: Float32Array
 }
 
 export class TiledMapLayer {
@@ -159,7 +158,6 @@ function buildTileBatches(tiles: TilePlacement[]): TileBatch[] {
       uvs,
       flippedUvs: new Float32Array(uvs.length),
       indices,
-      transformed: new Float32Array(positions.length),
     })
     start = end
   }
@@ -229,26 +227,28 @@ export class TiledMap extends ComponentX<TiledMapProps> {
     const green = this.node.color.g
     const blue = this.node.color.b
     const alpha = this.node.opacity * (this.node.color.a ?? 255)
+    const translateX = worldX + originX * scaleX * cos - originY * scaleY * sin
+    const translateY = worldY + originX * scaleX * sin + originY * scaleY * cos
 
     for (const batch of this.tileBatches) {
       const uvs = this.node.flipX || this.node.flipY
         ? flipTileUvs(batch.uvs, batch.flippedUvs, this.node.flipX, this.node.flipY)
         : batch.uvs
-      for (let i = 0; i < batch.positions.length; i += 2) {
-        const localX = (originX + batch.positions[i]) * scaleX
-        const localY = (originY + batch.positions[i + 1]) * scaleY
-        batch.transformed[i] = worldX + localX * cos - localY * sin
-        batch.transformed[i + 1] = worldY + localX * sin + localY * cos
-      }
       drawTextureMesh(
         batch.texture.id,
-        batch.transformed,
+        batch.positions,
         uvs,
         batch.indices,
         red,
         green,
         blue,
         alpha * batch.opacity,
+        translateX,
+        translateY,
+        scaleX,
+        scaleY,
+        cos,
+        sin,
       )
     }
   }

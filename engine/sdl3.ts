@@ -1,3 +1,5 @@
+export const isNative = false
+
 let canvas: HTMLCanvasElement | null = null
 let gl: WebGLRenderingContext | null = null
 let program: WebGLProgram | null = null
@@ -940,6 +942,12 @@ export function drawTextureMesh(
   green = 255,
   blue = 255,
   alpha = 255,
+  translateX = 0,
+  translateY = 0,
+  scaleX = 1,
+  scaleY = 1,
+  cosine = 1,
+  sine = 0,
 ): void {
   const asset = textures.get(id)
   if (!asset?.texture || positions.length !== uvs.length || indices.length % 3 !== 0) return
@@ -949,8 +957,10 @@ export function drawTextureMesh(
   for (let i = 0; i < indices.length; i++) {
     const index = indices[i] * 2
     if (index + 1 >= positions.length) return
-    trianglePositions[i * 2] = positions[index]
-    trianglePositions[i * 2 + 1] = positions[index + 1]
+    const x = positions[index] * scaleX
+    const y = positions[index + 1] * scaleY
+    trianglePositions[i * 2] = translateX + x * cosine - y * sine
+    trianglePositions[i * 2 + 1] = translateY + x * sine + y * cosine
     triangleUvs[i * 2] = uvs[index]
     triangleUvs[i * 2 + 1] = uvs[index + 1]
   }

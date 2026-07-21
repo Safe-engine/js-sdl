@@ -1,5 +1,9 @@
 import * as sdl from 'sdl3'
 
+// Avoid repeated QuickJS-to-C calls in native render loops. Web textures can
+// acquire their dimensions asynchronously, so their getters must stay live.
+const cacheTextureDimensions = sdl.isNative ?? false
+
 interface TextureRecord {
   id: number
   width: number
@@ -14,8 +18,8 @@ interface FontRecord {
 
 export class TextureAsset {
   private released = false
-  private readonly fallbackWidth: number
-  private readonly fallbackHeight: number
+  private readonly cachedWidth: number
+  private readonly cachedHeight: number
 
   constructor(
     readonly key: string,
@@ -24,16 +28,20 @@ export class TextureAsset {
     height: number,
     private readonly releaseAsset: (key: string) => void,
   ) {
-    this.fallbackWidth = width
-    this.fallbackHeight = height
+    this.cachedWidth = width
+    this.cachedHeight = height
   }
 
   get width(): number {
-    return sdl.getTextureWidth(this.id) || this.fallbackWidth
+    return cacheTextureDimensions
+      ? this.cachedWidth
+      : sdl.getTextureWidth(this.id) || this.cachedWidth
   }
 
   get height(): number {
-    return sdl.getTextureHeight(this.id) || this.fallbackHeight
+    return cacheTextureDimensions
+      ? this.cachedHeight
+      : sdl.getTextureHeight(this.id) || this.cachedHeight
   }
 
   release(): void {

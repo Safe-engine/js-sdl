@@ -39,4 +39,22 @@ describe('SpineBonesControl', () => {
     expect(head).toEqual({ x: 12, y: 34 })
     expect(worldUpdates).toBe(1)
   })
+
+  test('does not update a skeleton without an active animation track', () => {
+    const spine = new SpineSkeleton({ data: null as any })
+    let stateUpdates = 0
+    let skeletonUpdates = 0
+    ;(spine as any).state = {
+      getCurrent: () => null,
+      update: () => stateUpdates++,
+    }
+    spine.skeleton = {
+      update: () => skeletonUpdates++,
+    } as any
+
+    spine.onUpdate(1 / 60)
+
+    expect(stateUpdates).toBe(0)
+    expect(skeletonUpdates).toBe(0)
+  })
 })

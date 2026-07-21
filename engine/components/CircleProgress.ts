@@ -45,8 +45,8 @@ export class CircleProgress extends Sprite {
     const ratio = (this.value - this.min) / (this.max - this.min)
     if (ratio <= 0) return
 
-    const textureWidth = sdl.getTextureWidth(this.textureId)
-    const textureHeight = sdl.getTextureHeight(this.textureId)
+    const textureWidth = this.texture?.width ?? 0
+    const textureHeight = this.texture?.height ?? 0
     if (textureWidth <= 0 || textureHeight <= 0) return
 
     const frame = this.atlas?.getFrame(this.frameName)
