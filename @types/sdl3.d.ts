@@ -12,11 +12,11 @@ declare module 'sdl3' {
 
   export type ResolutionPolicy
     = | 'letterbox'
-      | 'overscan'
-      | 'stretch'
-      | 'fixed-width'
-      | 'fixed-height'
-      | 'integer-scale'
+    | 'overscan'
+    | 'stretch'
+    | 'fixed-width'
+    | 'fixed-height'
+    | 'integer-scale'
 
   /** Create a window and its renderer. */
   export function createWindow(
@@ -161,7 +161,7 @@ declare module 'sdl3' {
     red: number, green: number, blue: number, alpha?: number,
   ): void
 
-  export interface DrawPoint {
+  export interface Point {
     x: number
     y: number
   }
@@ -183,7 +183,7 @@ declare module 'sdl3' {
   ): void
 
   export function drawPolyline(
-    points: DrawPoint[],
+    points: Point[],
     red: number, green: number, blue: number, alpha?: number,
     closed?: boolean,
   ): void
@@ -256,11 +256,11 @@ type OrientationCallback = (
 ) => void
 type ResolutionPolicy
   = | 'letterbox'
-    | 'overscan'
-    | 'stretch'
-    | 'fixed-width'
-    | 'fixed-height'
-    | 'integer-scale'
+  | 'overscan'
+  | 'stretch'
+  | 'fixed-width'
+  | 'fixed-height'
+  | 'integer-scale'
 
 interface TextureAsset {
   texture: WebGLTexture | null

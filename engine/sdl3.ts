@@ -1003,11 +1003,6 @@ export function drawRect(
   textures.delete(id)
 }
 
-export interface DrawPoint {
-  x: number
-  y: number
-}
-
 export function drawLine(
   x1: number,
   y1: number,
@@ -1070,7 +1065,7 @@ export function drawCircle(
 }
 
 export function drawPolyline(
-  points: DrawPoint[],
+  points: Point[],
   red: number,
   green: number,
   blue: number,

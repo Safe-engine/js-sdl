@@ -59,6 +59,19 @@ describe('RenderCommandBuffer', () => {
     expect(view.commands[4]).toBe(CMD_POP_CLIP)
   })
 
+  it('encodes points, circles, and polylines as buffered primitive commands', () => {
+    const buffer = new RenderCommandBuffer()
+    buffer.beginFrame()
+
+    buffer.pushPoint(10, 20)
+    buffer.pushCircle(30, 40, 4)
+    buffer.pushPolyline([{ x: 0, y: 0 }, { x: 10, y: 10 }], 255, 255, 255, 255, true)
+
+    const view = buffer.getBufferView()
+    expect(view.commands[0]).toBe(CMD_DRAW_RECT)
+    expect([...view.commands.slice(1)].every(command => command === CMD_DRAW_LINE)).toBe(true)
+  })
+
   it('should execute submitCommandBuffer on Web fallback without errors', () => {
     const buffer = new RenderCommandBuffer()
     buffer.beginFrame()

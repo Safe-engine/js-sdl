@@ -1,7 +1,4 @@
 import {
-  drawRect,
-  popClipRect,
-  pushClipRect,
   startTextInput,
   stopTextInput,
 } from 'sdl3'
@@ -90,14 +87,14 @@ export class TextInput extends ComponentX<TextInputProps> {
     const border = isFocused
       ? this.focusedBorderColor
       : this.borderColor
-    drawRect(rect.x, rect.y, rect.width, rect.height,
+    globalCommandBuffer.pushRect(rect.x, rect.y, rect.width, rect.height,
       border.r, border.g, border.b, border.a ?? 255)
 
     const innerX = rect.x + this.borderWidth
     const innerY = rect.y + this.borderWidth
     const innerWidth = Math.max(0, rect.width - this.borderWidth * 2)
     const innerHeight = Math.max(0, rect.height - this.borderWidth * 2)
-    drawRect(innerX, innerY, innerWidth, innerHeight,
+    globalCommandBuffer.pushRect(innerX, innerY, innerWidth, innerHeight,
       background.r, background.g, background.b, background.a ?? 255)
 
     const contentX = innerX + this.padding.left
@@ -108,7 +105,7 @@ export class TextInput extends ComponentX<TextInputProps> {
       innerHeight - this.padding.top - this.padding.bottom)
     if (contentWidth <= 0 || contentHeight <= 0) return
 
-    pushClipRect(contentX, contentY, contentWidth, contentHeight)
+    globalCommandBuffer.pushClipRect(contentX, contentY, contentWidth, contentHeight)
     this.clipActive = true
 
     const texture = this.textTexture
@@ -125,14 +122,14 @@ export class TextInput extends ComponentX<TextInputProps> {
         const caretX = Math.min(contentX + contentWidth - 1,
           contentX + texture.width - offsetX + 1)
         const caretY = contentY + Math.max(0, (contentHeight - caretHeight) * 0.5)
-        drawRect(caretX, caretY, 1, caretHeight,
+        globalCommandBuffer.pushRect(caretX, caretY, 1, caretHeight,
           this.caretColor.r, this.caretColor.g,
           this.caretColor.b, this.caretColor.a ?? 255)
       }
     } else if (isFocused && this.caretVisible) {
       const caretHeight = Math.min(contentHeight, this.fontSize)
       const caretY = contentY + Math.max(0, (contentHeight - caretHeight) * 0.5)
-      drawRect(contentX, caretY, 1, caretHeight,
+      globalCommandBuffer.pushRect(contentX, caretY, 1, caretHeight,
         this.caretColor.r, this.caretColor.g,
         this.caretColor.b, this.caretColor.a ?? 255)
     }
@@ -140,7 +137,7 @@ export class TextInput extends ComponentX<TextInputProps> {
 
   onRenderEnd(): void {
     if (this.clipActive) {
-      popClipRect()
+      globalCommandBuffer.popClipRect()
       this.clipActive = false
     }
   }

@@ -274,6 +274,59 @@ export class RenderCommandBuffer {
     this.autoSubmitIfInactive()
   }
 
+  public pushPoint(
+    x: number,
+    y: number,
+    r = 255,
+    g = 255,
+    b = 255,
+    a = 255,
+  ): void {
+    this.pushRect(x - 1, y - 1, 2, 2, r, g, b, a)
+  }
+
+  public pushCircle(
+    x: number,
+    y: number,
+    radius: number,
+    r = 255,
+    g = 255,
+    b = 255,
+    a = 255,
+    fill = false,
+  ): void {
+    const segments = Math.max(12, Math.ceil(radius / 2))
+    let previousX = x + radius
+    let previousY = y
+    for (let i = 1; i <= segments; i++) {
+      const angle = i / segments * Math.PI * 2
+      const currentX = x + Math.cos(angle) * radius
+      const currentY = y + Math.sin(angle) * radius
+      this.pushLine(previousX, previousY, currentX, currentY, r, g, b, a)
+      if (fill) this.pushLine(x, y, currentX, currentY, r, g, b, a * 0.35)
+      previousX = currentX
+      previousY = currentY
+    }
+  }
+
+  public pushPolyline(
+    points: readonly Point[],
+    r = 255,
+    g = 255,
+    b = 255,
+    a = 255,
+    closed = false,
+  ): void {
+    for (let i = 1; i < points.length; i++) {
+      this.pushLine(points[i - 1].x, points[i - 1].y, points[i].x, points[i].y, r, g, b, a)
+    }
+    if (closed && points.length > 1) {
+      const first = points[0]
+      const last = points[points.length - 1]
+      this.pushLine(last.x, last.y, first.x, first.y, r, g, b, a)
+    }
+  }
+
   public pushClipRect(x: number, y: number, width: number, height: number): void {
     this.ensureCapacities(1, 4, 0, 0)
     this.commands[this.cmdOffset++] = CMD_PUSH_CLIP

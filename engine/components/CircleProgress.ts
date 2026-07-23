@@ -1,4 +1,3 @@
-import * as sdl from 'sdl3'
 import { globalCommandBuffer } from '../render/RenderCommandBuffer'
 import { spriteFrameCache } from '../SpriteFrameCache'
 import { Sprite } from './Sprite'

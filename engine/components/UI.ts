@@ -1,8 +1,8 @@
-import * as sdl from 'sdl3'
 import { ComponentX } from '../core/ComponentX'
 import type { Node } from '../core/Node'
 import { white } from '../helper/constants'
 import type { InputEvent } from '../Input'
+import { globalCommandBuffer } from '../render/RenderCommandBuffer'
 
 export type LayoutDirection = 'none' | 'horizontal' | 'vertical' | 'grid'
 export type LayoutAlignment = 'start' | 'center' | 'end' | 'stretch'
@@ -321,11 +321,11 @@ export class Toggle extends ComponentX {
   onRender(): void {
     const rect = this.worldRect()
     const color = this.checked ? this.trackOnColor : this.trackOffColor
-    sdl.drawRect(rect.x, rect.y, rect.width, rect.height,
+    globalCommandBuffer.pushRect(rect.x, rect.y, rect.width, rect.height,
       color.r, color.g, color.b, this.disabled ? 120 : color.a ?? 255)
     const thumb = Math.min(rect.height, rect.width * 0.5)
     const x = this.checked ? rect.x + rect.width - thumb : rect.x
-    sdl.drawRect(x, rect.y, thumb, rect.height,
+    globalCommandBuffer.pushRect(x, rect.y, thumb, rect.height,
       this.thumbColor.r, this.thumbColor.g, this.thumbColor.b,
       this.disabled ? 160 : this.thumbColor.a ?? 255)
   }
@@ -372,11 +372,11 @@ export class ScrollView extends UIContainer<ScrollViewProps> {
     const n = this.node
     const x = n.worldX - n.anchorX * n.width * Math.abs(n.worldScaleX)
     const y = n.worldY - n.anchorY * n.height * Math.abs(n.worldScaleY)
-    sdl.pushClipRect(x, y, n.width * Math.abs(n.worldScaleX), n.height * Math.abs(n.worldScaleY))
+    globalCommandBuffer.pushClipRect(x, y, n.width * Math.abs(n.worldScaleX), n.height * Math.abs(n.worldScaleY))
   }
 
   onRenderEnd(): void {
-    sdl.popClipRect()
+    globalCommandBuffer.popClipRect()
   }
 
   hitTest(x: number, y: number): boolean {

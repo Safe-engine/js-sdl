@@ -1,7 +1,7 @@
-import * as sdl from 'sdl3'
 import { white } from '../helper/constants'
 import type { InputEvent } from '../Input'
 import { ComponentX } from '../core/ComponentX'
+import { globalCommandBuffer } from '../render/RenderCommandBuffer'
 import { containsPoint, worldRect } from './UI'
 
 export interface SliderProps {
@@ -80,18 +80,18 @@ export class Slider extends ComponentX<SliderProps> {
   onRender(): void {
     const rect = worldRect(this.node)
     const ratio = this.valueRatio()
-    sdl.drawRect(rect.x, rect.y, rect.width, rect.height,
+    globalCommandBuffer.pushRect(rect.x, rect.y, rect.width, rect.height,
       this.trackColor.r, this.trackColor.g, this.trackColor.b,
       this.disabled ? 120 : this.trackColor.a ?? 255)
 
     if (this.vertical) {
       const fillHeight = rect.height * ratio
-      sdl.drawRect(rect.x, rect.y + rect.height - fillHeight, rect.width, fillHeight,
+      globalCommandBuffer.pushRect(rect.x, rect.y + rect.height - fillHeight, rect.width, fillHeight,
         this.fillColor.r, this.fillColor.g, this.fillColor.b,
         this.disabled ? 160 : this.fillColor.a ?? 255)
     } else {
       const fillWidth = rect.width * ratio
-      sdl.drawRect(rect.x, rect.y, fillWidth, rect.height,
+      globalCommandBuffer.pushRect(rect.x, rect.y, fillWidth, rect.height,
         this.fillColor.r, this.fillColor.g, this.fillColor.b,
         this.disabled ? 160 : this.fillColor.a ?? 255)
     }
@@ -103,13 +103,13 @@ export class Slider extends ComponentX<SliderProps> {
     if (this.vertical) {
       const cy = rect.y + rect.height - rect.height * ratio
       const thumbHeight = Math.min(thumbExtent, rect.height)
-      sdl.drawRect(rect.x, cy - thumbHeight * 0.5, rect.width, thumbHeight,
+      globalCommandBuffer.pushRect(rect.x, cy - thumbHeight * 0.5, rect.width, thumbHeight,
         this.thumbColor.r, this.thumbColor.g, this.thumbColor.b,
         this.disabled ? 180 : this.thumbColor.a ?? 255)
     } else {
       const cx = rect.x + rect.width * ratio
       const thumbWidth = Math.min(thumbExtent, rect.width)
-      sdl.drawRect(cx - thumbWidth * 0.5, rect.y, thumbWidth, rect.height,
+      globalCommandBuffer.pushRect(cx - thumbWidth * 0.5, rect.y, thumbWidth, rect.height,
         this.thumbColor.r, this.thumbColor.g, this.thumbColor.b,
         this.disabled ? 180 : this.thumbColor.a ?? 255)
     }

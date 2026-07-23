@@ -1,5 +1,5 @@
-import { drawCircle, drawPolyline } from 'sdl3'
 import { ComponentX } from '../core/ComponentX'
+import { globalCommandBuffer } from '../render/RenderCommandBuffer'
 import { CircleCollider, Collider } from './CollideComponent'
 import { CollideSystem } from './CollideSystem'
 
@@ -16,7 +16,7 @@ export class ColliderDebugRender extends ComponentX {
 
   drawCollider(collider: Collider) {
     if (collider instanceof CircleCollider) {
-      drawCircle(
+      globalCommandBuffer.pushCircle(
         collider.worldPosition.x,
         collider.worldPosition.y,
         collider.worldRadius,
@@ -27,6 +27,6 @@ export class ColliderDebugRender extends ComponentX {
       )
       return
     }
-    drawPolyline(collider.worldPoints, this.color.r, this.color.g, this.color.b, this.color.a, true)
+    globalCommandBuffer.pushPolyline(collider.worldPoints, this.color.r, this.color.g, this.color.b, this.color.a, true)
   }
 }

@@ -1,6 +1,6 @@
-import { drawCircle } from 'sdl3'
 import { ComponentX } from '../core/ComponentX'
 import type { InputEvent } from '../Input'
+import { globalCommandBuffer } from '../render/RenderCommandBuffer'
 
 export interface ParticlesProps {
   count?: number
@@ -92,7 +92,7 @@ export class Particles extends ComponentX<ParticlesProps> {
     for (const particle of this.particles) {
       const position = this.node.localToWorld(particle.x, particle.y)
       const alpha = Math.round(255 * this.node.opacity * particle.life / particle.duration)
-      drawCircle(position.x, position.y, particle.radius * scale,
+      globalCommandBuffer.pushCircle(position.x, position.y, particle.radius * scale,
         particle.color.r, particle.color.g, particle.color.b, alpha, true)
     }
   }

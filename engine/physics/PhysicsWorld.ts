@@ -1,6 +1,5 @@
 import { Body, BodyType, BoxShape, CircleShape, Contact, ContactImpulse, EdgeShape, Fixture, Manifold, PolygonShape, Shape, Transform, TransformValue, Vec2, World } from 'box2d'
-import type { DrawPoint } from 'sdl3'
-import * as sdl from 'sdl3'
+import { globalCommandBuffer } from '../render/RenderCommandBuffer'
 import {
   DEG_TO_RAD,
   PhysicsRigidBodyComponent,
@@ -213,7 +212,7 @@ function drawFixtureDebug(
         Transform.mulVec2(transform, circleShape.getCenter()),
         pixelsPerMeter,
       )
-      sdl.drawCircle(
+      globalCommandBuffer.pushCircle(
         center.x,
         center.y,
         circleShape.getRadius() * pixelsPerMeter,
@@ -222,32 +221,32 @@ function drawFixtureDebug(
         color.b,
         color.a,
       )
-      sdl.drawPoint(center.x, center.y, color.r, color.g, color.b, color.a)
+      globalCommandBuffer.pushPoint(center.x, center.y, color.r, color.g, color.b, color.a)
       break
     }
     case 'edge': {
       const edgeShape = shape as EdgeShape
       const a = toDebugPoint(Transform.mulVec2(transform, edgeShape.m_vertex1), pixelsPerMeter)
       const b = toDebugPoint(Transform.mulVec2(transform, edgeShape.m_vertex2), pixelsPerMeter)
-      sdl.drawLine(a.x, a.y, b.x, b.y, color.r, color.g, color.b, color.a)
+      globalCommandBuffer.pushLine(a.x, a.y, b.x, b.y, color.r, color.g, color.b, color.a)
       break
     }
     case 'polygon': {
       const polygonShape = shape as PolygonShape
-      const points: DrawPoint[] = []
+      const points: Point[] = []
       for (let i = 0; i < polygonShape.m_count; i++) {
         points.push(toDebugPoint(
           Transform.mulVec2(transform, polygonShape.m_vertices[i]),
           pixelsPerMeter,
         ))
       }
-      sdl.drawPolyline(points, color.r, color.g, color.b, color.a, true)
+      globalCommandBuffer.pushPolyline(points, color.r, color.g, color.b, color.a, true)
       break
     }
   }
 }
 
-function toDebugPoint(point: Vec2, pixelsPerMeter: number): DrawPoint {
+function toDebugPoint(point: Vec2, pixelsPerMeter: number): Point {
   return {
     x: point.x * pixelsPerMeter,
     y: point.y * pixelsPerMeter,
