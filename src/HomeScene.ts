@@ -7,10 +7,10 @@ import {
 import { instantiate, loadScene } from '../engine/core/instantiate'
 import { DragonBones } from '../engine/dragonbones'
 import {
-  db_mecha_1004d_show,
+  db_mecha_1004_d_show,
   lilita_one_regularFont,
-  sf_button,
-  sp_spineboy_pma,
+  sf_btn_shop,
+  sp_spineboy_pma
 } from './assets'
 import { GameScene } from './GameScene'
 
@@ -32,7 +32,7 @@ export class HomeScene extends Scene {
 
   __view() {
     const Button1 = instantiate(Button, {
-      spriteFrame: sf_button,
+      spriteFrame: sf_btn_shop,
       capInsets: [20, 20, 20, 20],
       onPress: this.onClick,
     })
@@ -48,7 +48,7 @@ export class HomeScene extends Scene {
       align: 'center',
       verticalAlign: 'middle',
     })
-    const dragonBonesComp1 = instantiate(DragonBones, { data: db_mecha_1004d_show, animation: 'idle', onAnimationComplete: this.onAnimationComplete.bind(this) })
+    const dragonBonesComp1 = instantiate(DragonBones, { data: db_mecha_1004_d_show, animation: 'idle', onAnimationComplete: this.onAnimationComplete.bind(this) })
     this.node.addChild(dragonBonesComp1.node)
     this.db = dragonBonesComp1
     dragonBonesComp1.node.x = 460
