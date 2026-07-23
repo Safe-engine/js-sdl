@@ -1,8 +1,11 @@
+import { AssetManager, TextureAsset } from '../AssetManager'
 import { ComponentX } from '../core/ComponentX'
 import type { InputEvent } from '../Input'
 import { globalCommandBuffer } from '../render/RenderCommandBuffer'
+import { SpriteFrameRegion, spriteFrameCache } from '../SpriteFrameCache'
 
 export interface ParticlesProps {
+  spriteFrame?: string
   count?: number
   duration?: number
   speed?: number
@@ -31,10 +34,15 @@ const DEFAULT_COLORS: readonly Color[] = [
 
 export class Particles extends ComponentX<ParticlesProps> {
   private particles: Particle[] = []
+  private texture: TextureAsset | null = null
+  private textureId = -1
+  private loadedSpriteFrame = ''
+  private frame: SpriteFrameRegion | null = null
 
   onAwake(): void {
     this.inputEnabled = this.props.emitOnTouch ?? false
     this.inputPriority = this.inputEnabled ? Number.MAX_SAFE_INTEGER : 0
+    this.ensureTexture()
   }
 
   get activeCount(): number {
@@ -89,11 +97,66 @@ export class Particles extends ComponentX<ParticlesProps> {
 
   onRender(): void {
     const scale = (Math.abs(this.node.worldScaleX) + Math.abs(this.node.worldScaleY)) * 0.5
+    this.ensureTexture()
     for (const particle of this.particles) {
       const position = this.node.localToWorld(particle.x, particle.y)
       const alpha = Math.round(255 * this.node.opacity * particle.life / particle.duration)
+      if (this.textureId >= 0) {
+        const size = particle.radius * scale * 2
+        const x = position.x - size * 0.5
+        const y = position.y - size * 0.5
+        if (this.frame) {
+          globalCommandBuffer.pushRegion(
+            this.textureId,
+            this.frame.x, this.frame.y, this.frame.width, this.frame.height,
+            x, y, size, size,
+            this.node.worldRotation,
+            size * 0.5, size * 0.5,
+            false, false,
+            particle.color.r, particle.color.g, particle.color.b, alpha,
+          )
+        } else {
+          globalCommandBuffer.pushSprite(
+            this.textureId,
+            x, y, size, size,
+            this.node.worldRotation,
+            size * 0.5, size * 0.5,
+            false, false,
+            particle.color.r, particle.color.g, particle.color.b, alpha,
+          )
+        }
+        continue
+      }
       globalCommandBuffer.pushCircle(position.x, position.y, particle.radius * scale,
         particle.color.r, particle.color.g, particle.color.b, alpha, true)
     }
+  }
+
+  onDestroy(): void {
+    this.releaseTexture()
+  }
+
+  private ensureTexture(): void {
+    const spriteFrame = this.props.spriteFrame
+    if (!spriteFrame) {
+      this.releaseTexture()
+      return
+    }
+    if (this.texture && this.loadedSpriteFrame === spriteFrame) return
+
+    this.releaseTexture()
+    const definition = spriteFrameCache.get(spriteFrame)
+    this.texture = AssetManager.acquireTexture(definition?.texturePath ?? spriteFrame)
+    this.textureId = this.texture.id
+    this.loadedSpriteFrame = spriteFrame
+    this.frame = definition?.region ?? null
+  }
+
+  private releaseTexture(): void {
+    this.texture?.release()
+    this.texture = null
+    this.textureId = -1
+    this.loadedSpriteFrame = ''
+    this.frame = null
   }
 }
