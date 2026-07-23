@@ -77,6 +77,8 @@ export type { CircleProgressProps } from './components/CircleProgress'
 export { Label } from './components/Label'
 export type { TextAlignment, VerticalTextAlignment } from './components/Label'
 export { ProgressBar } from './components/ProgressBar'
+export { Particles } from './components/Particles'
+export type { ParticleColor, ParticlesProps } from './components/Particles'
 export { RichText } from './components/RichText'
 export type { RichTextProps } from './components/RichText'
 export { Slider } from './components/Slider'
@@ -124,4 +126,3 @@ export type {
 export { Spine, SpineSkeleton } from './spine'
 export type { SpineData, SpineSkeletonProps } from './spine'
 export { SpineBonesControl } from './spine/SpineBonesControl'
-
