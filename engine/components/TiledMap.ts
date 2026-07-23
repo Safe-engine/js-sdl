@@ -187,6 +187,7 @@ export class TiledMap extends ComponentX<TiledMapProps> {
   private tilesets: LoadedTileset[] = []
   private tiles: TilePlacement[] = []
   private tileBatches: TileBatch[] = []
+  private tileOffsets = new Map<string, { x: number, y: number }>()
   private loadVersion = 0
   private loadingMapFile = ''
   private loadingPromise: Promise<void> | null = null
@@ -310,6 +311,17 @@ export class TiledMap extends ComponentX<TiledMapProps> {
     return new TiledMapLayer(this.node, map, layer)
   }
 
+  setTileOffset(layerName: string, column: number, row: number, x = 0, y = 0): void {
+    const key = `${layerName}:${column}:${row}`
+    if (x === 0 && y === 0) {
+      this.tileOffsets.delete(key)
+    } else {
+      this.tileOffsets.set(key, { x, y })
+    }
+    this.tiles = this.buildTiles()
+    this.tileBatches = buildTileBatches(this.tiles)
+  }
+
   private buildTiles(): TilePlacement[] {
     if (!this.map) return []
 
@@ -331,12 +343,13 @@ export class TiledMap extends ComponentX<TiledMapProps> {
         const source = this.getTileSource(tileset.data, gid - tileset.firstgid)
         const position = this.getTilePosition(column + (layer.x ?? 0), row + (layer.y ?? 0))
         const offset = tileset.data.tileoffset
+        const tileOffset = this.tileOffsets.get(`${layer.name}:${column}:${row}`)
 
         tiles.push({
           source,
           texture: tileset.texture,
-          x: position.x + (offset?.x ?? 0),
-          y: position.y + this.map.tileheight - source.height + (offset?.y ?? 0),
+          x: position.x + (offset?.x ?? 0) + (tileOffset?.x ?? 0),
+          y: position.y + this.map.tileheight - source.height + (offset?.y ?? 0) + (tileOffset?.y ?? 0),
           opacity,
           flipX: Boolean(rawGid & FLIPPED_HORIZONTALLY_FLAG),
           flipY: Boolean(rawGid & FLIPPED_VERTICALLY_FLAG),
@@ -392,6 +405,7 @@ export class TiledMap extends ComponentX<TiledMapProps> {
     this.tilesets = []
     this.tiles = []
     this.tileBatches = []
+    this.tileOffsets.clear()
     this.map = null
     this.loadedMapFile = ''
   }

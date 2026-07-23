@@ -29,6 +29,7 @@ const tiledMapJson = JSON.stringify({
 })
 
 mock.module('sdl3', () => ({
+  submitCommandBuffer: () => {},
   drawTextureMesh: () => {},
   drawTextureRegionRotated: () => {},
   getTextureHeight: () => 16,
@@ -192,5 +193,24 @@ describe('TiledMap compatibility helpers', () => {
     expect(layer.getTileAt(1, 0)).toBe(7)
     expect(layer.getTileAt(0, 1)).toBe(5)
     expect(layer.getTileAt(2, 0)).toBeNull()
+  })
+
+  test('offsets an individual tile without moving the rest of the map', () => {
+    const tiledMap = new TiledMap({ mapFile: 'res/Map/Map1.json' })
+    tiledMap.ensureNode()
+
+    ;(tiledMap as any).map = JSON.parse(tiledMapJson)
+    ;(tiledMap as any).tilesets = [{
+      data: (tiledMap as any).map.tilesets[0],
+      firstgid: 1,
+      lastgid: 1,
+      imagePath: 'tiles.png',
+      texture: { id: 1, width: 16, height: 16 },
+    }]
+    ;(tiledMap as any).tiles = (tiledMap as any).buildTiles()
+
+    tiledMap.setTileOffset('map', 0, 0, 0, 6)
+
+    expect((tiledMap as any).tiles[0].y).toBe(6)
   })
 })
