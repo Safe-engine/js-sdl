@@ -119,7 +119,7 @@ function collectAssetPath(
   textAssets: Set<string>,
   binaryAssets: Set<string>,
 ): void {
-  if (/\.(png|jpg|jpeg|webp)$/i.test(path)) {
+  if (/\.(png|jpg|jpeg|webp|svg)$/i.test(path)) {
     textureAssets.add(path)
     return
   }

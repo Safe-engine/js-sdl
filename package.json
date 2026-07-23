@@ -14,24 +14,12 @@
   "type": "module",
   "scripts": {
     "fix": "eslint ./engine --fix",
-    "typecheck": "tsc --noEmit -p tsconfig.examples.json",
-    "test:ts": "bun run typecheck && bun test tests",
-    "test:native": "cmake -S . -B build && cmake --build build --target js_sdl3_native_tests --parallel && ctest --test-dir build --output-on-failure",
+    "test": "bun run typecheck && bun test tests",
     "sync-res": "bun ./node_modules/safex-sync-res/src/index.ts",
-    "native:build": "cmake -S . -B build && cmake --build build --target sdl3js --parallel",
     "predev": "bun run sync-res",
-    "build": "tsc --build tsconfig.json",
-    "dev": "vite build --watch --config native/vite.config.ts",
-    "web:dev": "vite --config vite.config.ts --host",
-    "web:build": "vite build --config vite.config.ts",
-    "mobile:deps": "./scripts/bootstrap-mobile-deps.sh",
-    "mobile:assets": "node ./scripts/generate-mobile-assets.mjs",
-    "android:setup": "./scripts/setup-android.sh",
-    "android:apk": "./scripts/package-android.sh apk release",
-    "android:aab": "./scripts/package-android.sh aab release",
-    "ios:project": "./scripts/generate-ios-project.sh",
-    "ios:run": "./scripts/run-ios.sh",
-    "ios:ipa": "./scripts/package-ios.sh"
+    "typecheck": "tsc --build tsconfig.json",
+    "dev": "vite --config vite.config.ts --host",
+    "build": "vite build --config vite.config.ts"
   },
   "devDependencies": {
     "@types/bun": "^1.3.14",
