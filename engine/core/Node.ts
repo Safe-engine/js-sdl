@@ -46,6 +46,7 @@ export class Node {
   private _actionsAndSchedulePaused = false
   private _eventListeners = new Map<string, EventListenerEntry[]>()
   private _childRevision = 0
+  private _started = false
 
   private _x = Number.NaN
   private _y = Number.NaN
@@ -294,10 +295,12 @@ export class Node {
       component.onNodeReassigned(previousNode, this)
     }
     component.node = this
-    if (!this.components.includes(component)) {
+    const isNew = !this.components.includes(component)
+    if (isNew) {
       this.components.push(component)
     }
     component.onAwake()
+    if (isNew && this._started) component.onStart()
     return component
   }
 
@@ -325,6 +328,7 @@ export class Node {
       this.children.push(child)
     }
     this._childRevision += 1
+    if (this._started) child._startTree()
     return child
   }
 
@@ -470,6 +474,8 @@ export class Node {
 
   /** Internal: start all components (called once on first tick). */
   _startTree(): void {
+    if (this._started) return
+    this._started = true
     for (const c of this.components) c.onStart()
     for (const child of this.children) child._startTree()
   }

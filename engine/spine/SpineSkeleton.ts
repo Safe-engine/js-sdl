@@ -43,12 +43,21 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
   }
 
   onUpdate(dt: number): void {
-    if (!this.skeleton || !this.state) return
-    this.state.timeScale = this.props.timeScale ?? 1
-    this.state.update(dt)
-    this.state.apply(this.skeleton)
-    this.skeleton.update(dt)
-    this.skeleton.updateWorldTransform(Physics.update)
+    const skeleton = this.skeleton
+    const state = this.state
+    if (!skeleton || !state) return
+
+    state.timeScale = this.props.timeScale ?? 1
+    state.update(dt)
+    if (this.skeleton !== skeleton || this.state !== state) return
+
+    state.apply(skeleton)
+    if (this.skeleton !== skeleton || this.state !== state) return
+
+    skeleton.update(dt)
+    if (this.skeleton !== skeleton || this.state !== state) return
+
+    skeleton.updateWorldTransform(Physics.update)
   }
 
   onRender(): void {

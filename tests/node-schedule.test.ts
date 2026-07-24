@@ -18,7 +18,29 @@ class UpdatingComponent extends ComponentX {
   }
 }
 
+class StartingComponent extends ComponentX {
+  starts = 0
+
+  onStart(): void {
+    this.starts += 1
+  }
+}
+
 describe('Node scheduling', () => {
+  test('starts components and children added after the node has started', () => {
+    const root = new Node('root')
+    root._startTree()
+
+    const component = root.addComponent(StartingComponent)
+    const child = root.addChild(new Node('child'))
+    const childComponent = child.addComponent(StartingComponent)
+
+    root._startTree()
+
+    expect(component.starts).toBe(1)
+    expect(childComponent.starts).toBe(1)
+  })
+
   test('runs scheduleOnce after its delay', () => {
     const node = new Node('timer')
     const log: number[] = []

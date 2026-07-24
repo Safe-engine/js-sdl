@@ -9,12 +9,36 @@ mock.module('sdl3', () => ({
   loadBinaryFile: () => null,
   loadTextFile: () => null,
   releaseTexture: () => {},
+  submitCommandBuffer: () => {},
 }))
 
 const { SpineBonesControl } = await import('../engine/spine/SpineBonesControl')
 const { SpineSkeleton } = await import('../engine/spine/SpineSkeleton')
 
 describe('SpineBonesControl', () => {
+  test('stops updating when a Spine callback disposes the skeleton', () => {
+    const spine = new SpineSkeleton({ data: null as any })
+    const apply = mock(() => {})
+    const update = mock(() => {})
+    const updateWorldTransform = mock(() => {})
+    const skeleton = { update, updateWorldTransform } as any
+
+    ;(spine as any).state = {
+      update: () => {
+        ;(spine as any).state = null
+        spine.skeleton = null as any
+      },
+      apply,
+    }
+    spine.skeleton = skeleton
+
+    spine.onUpdate(1 / 60)
+
+    expect(apply).not.toHaveBeenCalled()
+    expect(update).not.toHaveBeenCalled()
+    expect(updateWorldTransform).not.toHaveBeenCalled()
+  })
+
   test('waits for a loaded ancestor SpineSkeleton before applying bone positions', () => {
     const parent = new Node('spine')
     const spine = parent.addComponent(new SpineSkeleton({ data: null as any }))
