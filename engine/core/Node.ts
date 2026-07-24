@@ -38,7 +38,9 @@ export class Node {
   opacity = 1
   color: Color = { r: 255, g: 255, b: 255, a: 255 }
   cameraMask = 0xffffffff
-  zIndex = 0
+  private _zIndex = 0
+  private _renderChildren: Node[] | null = null
+  private _renderChildrenRevision = -1
   declare tag: Integer
   private _scheduledCallbacks: ScheduledEntry[] = []
   private _actionsAndSchedulePaused = false
@@ -74,6 +76,16 @@ export class Node {
 
   get childRevision(): number {
     return this._childRevision
+  }
+
+  get zIndex(): number {
+    return this._zIndex
+  }
+
+  set zIndex(value: number) {
+    if (this._zIndex === value) return
+    this._zIndex = value
+    this.parent?._invalidateRenderChildren()
   }
 
   get transformDirty(): boolean {
@@ -318,7 +330,11 @@ export class Node {
 
   getRenderChildren(): Node[] {
     if (this.children.length < 2) return this.children
-    return [...this.children].sort((a, b) => a.zIndex - b.zIndex)
+    if (this._renderChildrenRevision !== this._childRevision) {
+      this._renderChildren = [...this.children].sort((a, b) => a.zIndex - b.zIndex)
+      this._renderChildrenRevision = this._childRevision
+    }
+    return this._renderChildren!
   }
 
   removeFromParent() {
@@ -474,6 +490,10 @@ export class Node {
     for (const child of this.children) {
       child._markTransformDirty()
     }
+  }
+
+  private _invalidateRenderChildren(): void {
+    this._renderChildrenRevision = -1
   }
 
   private _ensureWorldTransform(): void {
