@@ -92,6 +92,7 @@ export { TouchEventRegister } from './components/TouchEventRegister'
 export type { TouchEventRegisterProps } from './components/TouchEventRegister'
 export {
   ScrollView,
+  Panel,
   Toggle,
   UIContainer,
   UILayout
@@ -126,4 +127,3 @@ export type {
 export { Spine, SpineSkeleton } from './spine'
 export type { SpineData, SpineSkeletonProps } from './spine'
 export { SpineBonesControl } from './spine/SpineBonesControl'
-

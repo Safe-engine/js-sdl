@@ -2,16 +2,17 @@ import {
   startTextInput,
   stopTextInput,
 } from 'sdl3'
-import { globalCommandBuffer } from '../render/RenderCommandBuffer'
 import {
   AssetManager,
   FontAsset,
   TextureAsset,
 } from '../AssetManager'
+import { ComponentX } from '../core/ComponentX'
+import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH } from '../core/Node'
 import type { InputEvent } from '../Input'
+import { globalCommandBuffer } from '../render/RenderCommandBuffer'
 import { Label } from './Label'
 import { containsPoint, worldRect } from './UI'
-import { ComponentX } from '../core/ComponentX'
 
 export interface TextInputProps {
   font?: string
@@ -65,6 +66,8 @@ export class TextInput extends ComponentX<TextInputProps> {
     this.maxLength = this.props.maxLength ?? Number.POSITIVE_INFINITY
     this.submitOnEnter = this.props.submitOnEnter ?? true
     this.blurOnSubmit = this.props.blurOnSubmit ?? false
+    if (this.node.width === DEFAULT_NODE_WIDTH) this.node.width = 480
+    if (this.node.height === DEFAULT_NODE_HEIGHT) this.node.height = 80
   }
 
   onUpdate(dt: number): void {
@@ -171,12 +174,13 @@ export class TextInput extends ComponentX<TextInputProps> {
   }
 
   focus(): this {
-    if (TextInput.focused === this) return this
-    TextInput.focused?.blur()
-    TextInput.focused = this
-    this.resetCaretBlink()
+    if (TextInput.focused !== this) {
+      TextInput.focused?.blur()
+      TextInput.focused = this
+      this.resetCaretBlink()
+      this.props.onFocus?.(this)
+    }
     startTextInput()
-    this.props.onFocus?.(this)
     return this
   }
 

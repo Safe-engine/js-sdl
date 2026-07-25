@@ -440,3 +440,16 @@ export class ScrollView extends UIContainer<ScrollViewProps> {
       Math.max(0, this.props.contentSize.height - this.props.viewSize.height), this.scrollY))
   }
 }
+
+interface PanelProps {
+  color?: Color
+}
+
+export class Panel extends UIContainer<PanelProps> {
+  onRender() {
+    const rect = worldRect(this.node)
+    globalCommandBuffer.pushRect(rect.x, rect.y, rect.width, rect.height,
+      this.props.color?.r, this.props.color?.g, this.props.color?.b,
+      this.node.opacity * (this.props.color?.a ?? 255))
+  }
+}

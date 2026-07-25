@@ -1,5 +1,5 @@
-import { ComponentX } from './ComponentX'
 import { getActiveCamera } from './CameraRenderContext'
+import { ComponentX } from './ComponentX'
 
 export const DEFAULT_NODE_WIDTH = 0
 export const DEFAULT_NODE_HEIGHT = 0
@@ -110,6 +110,17 @@ export class Node {
   set height(value: number) {
     if (this._height === value) return
     this._height = value
+    this._markTransformDirty()
+  }
+
+  get size(): Size {
+    return { width: this._width, height: this._height }
+  }
+
+  set size(value: Size) {
+    if (this._width === value.width && this._height === value.height) return
+    this._width = value.width
+    this._height = value.height
     this._markTransformDirty()
   }
 

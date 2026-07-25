@@ -163,25 +163,39 @@ function ensureHiddenTextInput(): HTMLInputElement {
   input.autocapitalize = 'off'
   input.spellcheck = false
   input.tabIndex = -1
-  input.setAttribute('aria-hidden', 'true')
+  input.setAttribute('aria-label', 'Text input')
   input.style.position = 'fixed'
-  input.style.left = '-10000px'
+  input.style.left = '0'
   input.style.top = '0'
   input.style.width = '1px'
   input.style.height = '1px'
-  input.style.opacity = '0'
-  input.addEventListener('input', () => {
-    if (input.value) {
-      textInputCallback?.(input.value)
+  input.style.opacity = '0.001'
+  input.style.border = 'none'
+  input.style.outline = 'none'
+  input.style.padding = '0'
+  input.style.margin = '0'
+  input.style.pointerEvents = 'none'
+  input.style.zIndex = '-1'
+
+  let isComposing = false
+  input.addEventListener('compositionstart', () => {
+    isComposing = true
+  })
+  input.addEventListener('compositionend', (event) => {
+    isComposing = false
+    if (event.data) {
+      textInputCallback?.(event.data)
       input.value = ''
     }
   })
-  input.addEventListener('keydown', (event) => {
-    keyDownCallback?.(event.key)
-    if (event.key === 'Tab') event.preventDefault()
-  })
-  input.addEventListener('keyup', (event) => {
-    keyUpCallback?.(event.key)
+  input.addEventListener('input', (event) => {
+    if (isComposing) return
+    const val = input.value
+    const data = (event as InputEvent).data ?? val
+    if (data) {
+      textInputCallback?.(data)
+      input.value = ''
+    }
   })
   document.body.appendChild(input)
   hiddenTextInput = input
@@ -606,6 +620,7 @@ export function createWindow(
 
   canvas.addEventListener('pointerdown', (event) => {
     pointerDown = true
+    event.preventDefault()
     canvas?.setPointerCapture(event.pointerId)
     touchStartCallback?.(...pointerPosition(event))
   })
@@ -1323,7 +1338,11 @@ export function onKeyUp(callback: KeyCallback): void {
 }
 
 export function startTextInput(): void {
-  ensureHiddenTextInput().focus({ preventScroll: true })
+  const input = ensureHiddenTextInput()
+  input.focus({ preventScroll: true })
+  queueMicrotask(() => {
+    input.focus({ preventScroll: true })
+  })
 }
 
 export function stopTextInput(): void {
@@ -1381,6 +1400,25 @@ if (typeof document !== 'undefined') {
 if (typeof window !== 'undefined') {
   window.addEventListener('orientationchange', emitOrientation)
   window.addEventListener('pagehide', () => terminateCallback?.())
+  window.addEventListener('keydown', (event) => {
+    const active = document.activeElement
+    if (active && active !== document.body && active !== canvas && active !== hiddenTextInput) {
+      return
+    }
+    keyDownCallback?.(event.key)
+    if (active === hiddenTextInput || event.target === hiddenTextInput) {
+      if (['Tab', 'Backspace', 'Escape', 'Enter'].includes(event.key)) {
+        event.preventDefault()
+      }
+    }
+  })
+  window.addEventListener('keyup', (event) => {
+    const active = document.activeElement
+    if (active && active !== document.body && active !== canvas && active !== hiddenTextInput) {
+      return
+    }
+    keyUpCallback?.(event.key)
+  })
 }
 
 // Browsers do not expose an equivalent low-memory event.

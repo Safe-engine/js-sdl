@@ -16,10 +16,18 @@
       "./node_modules/@types",
       "./@types"
     ],
-    "isolatedModules": true
+    "isolatedModules": true,
+    "baseUrl": ".",
+    "paths": {
+      "sdl3": [
+        "./engine/sdl3.ts"
+      ],
+      "box2d": [
+        "./engine/physics/box2d.ts"
+      ]
+    }
   },
   "exclude": [
-    "web/vite-plugin-sdl-tsx.ts",
     "@types/package.d.ts"
   ],
   "include": [
