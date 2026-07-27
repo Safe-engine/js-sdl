@@ -1,5 +1,6 @@
 import {
   Button,
+  DicedSprite,
   Label,
   Scene,
   SpineSkeleton,
@@ -7,8 +8,10 @@ import {
 import { instantiate, loadScene } from '../engine/core/instantiate'
 import { DragonBones } from '../engine/dragonbones'
 import {
+  atlas_diced_json,
   db_mecha_1004_d_show,
   lilita_one_regularFont,
+  sf_atlas,
   sf_btn_shop,
   sp_spineboy_pma
 } from './assets'
@@ -48,6 +51,7 @@ export class HomeScene extends Scene {
       align: 'center',
       verticalAlign: 'middle',
     })
+    Button1.node.resolveComponent(Label1)
     const dragonBonesComp1 = instantiate(DragonBones, { data: db_mecha_1004_d_show, animation: 'idle', onAnimationComplete: this.onAnimationComplete.bind(this) })
     this.node.addChild(dragonBonesComp1.node)
     this.db = dragonBonesComp1
@@ -59,6 +63,9 @@ export class HomeScene extends Scene {
     spine1.node.x = 260
     spine1.node.y = 840
     spine1.node.scale = 0.3
-    Button1.node.resolveComponent(Label1)
+    const diced = instantiate(DicedSprite, { data: atlas_diced_json, animation: 'Heal', texture: sf_atlas })
+    this.node.addChild(diced.node)
+    diced.node.x = 260
+    diced.node.y = 240
   }
 }

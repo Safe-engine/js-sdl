@@ -43,6 +43,8 @@ export type {
   CollideSystemProps, PolygonColliderProps
 } from './collider'
 export { ComponentX } from './core/ComponentX'
+export { DicedSprite } from './dicing/DicedSprite'
+export type { DicedAnimation, DicedJSON, DicedSpriteProps, Meta } from './dicing/DicedSprite'
 export { Container } from './core/Container'
 export { instantiate, loadScene } from './core/instantiate'
 export { Node } from './core/Node'
