@@ -25,9 +25,9 @@ export type DicedJSON = {
 }
 
 export interface DicedSpriteProps {
-  texture: string
-  animation: string
-  data?: string | DicedJSON
+  texture?: string
+  animation?: string
+  data: string | DicedJSON
 }
 
 export class DicedSprite extends ComponentX<DicedSpriteProps> {
@@ -37,6 +37,15 @@ export class DicedSprite extends ComponentX<DicedSpriteProps> {
   private elapsed = 0
   private frameIndex = 0
   private loadVersion = 0
+
+  setAnimation(animation: string) {
+    if (this.props.animation === animation) return
+
+    this.props.animation = animation
+    void this.reload().catch((error) => {
+      console.error('DicedSprite reload failed', error)
+    })
+  }
 
   onStart(): void {
     void this.reload().catch((error) => {
@@ -115,7 +124,7 @@ export class DicedSprite extends ComponentX<DicedSpriteProps> {
 
   async reload(): Promise<void> {
     const data = this.props.data
-    if (!data || !this.props.texture) return
+    if (!data) return
 
     const version = ++this.loadVersion
     const atlas = typeof data === 'string'
@@ -123,13 +132,33 @@ export class DicedSprite extends ComponentX<DicedSpriteProps> {
       : data
     if (version !== this.loadVersion) return
 
-    const animation = atlas.animations.find(({ name }) => name === this.props.animation)
-    if (!animation) {
-      throw new Error(`Diced animation not found: ${this.props.animation}`)
+    let animationName = this.props.animation
+    if (!animationName) {
+      const firstAnimation = atlas.animations[0]
+      if (!firstAnimation) {
+        throw new Error('Diced sprite data contains no animations')
+      }
+      animationName = firstAnimation.name
+      this.props.animation = animationName
     }
 
+    const animation = atlas.animations.find(({ name }) => name === animationName)
+    if (!animation) {
+      throw new Error(`Diced animation not found: ${animationName}`)
+    }
+
+    const texturePath = this.props.texture
+      ?? (typeof data === 'string'
+        ? resolveSiblingPath(data, `${atlas.meta.name}.png`)
+        : `${atlas.meta.name}.png`)
+
+    if (!texturePath) {
+      throw new Error('Diced sprite texture path could not be determined')
+    }
+
+    this.props.texture = texturePath
     this.texture?.release()
-    this.texture = AssetManager.acquireTexture(this.props.texture)
+    this.texture = AssetManager.acquireTexture(texturePath)
     this.atlas = atlas
     this.currentAnimation = animation
     this.elapsed = 0
@@ -137,4 +166,9 @@ export class DicedSprite extends ComponentX<DicedSpriteProps> {
     this.node.width = atlas.meta.rawWidth
     this.node.height = atlas.meta.rawHeight
   }
+}
+
+function resolveSiblingPath(path: string, sibling: string): string {
+  const slash = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'))
+  return slash >= 0 ? `${path.slice(0, slash + 1)}${sibling}` : sibling
 }

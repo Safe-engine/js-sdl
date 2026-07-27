@@ -43,14 +43,14 @@ export type {
   CollideSystemProps, PolygonColliderProps
 } from './collider'
 export { ComponentX } from './core/ComponentX'
-export { DicedSprite } from './dicing/DicedSprite'
-export type { DicedAnimation, DicedJSON, DicedSpriteProps, Meta } from './dicing/DicedSprite'
 export { Container } from './core/Container'
 export { instantiate, loadScene } from './core/instantiate'
 export { Node } from './core/Node'
 export { NodePool } from './core/NodePool'
 export { Scene } from './core/Scene'
 export type { Orientation } from './core/Scene'
+export { DicedSprite } from './dicing/DicedSprite'
+export type { DicedAnimation, DicedJSON, DicedSpriteProps, Meta } from './dicing/DicedSprite'
 export { Engine } from './Engine'
 export * from './helper/assets-load'
 export { InputEvent, InputSystem, Touch } from './Input'
@@ -93,9 +93,7 @@ export type { TiledMapProps } from './components/TiledMap'
 export { TouchEventRegister } from './components/TouchEventRegister'
 export type { TouchEventRegisterProps } from './components/TouchEventRegister'
 export {
-  ScrollView,
-  Panel,
-  Toggle,
+  Panel, ScrollView, Toggle,
   UIContainer,
   UILayout
 } from './components/UI'
@@ -106,6 +104,7 @@ export type {
 export { Widget } from './components/Widget'
 export type { WidgetProps } from './components/Widget'
 export type { BaseComponentProps } from './core/ComponentX'
+export * from './dicing/DicedSprite'
 export * from './dragonbones'
 export * from './helper/Intersection'
 export * from './helper/math'
@@ -129,3 +128,4 @@ export type {
 export { Spine, SpineSkeleton } from './spine'
 export type { SpineData, SpineSkeletonProps } from './spine'
 export { SpineBonesControl } from './spine/SpineBonesControl'
+
