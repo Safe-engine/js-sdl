@@ -5,6 +5,20 @@ import type { InputEvent } from '../Input'
 import { globalCommandBuffer } from '../render/RenderCommandBuffer'
 import { SpriteFrameRegion, spriteFrameCache } from '../SpriteFrameCache'
 
+export interface ParticlesEmitOptions {
+  angle?: number
+  angleSpread?: number
+  speed?: number
+  duration?: number
+  radius?: number
+  width?: number
+  height?: number
+  rotation?: number
+  gravity?: number
+  targetY?: number
+  color?: Color
+}
+
 export interface ParticlesProps {
   configFile?: string
   spriteFrame?: string
@@ -14,6 +28,12 @@ export interface ParticlesProps {
   speed?: number
   gravity?: number
   radius?: number
+  width?: number
+  height?: number
+  angle?: number
+  angleSpread?: number
+  rotation?: number
+  rotationFollowVelocity?: boolean
   colors?: readonly Color[]
   emitOnTouch?: boolean
 }
@@ -26,7 +46,12 @@ interface Particle {
   life: number
   duration: number
   radius: number
+  width: number
+  height: number
+  rotation: number
   color: Color
+  gravity?: number
+  targetY?: number
 }
 
 const DEFAULT_COLORS: readonly Color[] = [
@@ -58,24 +83,59 @@ export class Particles extends ComponentX<ParticlesProps> {
     return this.particles.length
   }
 
-  emit(x: number, y: number, count = this.props.count ?? 16): void {
-    const duration = this.props.duration ?? 0.55
-    const speed = this.props.speed ?? 150
-    const radius = this.props.radius ?? 7
-    const colors = this.props.colors?.length ? this.props.colors : DEFAULT_COLORS
+  emit(x: number, y: number, count = this.props.count ?? 16, options?: ParticlesEmitOptions): void {
+    const duration = options?.duration ?? this.props.duration ?? 0.55
+    const speed = options?.speed ?? this.props.speed ?? 150
+    const radius = options?.radius ?? this.props.radius ?? 7
+    const width = options?.width ?? this.props.width ?? (radius * 2)
+    const height = options?.height ?? this.props.height ?? (radius * 2)
+    const colors = options?.color ? [options.color] : (this.props.colors?.length ? this.props.colors : DEFAULT_COLORS)
+
+    const baseAngle = options?.angle ?? this.props.angle
+    const angleSpread = options?.angleSpread ?? this.props.angleSpread ?? (baseAngle !== undefined ? 0 : 360)
+    const baseRotation = options?.rotation ?? this.props.rotation
 
     for (let i = 0; i < count; i++) {
-      const angle = Math.random() * Math.PI * 2
+      let angleRad = 0
+      if (baseAngle !== undefined) {
+        const spreadRad = (angleSpread * Math.PI) / 180
+        const offset = spreadRad > 0 ? (Math.random() - 0.5) * spreadRad : 0
+        angleRad = (baseAngle * Math.PI) / 180 + offset
+      } else {
+        angleRad = Math.random() * Math.PI * 2
+      }
+
       const particleDuration = duration * (0.7 + Math.random() * 0.3)
+      let velocityX = 0
+      let velocityY = 0
+
+      if (baseAngle !== undefined) {
+        velocityX = Math.cos(angleRad) * speed * (0.85 + Math.random() * 0.3)
+        velocityY = Math.sin(angleRad) * speed * (0.85 + Math.random() * 0.3)
+      } else {
+        velocityX = Math.cos(angleRad) * speed * (0.5 + Math.random() * 0.5)
+        velocityY = Math.sin(angleRad) * speed - speed * 0.35
+      }
+
+      let particleRotation = baseRotation ?? 0
+      if (this.props.rotationFollowVelocity || (baseRotation === undefined && baseAngle !== undefined)) {
+        particleRotation = Math.atan2(velocityY, velocityX) * (180 / Math.PI)
+      }
+
       this.particles.push({
         x,
         y,
-        velocityX: Math.cos(angle) * speed * (0.5 + Math.random() * 0.5),
-        velocityY: Math.sin(angle) * speed - speed * 0.35,
+        velocityX,
+        velocityY,
         life: particleDuration,
         duration: particleDuration,
         radius: radius * (0.65 + Math.random() * 0.35),
+        width,
+        height,
+        rotation: particleRotation,
         color: colors[i % colors.length],
+        gravity: options?.gravity,
+        targetY: options?.targetY,
       })
     }
   }
@@ -90,7 +150,7 @@ export class Particles extends ComponentX<ParticlesProps> {
   }
 
   onUpdate(dt: number): void {
-    const gravity = this.props.gravity ?? 260
+    const defaultGravity = this.props.gravity ?? 260
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const particle = this.particles[i]
       particle.life -= dt
@@ -98,29 +158,45 @@ export class Particles extends ComponentX<ParticlesProps> {
         this.particles.splice(i, 1)
         continue
       }
+      const gravity = particle.gravity ?? defaultGravity
       particle.velocityY += gravity * dt
       particle.x += particle.velocityX * dt
       particle.y += particle.velocityY * dt
+
+      if (particle.targetY !== undefined && particle.y >= particle.targetY) {
+        particle.y = particle.targetY
+        particle.velocityX = 0
+        particle.velocityY = 0
+      }
+
+      if (this.props.rotationFollowVelocity && (particle.velocityX !== 0 || particle.velocityY !== 0)) {
+        particle.rotation = Math.atan2(particle.velocityY, particle.velocityX) * (180 / Math.PI)
+      }
     }
   }
 
   onRender(): void {
-    const scale = (Math.abs(this.node.worldScaleX) + Math.abs(this.node.worldScaleY)) * 0.5
+    const scaleX = Math.abs(this.node.worldScaleX)
+    const scaleY = Math.abs(this.node.worldScaleY)
+    const scale = (scaleX + scaleY) * 0.5
     this.ensureTexture()
     for (const particle of this.particles) {
       const position = this.node.localToWorld(particle.x, particle.y)
       const alpha = Math.round(255 * this.node.opacity * particle.life / particle.duration)
+      const pWidth = (particle.width ?? particle.radius * 2) * scaleX
+      const pHeight = (particle.height ?? particle.radius * 2) * scaleY
+      const rotation = (particle.rotation ?? 0) + this.node.worldRotation
+
       if (this.textureId >= 0) {
-        const size = particle.radius * scale * 2
-        const x = position.x - size * 0.5
-        const y = position.y - size * 0.5
+        const x = position.x - pWidth * 0.5
+        const y = position.y - pHeight * 0.5
         if (this.frame) {
           globalCommandBuffer.pushRegion(
             this.textureId,
             this.frame.x, this.frame.y, this.frame.width, this.frame.height,
-            x, y, size, size,
-            this.node.worldRotation,
-            size * 0.5, size * 0.5,
+            x, y, pWidth, pHeight,
+            rotation,
+            pWidth * 0.5, pHeight * 0.5,
             false, false,
             particle.color.r, particle.color.g, particle.color.b, alpha,
             this.props.pma,
@@ -128,9 +204,9 @@ export class Particles extends ComponentX<ParticlesProps> {
         } else {
           globalCommandBuffer.pushSprite(
             this.textureId,
-            x, y, size, size,
-            this.node.worldRotation,
-            size * 0.5, size * 0.5,
+            x, y, pWidth, pHeight,
+            rotation,
+            pWidth * 0.5, pHeight * 0.5,
             false, false,
             particle.color.r, particle.color.g, particle.color.b, alpha,
             this.props.pma,
@@ -193,3 +269,4 @@ export class Particles extends ComponentX<ParticlesProps> {
     this.frame = null
   }
 }
+
