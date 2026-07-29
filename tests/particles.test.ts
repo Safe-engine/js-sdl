@@ -1,12 +1,14 @@
 import { describe, expect, mock, test } from 'bun:test'
 import { Scene } from '../engine/core/Scene'
 
+const loadTexture = mock(() => 1)
+
 mock.module('sdl3', () => ({
   getTextureHeight: () => 16,
   getTextureWidth: () => 16,
   isNative: true,
   loadTextFile: () => null,
-  loadTexture: () => 1,
+  loadTexture,
   releaseTexture: () => {},
   submitCommandBuffer: () => {},
 }))
@@ -45,5 +47,13 @@ describe('Particles', () => {
 
     expect(globalCommandBuffer.commands[0]).toBe(CMD_DRAW_SPRITE)
     expect(globalCommandBuffer.uintBuffer[0]).toBe(1)
+  })
+
+  test('loads PMA particle textures with PMA enabled', () => {
+    const scene = new Scene()
+    const particles = new Particles({ spriteFrame: 'particle-pma.png', pma: true })
+    scene.node.addComponent(particles)
+
+    expect(loadTexture).toHaveBeenLastCalledWith('particle-pma.png', true)
   })
 })

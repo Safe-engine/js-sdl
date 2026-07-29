@@ -6,6 +6,7 @@ import { SpriteFrameRegion, spriteFrameCache } from '../SpriteFrameCache'
 
 export interface ParticlesProps {
   spriteFrame?: string
+  pma?: boolean
   count?: number
   duration?: number
   speed?: number
@@ -146,7 +147,7 @@ export class Particles extends ComponentX<ParticlesProps> {
 
     this.releaseTexture()
     const definition = spriteFrameCache.get(spriteFrame)
-    this.texture = AssetManager.acquireTexture(definition?.texturePath ?? spriteFrame)
+    this.texture = AssetManager.acquireTexture(definition?.texturePath ?? spriteFrame, { pma: this.props.pma })
     this.textureId = this.texture.id
     this.loadedSpriteFrame = spriteFrame
     this.frame = definition?.region ?? null
