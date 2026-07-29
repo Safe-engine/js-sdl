@@ -27,7 +27,7 @@ export type DicedJSON = {
 export interface DicedSpriteProps {
   texture?: string
   animation?: string
-  loop: boolean
+  loop?: boolean
   data: string | DicedJSON
 }
 
@@ -194,6 +194,7 @@ export class DicedSprite extends ComponentX<DicedSpriteProps> {
     }
 
     this.props.texture = texturePath
+    this.props.loop = this.props.loop ?? true
     this.texture?.release()
     this.texture = AssetManager.acquireTexture(texturePath)
     this.atlas = atlas
