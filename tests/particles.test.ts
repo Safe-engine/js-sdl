@@ -56,4 +56,25 @@ describe('Particles', () => {
 
     expect(loadTexture).toHaveBeenLastCalledWith('particle-pma.png', true)
   })
+
+  test('loads particle props from a JSON config file', async () => {
+    const originalFetch = globalThis.fetch
+    ;(globalThis as any).fetch = async () => ({
+      ok: true,
+      text: async () => JSON.stringify({ count: 5, duration: 2, emitOnTouch: true }),
+    })
+
+    try {
+      const particles = new Particles({ configFile: 'particle-config.json', count: 2 })
+
+      await particles.reload()
+      particles.emit(100, 200)
+
+      expect(particles.activeCount).toBe(2)
+      expect(particles.props.duration).toBe(2)
+      expect(particles.inputEnabled).toBe(true)
+    } finally {
+      ;(globalThis as any).fetch = originalFetch
+    }
+  })
 })

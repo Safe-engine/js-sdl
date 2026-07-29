@@ -1,10 +1,12 @@
 import { AssetManager, TextureAsset } from '../AssetManager'
 import { ComponentX } from '../core/ComponentX'
+import { loadTextAsset } from '../helper/text-resource'
 import type { InputEvent } from '../Input'
 import { globalCommandBuffer } from '../render/RenderCommandBuffer'
 import { SpriteFrameRegion, spriteFrameCache } from '../SpriteFrameCache'
 
 export interface ParticlesProps {
+  configFile?: string
   spriteFrame?: string
   pma?: boolean
   count?: number
@@ -34,16 +36,22 @@ const DEFAULT_COLORS: readonly Color[] = [
 ]
 
 export class Particles extends ComponentX<ParticlesProps> {
+  private readonly inlineProps: ParticlesProps
   private particles: Particle[] = []
   private texture: TextureAsset | null = null
   private textureId = -1
   private loadedSpriteFrame = ''
   private frame: SpriteFrameRegion | null = null
+  private loadVersion = 0
+
+  constructor(props?: ParticlesProps) {
+    super(props)
+    this.inlineProps = { ...this.props }
+  }
 
   onAwake(): void {
-    this.inputEnabled = this.props.emitOnTouch ?? false
-    this.inputPriority = this.inputEnabled ? Number.MAX_SAFE_INTEGER : 0
-    this.ensureTexture()
+    this.applyProps()
+    void this.reload()
   }
 
   get activeCount(): number {
@@ -134,7 +142,29 @@ export class Particles extends ComponentX<ParticlesProps> {
   }
 
   onDestroy(): void {
+    this.loadVersion++
     this.releaseTexture()
+  }
+
+  async reload(): Promise<void> {
+    const configFile = this.inlineProps.configFile
+    if (!configFile) return
+
+    const version = ++this.loadVersion
+    const config = JSON.parse(await loadTextAsset(configFile, 'particle config')) as Partial<ParticlesProps>
+    if (version !== this.loadVersion) return
+    if (!config || typeof config !== 'object' || Array.isArray(config)) {
+      throw new Error(`Particle config must be a JSON object: ${configFile}`)
+    }
+
+    this.props = { ...config, ...this.inlineProps }
+    this.applyProps()
+  }
+
+  private applyProps(): void {
+    this.inputEnabled = this.props.emitOnTouch ?? false
+    this.inputPriority = this.inputEnabled ? Number.MAX_SAFE_INTEGER : 0
+    this.ensureTexture()
   }
 
   private ensureTexture(): void {
