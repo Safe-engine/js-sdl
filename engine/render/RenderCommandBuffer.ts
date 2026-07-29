@@ -9,6 +9,8 @@ export const CMD_PUSH_CLIP = 6
 export const CMD_POP_CLIP = 7
 export const CMD_DRAW_REGION = 8
 
+const ADDITIVE_TEXTURE_FLAG = 0x80000000
+
 export class RenderCommandBuffer {
   public commands: Int32Array
   public floatBuffer: Float32Array
@@ -61,13 +63,14 @@ export class RenderCommandBuffer {
     g = 255,
     b = 255,
     a = 255,
+    additive = false,
   ): void {
     this.ensureCapacities(1, 13, 2, 0)
     const c = this.packColor(r, g, b, a)
 
     this.commands[this.cmdOffset++] = CMD_DRAW_REGION
 
-    this.uintBuffer[this.uintOffset++] = textureId >>> 0
+    this.uintBuffer[this.uintOffset++] = (textureId | (additive ? ADDITIVE_TEXTURE_FLAG : 0)) >>> 0
     this.uintBuffer[this.uintOffset++] = c
 
     this.floatBuffer[this.floatOffset++] = sx
@@ -102,13 +105,14 @@ export class RenderCommandBuffer {
     g = 255,
     b = 255,
     a = 255,
+    additive = false,
   ): void {
     this.ensureCapacities(1, 9, 2, 0)
     const c = this.packColor(r, g, b, a)
 
     this.commands[this.cmdOffset++] = CMD_DRAW_SPRITE
 
-    this.uintBuffer[this.uintOffset++] = textureId >>> 0
+    this.uintBuffer[this.uintOffset++] = (textureId | (additive ? ADDITIVE_TEXTURE_FLAG : 0)) >>> 0
     this.uintBuffer[this.uintOffset++] = c
 
     this.floatBuffer[this.floatOffset++] = x

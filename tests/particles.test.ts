@@ -57,6 +57,18 @@ describe('Particles', () => {
     expect(loadTexture).toHaveBeenLastCalledWith('particle-pma.png', true)
   })
 
+  test('renders PMA particles additively so black backgrounds do not obscure the scene', () => {
+    const scene = new Scene()
+    const particles = new Particles({ count: 1, spriteFrame: 'particle-black.png', pma: true })
+    scene.node.addComponent(particles)
+
+    particles.emit(100, 200)
+    globalCommandBuffer.beginFrame()
+    particles.onRender()
+
+    expect(globalCommandBuffer.uintBuffer[0]).toBe(0x80000001)
+  })
+
   test('loads particle props from a JSON config file', async () => {
     const originalFetch = globalThis.fetch
     ;(globalThis as any).fetch = async () => ({

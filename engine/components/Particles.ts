@@ -123,6 +123,7 @@ export class Particles extends ComponentX<ParticlesProps> {
             size * 0.5, size * 0.5,
             false, false,
             particle.color.r, particle.color.g, particle.color.b, alpha,
+            this.props.pma,
           )
         } else {
           globalCommandBuffer.pushSprite(
@@ -132,6 +133,7 @@ export class Particles extends ComponentX<ParticlesProps> {
             size * 0.5, size * 0.5,
             false, false,
             particle.color.r, particle.color.g, particle.color.b, alpha,
+            this.props.pma,
           )
         }
         continue

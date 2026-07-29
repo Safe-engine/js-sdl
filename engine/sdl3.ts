@@ -72,6 +72,7 @@ const rendererStats: RendererStats = {
 const MAX_BATCH_VERTICES = 6000
 let batchTexture: WebGLTexture | null = null
 let batchColor: [number, number, number, number] | null = null
+let batchAdditive = false
 const batchPositions: number[] = []
 const batchUvs: number[] = []
 
@@ -92,6 +93,7 @@ function colorToUniform(
 function sameBatch(
   texture: WebGLTexture,
   color: [number, number, number, number],
+  additive: boolean,
 ): boolean {
   return batchTexture === texture
     && !!batchColor
@@ -99,6 +101,7 @@ function sameBatch(
     && batchColor[1] === color[1]
     && batchColor[2] === color[2]
     && batchColor[3] === color[3]
+    && batchAdditive === additive
 }
 
 function queueDraw(
@@ -106,17 +109,19 @@ function queueDraw(
   positions: readonly number[],
   uvs: readonly number[],
   color: [number, number, number, number],
+  additive = false,
 ): void {
   if (!asset.texture || !program || !positionBuffer || !uvBuffer) return
   const vertexCount = positions.length / 2
   frameVertices += vertexCount
-  if (!sameBatch(asset.texture, color)
+  if (!sameBatch(asset.texture, color, additive)
     || batchPositions.length / 2 + vertexCount > MAX_BATCH_VERTICES) {
     flushDrawBatch()
   }
 
   batchTexture = asset.texture
   batchColor = color
+  batchAdditive = additive
   for (let i = 0; i < positions.length; i++) batchPositions.push(positions[i])
   for (let i = 0; i < uvs.length; i++) batchUvs.push(uvs[i])
 }
@@ -126,12 +131,14 @@ function flushDrawBatch(): void {
   if (!program || !positionBuffer || !uvBuffer) {
     batchTexture = null
     batchColor = null
+    batchAdditive = false
     batchPositions.length = 0
     batchUvs.length = 0
     return
   }
 
   const context = requireGl()
+  context.blendFunc(context.ONE, batchAdditive ? context.ONE : context.ONE_MINUS_SRC_ALPHA)
   context.useProgram(program)
   context.uniform2f(resolutionLocation, logicalWidth, logicalHeight)
   context.uniform1i(samplerLocation, 0)
@@ -151,6 +158,7 @@ function flushDrawBatch(): void {
 
   batchTexture = null
   batchColor = null
+  batchAdditive = false
   batchPositions.length = 0
   batchUvs.length = 0
 }
@@ -828,6 +836,7 @@ function draw(
   green = 255,
   blue = 255,
   alpha = 255,
+  additive = false,
 ): void {
   const asset = textures.get(id)
   if (!asset?.texture || !program || !positionBuffer || !uvBuffer) return
@@ -862,7 +871,7 @@ function draw(
     u0, v1, u1, v0, u1, v1,
   ]
 
-  queueDraw(asset, positions, uvs, colorToUniform(red, green, blue, alpha))
+  queueDraw(asset, positions, uvs, colorToUniform(red, green, blue, alpha), additive)
 }
 
 export function drawTexture(id: number, x: number, y: number): void {
@@ -886,13 +895,14 @@ export function drawTextureRotated(
   green = 255,
   blue = 255,
   alpha = 255,
+  additive = false,
 ): void {
   const asset = textures.get(id)
   if (!asset) return
   draw(
     id, 0, 0, asset.width, asset.height,
     x, y, width, height, angle, centerX, centerY, flipX, flipY,
-    red, green, blue, alpha,
+    red, green, blue, alpha, additive,
   )
 }
 
@@ -915,11 +925,12 @@ export function drawTextureRegionRotated(
   green = 255,
   blue = 255,
   alpha = 255,
+  additive = false,
 ): void {
   draw(
     id, sourceX, sourceY, sourceWidth, sourceHeight,
     x, y, width, height, angle, centerX, centerY, flipX, flipY,
-    red, green, blue, alpha,
+    red, green, blue, alpha, additive,
   )
 }
 
@@ -1137,7 +1148,9 @@ export function submitCommandBuffer(buffer: SpriteBatchBuffer): void {
     if (op === 0) break
 
     if (op === 1) { // CMD_DRAW_SPRITE
-      const id = uintBuffer[uintIdx++]
+      const texture = uintBuffer[uintIdx++]
+      const additive = (texture & 0x80000000) !== 0
+      const id = texture & 0x7fffffff
       const c = uintBuffer[uintIdx++]
       const x = floatBuffer[floatIdx++]
       const y = floatBuffer[floatIdx++]
@@ -1154,9 +1167,11 @@ export function submitCommandBuffer(buffer: SpriteBatchBuffer): void {
       const b = (c >>> 8) & 0xff
       const a = c & 0xff
 
-      drawTextureRotated(id, x, y, w, h, angle, cx, cy, flipX, flipY, r, g, b, a)
+      drawTextureRotated(id, x, y, w, h, angle, cx, cy, flipX, flipY, r, g, b, a, additive)
     } else if (op === 8) { // CMD_DRAW_REGION
-      const id = uintBuffer[uintIdx++]
+      const texture = uintBuffer[uintIdx++]
+      const additive = (texture & 0x80000000) !== 0
+      const id = texture & 0x7fffffff
       const c = uintBuffer[uintIdx++]
       const sx = floatBuffer[floatIdx++]
       const sy = floatBuffer[floatIdx++]
@@ -1178,7 +1193,7 @@ export function submitCommandBuffer(buffer: SpriteBatchBuffer): void {
       const a = c & 0xff
 
       drawTextureRegionRotated(
-        id, sx, sy, sw, sh, dx, dy, dw, dh, angle, cx, cy, flipX, flipY, r, g, b, a,
+        id, sx, sy, sw, sh, dx, dy, dw, dh, angle, cx, cy, flipX, flipY, r, g, b, a, additive,
       )
     } else if (op === 2) { // CMD_DRAW_QUAD
       const id = uintBuffer[uintIdx++]
