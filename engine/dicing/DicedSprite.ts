@@ -27,6 +27,7 @@ export type DicedJSON = {
 export interface DicedSpriteProps {
   texture?: string
   animation?: string
+  loop: boolean
   data: string | DicedJSON
 }
 
@@ -36,18 +37,30 @@ export class DicedSprite extends ComponentX<DicedSpriteProps> {
   private currentAnimation: DicedAnimation | null = null
   private elapsed = 0
   private frameIndex = 0
+  private stopFrame: number | null = null
   private loadVersion = 0
 
-  setAnimation(animation: string) {
-    if (this.props.animation === animation) return
+  reset() {
+    this.stopFrame = null
+    this.elapsed = 0
+    this.frameIndex = 0
+  }
 
+  setAnimation(animation: string, loop = true) {
+    if (this.props.animation === animation) return
     this.props.animation = animation
+    this.props.loop = loop
+    this.reset()
     void this.reload().catch((error) => {
       console.error('DicedSprite reload failed', error)
     })
   }
 
-  onStart(): void {
+  stopAtFrame(frame: number) {
+    this.stopFrame = frame
+  }
+
+  onStart() {
     void this.reload().catch((error) => {
       console.error('DicedSprite reload failed', error)
     })
@@ -57,13 +70,37 @@ export class DicedSprite extends ComponentX<DicedSpriteProps> {
     const animation = this.currentAnimation
     if (!animation || animation.frames.length < 2 || animation.fps <= 0) return
 
+    const stopFrame = this.stopFrame
+    if (stopFrame !== null) {
+      if (!Number.isInteger(stopFrame) || stopFrame < 0 || stopFrame >= animation.frames.length) {
+        throw new RangeError(`Diced sprite frame ${stopFrame} is out of range`)
+      }
+      if (this.frameIndex === stopFrame) return
+    }
+    if (!this.props.loop && this.frameIndex === animation.frames.length - 1) return
+
     this.elapsed += dt
     const frameDuration = 1 / animation.fps
     const framesElapsed = Math.floor(this.elapsed / frameDuration)
     if (framesElapsed === 0) return
 
+    if (stopFrame !== null) {
+      const framesUntilStop = stopFrame > this.frameIndex
+        ? stopFrame - this.frameIndex
+        : this.props.loop
+          ? animation.frames.length - this.frameIndex + stopFrame
+          : Infinity
+      if (framesElapsed >= framesUntilStop) {
+        this.frameIndex = stopFrame
+        this.elapsed = 0
+        return
+      }
+    }
+
     this.elapsed -= framesElapsed * frameDuration
-    this.frameIndex = (this.frameIndex + framesElapsed) % animation.frames.length
+    this.frameIndex = this.props.loop
+      ? (this.frameIndex + framesElapsed) % animation.frames.length
+      : Math.min(this.frameIndex + framesElapsed, animation.frames.length - 1)
   }
 
   onRender(): void {

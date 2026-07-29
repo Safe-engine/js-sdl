@@ -63,7 +63,7 @@ export class HomeScene extends Scene {
     spine1.node.x = 260
     spine1.node.y = 840
     spine1.node.scale = 0.3
-    const diced = instantiate(DicedSprite, { data: atlas_diced_json, animation: 'Heal', texture: sf_atlas })
+    const diced = instantiate(DicedSprite, { data: atlas_diced_json, animation: 'Heal', texture: sf_atlas, loop: true })
     this.node.addChild(diced.node)
     diced.node.x = 260
     diced.node.y = 240
