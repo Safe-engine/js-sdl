@@ -31,10 +31,21 @@ export interface DicedSpriteProps {
   data: string | DicedJSON
 }
 
+type DicedMesh = {
+  positions: readonly [Float32Array, Float32Array, Float32Array, Float32Array]
+  uvs: readonly [Float32Array, Float32Array, Float32Array, Float32Array]
+  indices: Uint16Array
+}
+
+const MAX_MESH_CELLS = 0x3fff
+
 export class DicedSprite extends ComponentX<DicedSpriteProps> {
   private texture: TextureAsset | null = null
   private atlas: DicedJSON | null = null
   private currentAnimation: DicedAnimation | null = null
+  private currentMeshes: DicedMesh[][] = []
+  private meshesByAnimation = new Map<DicedAnimation, DicedMesh[][]>()
+  private texturePath: string | null = null
   private elapsed = 0
   private frameIndex = 0
   private stopFrame: number | null = null
@@ -51,6 +62,10 @@ export class DicedSprite extends ComponentX<DicedSpriteProps> {
     this.props.animation = animation
     this.props.loop = loop
     this.reset()
+    if (this.atlas) {
+      this.setCurrentAnimation(animation)
+      return
+    }
     void this.reload().catch((error) => {
       console.error('DicedSprite reload failed', error)
     })
@@ -58,6 +73,7 @@ export class DicedSprite extends ComponentX<DicedSpriteProps> {
 
   stopAtFrame(frame: number) {
     this.stopFrame = frame
+    this.validateStopFrame()
   }
 
   onStart() {
@@ -71,17 +87,11 @@ export class DicedSprite extends ComponentX<DicedSpriteProps> {
     if (!animation || animation.frames.length < 2 || animation.fps <= 0) return
 
     const stopFrame = this.stopFrame
-    if (stopFrame !== null) {
-      if (!Number.isInteger(stopFrame) || stopFrame < 0 || stopFrame >= animation.frames.length) {
-        throw new RangeError(`Diced sprite frame ${stopFrame} is out of range`)
-      }
-      if (this.frameIndex === stopFrame) return
-    }
+    if (stopFrame !== null && this.frameIndex === stopFrame) return
     if (!this.props.loop && this.frameIndex === animation.frames.length - 1) return
 
     this.elapsed += dt
-    const frameDuration = 1 / animation.fps
-    const framesElapsed = Math.floor(this.elapsed / frameDuration)
+    const framesElapsed = Math.floor(this.elapsed * animation.fps)
     if (framesElapsed === 0) return
 
     if (stopFrame !== null) {
@@ -97,7 +107,7 @@ export class DicedSprite extends ComponentX<DicedSpriteProps> {
       }
     }
 
-    this.elapsed -= framesElapsed * frameDuration
+    this.elapsed -= framesElapsed / animation.fps
     this.frameIndex = this.props.loop
       ? (this.frameIndex + framesElapsed) % animation.frames.length
       : Math.min(this.frameIndex + framesElapsed, animation.frames.length - 1)
@@ -106,57 +116,34 @@ export class DicedSprite extends ComponentX<DicedSpriteProps> {
   onRender(): void {
     const atlas = this.atlas
     const texture = this.texture
-    const animation = this.currentAnimation
-    if (!this.node.visible || !atlas || !texture || !animation) return
+    const meshes = this.currentMeshes[this.frameIndex]
+    if (!this.node.visible || !atlas || !texture || !meshes) return
 
-    const frame = animation.frames[this.frameIndex]
-    if (!frame) return
-
-    const { meta } = atlas
     const node = this.node
-    const scaleX = node.worldScaleX
-    const scaleY = node.worldScaleY
-    const rawWidth = meta.rawWidth * scaleX
-    const rawHeight = meta.rawHeight * scaleY
-    const originX = node.worldX - node.anchorX * rawWidth
-    const originY = node.worldY - node.anchorY * rawHeight
-    const cellWidth = meta.cellW * scaleX
-    const cellHeight = meta.cellH * scaleY
+    const radians = node.worldRotation * Math.PI / 180
+    const cosine = Math.cos(radians)
+    const sine = Math.sin(radians)
+    const meshVariant = (node.flipX ? 1 : 0) | (node.flipY ? 2 : 0)
     const opacity = node.opacity * (node.color.a ?? 255)
+    const anchorX = -node.anchorX * atlas.meta.rawWidth * node.worldScaleX
+    const anchorY = -node.anchorY * atlas.meta.rawHeight * node.worldScaleY
+    const translateX = node.worldX + anchorX * cosine - anchorY * sine
+    const translateY = node.worldY + anchorX * sine + anchorY * cosine
 
-    for (let row = 0; row < frame.length; row++) {
-      const cells = frame[row]
-      for (let column = 0; column < cells.length; column++) {
-        const cell = cells[column]
-        if (cell < 0) continue
-
-        const sourceColumn = cell % meta.atlasCols
-        const sourceRow = Math.floor(cell / meta.atlasCols)
-        const drawColumn = node.flipX ? cells.length - 1 - column : column
-        const drawRow = node.flipY ? frame.length - 1 - row : row
-        const x = originX + drawColumn * cellWidth
-        const y = originY + drawRow * cellHeight
-        const uvInset = 0.5
-
-        globalCommandBuffer.pushRegion(
-          texture.id,
-          sourceColumn * meta.cellW + uvInset,
-          sourceRow * meta.cellH + uvInset,
-          meta.cellW - uvInset * 2,
-          meta.cellH - uvInset * 2,
-          x, y, cellWidth, cellHeight,
-          node.worldRotation,
-          node.worldX - x, node.worldY - y,
-          node.flipX, node.flipY,
-          node.color.r, node.color.g, node.color.b, opacity,
-        )
-      }
+    for (const mesh of meshes) {
+      globalCommandBuffer.pushMesh(
+        texture.id, mesh.positions[meshVariant], mesh.uvs[meshVariant], mesh.indices,
+        node.color.r, node.color.g, node.color.b, opacity,
+        translateX, translateY, node.worldScaleX, node.worldScaleY, cosine, sine,
+      )
     }
   }
 
   onDestroy(): void {
     this.texture?.release()
     this.texture = null
+    this.texturePath = null
+    this.meshesByAnimation.clear()
   }
 
   async reload(): Promise<void> {
@@ -179,11 +166,6 @@ export class DicedSprite extends ComponentX<DicedSpriteProps> {
       this.props.animation = animationName
     }
 
-    const animation = atlas.animations.find(({ name }) => name === animationName)
-    if (!animation) {
-      throw new Error(`Diced animation not found: ${animationName}`)
-    }
-
     const texturePath = this.props.texture
       ?? (typeof data === 'string'
         ? resolveSiblingPath(data, `${atlas.meta.name}.png`)
@@ -195,15 +177,127 @@ export class DicedSprite extends ComponentX<DicedSpriteProps> {
 
     this.props.texture = texturePath
     this.props.loop = this.props.loop ?? true
-    this.texture?.release()
-    this.texture = AssetManager.acquireTexture(texturePath)
+    const textureChanged = this.texturePath !== texturePath
+    if (textureChanged) {
+      this.texture?.release()
+      this.texture = AssetManager.acquireTexture(texturePath)
+      this.texturePath = texturePath
+    }
+    if (textureChanged || this.atlas !== atlas) this.meshesByAnimation.clear()
     this.atlas = atlas
-    this.currentAnimation = animation
-    this.elapsed = 0
-    this.frameIndex = 0
+    this.setCurrentAnimation(animationName)
     this.node.width = atlas.meta.rawWidth
     this.node.height = atlas.meta.rawHeight
   }
+
+  private setCurrentAnimation(name: string): void {
+    const atlas = this.atlas
+    const texture = this.texture
+    if (!atlas || !texture) return
+
+    const animation = atlas.animations.find(({ name: animationName }) => animationName === name)
+    if (!animation) throw new Error(`Diced animation not found: ${name}`)
+
+    this.currentAnimation = animation
+    let meshes = this.meshesByAnimation.get(animation)
+    if (!meshes) {
+      meshes = compileMeshes(animation, atlas.meta, texture.width, texture.height)
+      this.meshesByAnimation.set(animation, meshes)
+    }
+    this.currentMeshes = meshes
+    this.elapsed = 0
+    this.frameIndex = 0
+    this.validateStopFrame()
+  }
+
+  private validateStopFrame(): void {
+    const animation = this.currentAnimation
+    const stopFrame = this.stopFrame
+    if (!animation || stopFrame === null) return
+    if (!Number.isInteger(stopFrame) || stopFrame < 0 || stopFrame >= animation.frames.length) {
+      throw new RangeError(`Diced sprite frame ${stopFrame} is out of range`)
+    }
+  }
+}
+
+function compileMeshes(
+  animation: DicedAnimation,
+  meta: Meta,
+  textureWidth: number,
+  textureHeight: number,
+): DicedMesh[][] {
+  if (textureWidth <= 0 || textureHeight <= 0) return []
+
+  return animation.frames.map((frame) => {
+    const cells: Array<{ cell: number, row: number, column: number, rowLength: number }> = []
+    for (let row = 0; row < frame.length; row++) {
+      const rowCells = frame[row]
+      for (let column = 0; column < rowCells.length; column++) {
+        const cell = rowCells[column]
+        if (cell >= 0) cells.push({ cell, row, column, rowLength: rowCells.length })
+      }
+    }
+
+    const meshes: DicedMesh[] = []
+    for (let start = 0; start < cells.length; start += MAX_MESH_CELLS) {
+      meshes.push(compileMesh(cells.slice(start, start + MAX_MESH_CELLS), frame.length, meta, textureWidth, textureHeight))
+    }
+    return meshes
+  })
+}
+
+function compileMesh(
+  cells: Array<{ cell: number, row: number, column: number, rowLength: number }>,
+  rowCount: number,
+  meta: Meta,
+  textureWidth: number,
+  textureHeight: number,
+): DicedMesh {
+  const positions = [new Float32Array(cells.length * 8), new Float32Array(cells.length * 8), new Float32Array(cells.length * 8), new Float32Array(cells.length * 8)] as const
+  const uvs = [new Float32Array(cells.length * 8), new Float32Array(cells.length * 8), new Float32Array(cells.length * 8), new Float32Array(cells.length * 8)] as const
+  const indices = new Uint16Array(cells.length * 6)
+  const inset = 0.5
+  const uWidth = (meta.cellW - inset * 2) / textureWidth
+  const vHeight = (meta.cellH - inset * 2) / textureHeight
+
+  for (let index = 0; index < cells.length; index++) {
+    const { cell, row, column, rowLength } = cells[index]
+    const sourceColumn = cell % meta.atlasCols
+    const sourceRow = Math.floor(cell / meta.atlasCols)
+    const u0 = (sourceColumn * meta.cellW + inset) / textureWidth
+    const v0 = (sourceRow * meta.cellH + inset) / textureHeight
+    const offset = index * 8
+    const indexOffset = index * 6
+    const vertex = index * 4
+
+    writeQuad(positions[0], offset, column, row, meta)
+    writeQuad(positions[1], offset, rowLength - 1 - column, row, meta)
+    writeQuad(positions[2], offset, column, rowCount - 1 - row, meta)
+    writeQuad(positions[3], offset, rowLength - 1 - column, rowCount - 1 - row, meta)
+    writeUvs(uvs[0], offset, u0, v0, uWidth, vHeight, false, false)
+    writeUvs(uvs[1], offset, u0, v0, uWidth, vHeight, true, false)
+    writeUvs(uvs[2], offset, u0, v0, uWidth, vHeight, false, true)
+    writeUvs(uvs[3], offset, u0, v0, uWidth, vHeight, true, true)
+    indices.set([vertex, vertex + 1, vertex + 2, vertex + 2, vertex + 1, vertex + 3], indexOffset)
+  }
+
+  return { positions, uvs, indices }
+}
+
+function writeQuad(target: Float32Array, offset: number, column: number, row: number, meta: Meta): void {
+  const x0 = column * meta.cellW
+  const y0 = row * meta.cellH
+  target.set([x0, y0, x0 + meta.cellW, y0, x0, y0 + meta.cellH, x0 + meta.cellW, y0 + meta.cellH], offset)
+}
+
+function writeUvs(target: Float32Array, offset: number, u0: number, v0: number, width: number, height: number, flipX: boolean, flipY: boolean): void {
+  const u1 = u0 + width
+  const v1 = v0 + height
+  const left = flipX ? u1 : u0
+  const right = flipX ? u0 : u1
+  const top = flipY ? v1 : v0
+  const bottom = flipY ? v0 : v1
+  target.set([left, top, right, top, left, bottom, right, bottom], offset)
 }
 
 function resolveSiblingPath(path: string, sibling: string): string {

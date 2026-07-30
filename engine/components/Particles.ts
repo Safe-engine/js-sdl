@@ -255,7 +255,7 @@ export class Particles extends ComponentX<ParticlesProps> {
 
     this.releaseTexture()
     const definition = spriteFrameCache.get(spriteFrame)
-    this.texture = AssetManager.acquireTexture(definition?.texturePath ?? spriteFrame, { additive: this.props.additive })
+    this.texture = AssetManager.acquireTexture(definition?.texturePath ?? spriteFrame, { pma: this.props.additive })
     this.textureId = this.texture.id
     this.loadedSpriteFrame = spriteFrame
     this.frame = definition?.region ?? null
