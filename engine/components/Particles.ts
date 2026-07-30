@@ -22,7 +22,7 @@ export interface ParticlesEmitOptions {
 export interface ParticlesProps {
   configFile?: string
   spriteFrame?: string
-  pma?: boolean
+  additive?: boolean
   count?: number
   duration?: number
   speed?: number
@@ -199,7 +199,7 @@ export class Particles extends ComponentX<ParticlesProps> {
             pWidth * 0.5, pHeight * 0.5,
             false, false,
             particle.color.r, particle.color.g, particle.color.b, alpha,
-            this.props.pma,
+            this.props.additive,
           )
         } else {
           globalCommandBuffer.pushSprite(
@@ -209,7 +209,7 @@ export class Particles extends ComponentX<ParticlesProps> {
             pWidth * 0.5, pHeight * 0.5,
             false, false,
             particle.color.r, particle.color.g, particle.color.b, alpha,
-            this.props.pma,
+            this.props.additive,
           )
         }
         continue
@@ -255,7 +255,7 @@ export class Particles extends ComponentX<ParticlesProps> {
 
     this.releaseTexture()
     const definition = spriteFrameCache.get(spriteFrame)
-    this.texture = AssetManager.acquireTexture(definition?.texturePath ?? spriteFrame, { pma: this.props.pma })
+    this.texture = AssetManager.acquireTexture(definition?.texturePath ?? spriteFrame, { additive: this.props.additive })
     this.textureId = this.texture.id
     this.loadedSpriteFrame = spriteFrame
     this.frame = definition?.region ?? null
@@ -269,4 +269,3 @@ export class Particles extends ComponentX<ParticlesProps> {
     this.frame = null
   }
 }
-
