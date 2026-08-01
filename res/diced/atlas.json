@@ -3,6 +3,8 @@
     "name": "diced_atlas",
     "rawWidth": 192,
     "rawHeight": 192,
+    "anchorX": 0.5,
+    "anchorY": 0.5,
     "cellW": 32,
     "cellH": 32,
     "atlasCols": 12,

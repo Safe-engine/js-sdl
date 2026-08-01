@@ -11,6 +11,8 @@ export type Meta = {
   cellH: number
   atlasCols: number
   atlasRows: number
+  anchorX: number
+  anchorY: number
 }
 
 export type DicedAnimation = {
@@ -188,6 +190,8 @@ export class DicedSprite extends ComponentX<DicedSpriteProps> {
     this.setCurrentAnimation(animationName)
     this.node.width = atlas.meta.rawWidth
     this.node.height = atlas.meta.rawHeight
+    this.node.anchorX = atlas.meta.anchorX ?? 0.5
+    this.node.anchorY = atlas.meta.anchorY ?? 0.5
   }
 
   private setCurrentAnimation(name: string): void {

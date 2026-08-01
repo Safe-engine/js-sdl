@@ -6,6 +6,7 @@ const atlas: DicedJSON = {
   meta: {
     name: 'test', rawWidth: 32, rawHeight: 16,
     cellW: 16, cellH: 16, atlasCols: 2, atlasRows: 1,
+    anchorX: 0.25, anchorY: 0.75,
   },
   animations: [{
     name: 'idle', fps: 10,
@@ -22,6 +23,19 @@ type DicedSpriteInternals = {
 }
 
 describe('DicedSprite', () => {
+  it('sets the node anchor from atlas metadata', async () => {
+    const sprite = new DicedSprite({ data: atlas, animation: 'idle' })
+    const node = sprite.ensureNode()
+    const internals = sprite as unknown as DicedSpriteInternals
+    internals.texture = { id: 7, width: 32, height: 16 }
+    internals.texturePath = 'test.png'
+
+    await sprite.reload()
+
+    expect(node.anchorX).toBe(0.25)
+    expect(node.anchorY).toBe(0.75)
+  })
+
   it('renders a multi-cell frame as one mesh command', () => {
     const sprite = new DicedSprite({ data: atlas, animation: 'idle' })
     sprite.ensureNode()
