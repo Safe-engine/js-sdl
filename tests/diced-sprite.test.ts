@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test'
+import { AssetManager } from '../engine/AssetManager'
 import { DicedSprite, type DicedJSON } from '../engine/dicing/DicedSprite'
 import { CMD_DRAW_MESH, globalCommandBuffer } from '../engine/render/RenderCommandBuffer'
 
@@ -71,5 +72,29 @@ describe('DicedSprite', () => {
 
     expect(internals.currentAnimation.name).toBe('alternate')
     expect(internals.texturePath).toBe('test.png')
+  })
+
+  it('uses showFrame prop to set stop frame', async () => {
+    const multiFrameAtlas: DicedJSON = {
+      ...atlas,
+      animations: [{ name: 'idle', fps: 10, frames: [[[0]], [[1]], [[0]]] }],
+    }
+    const sprite = new DicedSprite({ data: multiFrameAtlas, animation: 'idle', showFrame: 1 })
+    sprite.ensureNode()
+
+    const originalAcquireTexture = AssetManager.acquireTexture
+    const fakeTexture = { id: 7, width: 32, height: 16 }
+    AssetManager.acquireTexture = (() => fakeTexture) as any
+
+    try {
+      await sprite.reload()
+      expect((sprite as any).stopFrame).toBe(1)
+      expect((sprite as any).frameIndex).toBe(1)
+
+      sprite.onUpdate(0.1)
+      expect((sprite as any).frameIndex).toBe(1)
+    } finally {
+      AssetManager.acquireTexture = originalAcquireTexture
+    }
   })
 })

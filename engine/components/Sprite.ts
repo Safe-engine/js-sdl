@@ -1,4 +1,3 @@
-import { globalCommandBuffer } from '../render/RenderCommandBuffer'
 import {
   AssetManager,
   TextureAsset,
@@ -6,12 +5,14 @@ import {
 } from '../AssetManager'
 import { ComponentX } from '../core/ComponentX'
 import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH } from '../core/Node'
+import { globalCommandBuffer } from '../render/RenderCommandBuffer'
 import { SpriteFrameRegion, spriteFrameCache } from '../SpriteFrameCache'
 
 export interface SpriteProps {
   spriteFrame?: string
   capInsets?: [number, number, number, number]
   tiled?: boolean
+  additive?: boolean
 }
 
 export interface SpriteFillOptions {
@@ -28,6 +29,7 @@ export class Sprite<Props extends SpriteProps = SpriteProps> extends ComponentX<
   protected texture: TextureAsset | null = null
   private loadedPath = ''
   private loadedAtlas: TextureAtlas | null = null
+  private loadedAdditive = false
   private cachedFrame: SpriteFrameRegion | null = null
   private autoWidth = DEFAULT_NODE_WIDTH
   private autoHeight = DEFAULT_NODE_HEIGHT
@@ -160,6 +162,7 @@ export class Sprite<Props extends SpriteProps = SpriteProps> extends ComponentX<
       this.node.color.g,
       this.node.color.b,
       this.node.opacity * (this.node.color.a ?? 255),
+      !!this.props.additive,
     )
   }
 
@@ -168,16 +171,19 @@ export class Sprite<Props extends SpriteProps = SpriteProps> extends ComponentX<
   }
 
   private ensureTexture(): void {
+    const additive = !!this.props.additive
+
     if (this.atlas) {
-      if (this.texture && this.loadedAtlas === this.atlas) {
+      if (this.texture && this.loadedAtlas === this.atlas && this.loadedAdditive === additive) {
         const frame = this.getFrame()
         this.applyNaturalSize(frame?.width ?? this.texture.width,
           frame?.height ?? this.texture.height)
         return
       }
       this.releaseTexture()
-      this.texture = AssetManager.acquireTexture(this.atlas.texture.key)
+      this.texture = AssetManager.acquireTexture(this.atlas.texture.key, { pma: additive })
       this.loadedAtlas = this.atlas
+      this.loadedAdditive = additive
       this.cachedFrame = null
       this.textureId = this.texture.id
       const frame = this.getFrame()
@@ -189,7 +195,7 @@ export class Sprite<Props extends SpriteProps = SpriteProps> extends ComponentX<
       this.releaseTexture()
       return
     }
-    if (this.texture && this.loadedPath === this.texturePath) {
+    if (this.texture && this.loadedPath === this.texturePath && this.loadedAdditive === additive) {
       this.applyNaturalSize(
         this.cachedFrame?.width ?? this.texture.width,
         this.cachedFrame?.height ?? this.texture.height,
@@ -198,8 +204,9 @@ export class Sprite<Props extends SpriteProps = SpriteProps> extends ComponentX<
     }
     this.releaseTexture()
     const spriteFrame = spriteFrameCache.get(this.texturePath)
-    this.texture = AssetManager.acquireTexture(spriteFrame?.texturePath ?? this.texturePath)
+    this.texture = AssetManager.acquireTexture(spriteFrame?.texturePath ?? this.texturePath, { pma: additive })
     this.loadedPath = this.texturePath
+    this.loadedAdditive = additive
     this.cachedFrame = spriteFrame?.region ?? null
     this.textureId = this.texture.id
     this.applyNaturalSize(
@@ -250,6 +257,7 @@ export class Sprite<Props extends SpriteProps = SpriteProps> extends ComponentX<
         this.node.flipX, this.node.flipY,
         this.node.color.r, this.node.color.g, this.node.color.b,
         opacity,
+        !!this.props.additive,
       )
       return
     }
@@ -270,6 +278,7 @@ export class Sprite<Props extends SpriteProps = SpriteProps> extends ComponentX<
       this.node.flipX, this.node.flipY,
       this.node.color.r, this.node.color.g, this.node.color.b,
       opacity,
+      !!this.props.additive,
     )
   }
 
@@ -320,6 +329,7 @@ export class Sprite<Props extends SpriteProps = SpriteProps> extends ComponentX<
       this.node.flipX, this.node.flipY,
       this.node.color.r, this.node.color.g, this.node.color.b,
       this.node.opacity * (this.node.color.a ?? 255),
+      !!this.props.additive,
     )
   }
 
@@ -354,6 +364,7 @@ export class Sprite<Props extends SpriteProps = SpriteProps> extends ComponentX<
           this.node.flipX, this.node.flipY,
           this.node.color.r, this.node.color.g, this.node.color.b,
           opacity,
+          !!this.props.additive,
         )
       }
     }
@@ -406,6 +417,7 @@ export class Sprite<Props extends SpriteProps = SpriteProps> extends ComponentX<
             this.node.flipX, this.node.flipY,
             this.node.color.r, this.node.color.g, this.node.color.b,
             opacity,
+            !!this.props.additive,
           )
         }
         sourceX += sourceWidth
@@ -431,6 +443,7 @@ export class Sprite<Props extends SpriteProps = SpriteProps> extends ComponentX<
     this.texture = null
     this.loadedPath = ''
     this.loadedAtlas = null
+    this.loadedAdditive = false
     this.cachedFrame = null
     this.textureId = -1
   }

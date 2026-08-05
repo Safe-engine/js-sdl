@@ -30,6 +30,7 @@ export interface DicedSpriteProps {
   texture?: string
   animation?: string
   loop?: boolean
+  showFrame?: number
   data: string | DicedJSON
 }
 
@@ -187,7 +188,13 @@ export class DicedSprite extends ComponentX<DicedSpriteProps> {
     }
     if (textureChanged || this.atlas !== atlas) this.meshesByAnimation.clear()
     this.atlas = atlas
+    if (this.props.showFrame != null) {
+      this.stopFrame = this.props.showFrame
+    }
     this.setCurrentAnimation(animationName)
+    if (this.stopFrame !== null) {
+      this.frameIndex = this.stopFrame
+    }
     this.node.width = atlas.meta.rawWidth
     this.node.height = atlas.meta.rawHeight
     this.node.anchorX = atlas.meta.anchorX ?? 0.5
