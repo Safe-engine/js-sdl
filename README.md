@@ -1,16 +1,12 @@
-### Web
+### Install
+```bash
+npm install @safe-engine/sdl
+```
 
-The browser build reuses the same engine and game code, replacing the native
-`sdl3` module with the WebGL implementation in `web/sdl3.ts`.
+### Dev
 
 ```bash
 bun run dev
-```
-
-Create a production build in `dist-web/` with:
-
-```bash
-bun run build
 ```
 
 ### Resolution policy
