@@ -26,7 +26,6 @@ function marginBottom(c: LayoutChild | null): number { return c ? c.margin[2] : 
 
 interface UIContainerProps {
   direction?: LayoutDirection
-  gap?: number
   paddingTop?: number
   paddingLeft?: number
   paddingRight?: number
@@ -38,7 +37,7 @@ export class UIContainer<Props = UIContainerProps> extends ComponentX<Props> {
   private _lastChildRevision = -1
 
   private get _p(): Required<UIContainerProps> {
-    return { direction: 'none', gap: 0, paddingTop: 0, paddingLeft: 0, paddingRight: 0, paddingBottom: 0, ...this.props as any }
+    return { direction: 'none', paddingTop: 0, paddingLeft: 0, paddingRight: 0, paddingBottom: 0, ...this.props as any }
   }
 
   get align(): LayoutAlignment { return this._align }
@@ -73,7 +72,7 @@ export class UIContainer<Props = UIContainerProps> extends ComponentX<Props> {
 
     let fixed = 0
     let totalFlex = 0
-    const margins: { before: number; after: number }[] = []
+    const margins: { before: number, after: number }[] = []
     for (const child of kids) {
       const lc = getLayoutChild(child)
       margins.push({
@@ -89,7 +88,6 @@ export class UIContainer<Props = UIContainerProps> extends ComponentX<Props> {
         fixed += size + marginSum
       }
     }
-    fixed += p.gap * Math.max(0, kids.length - 1)
     const remaining = Math.max(0, mainSize - leading - trailing - fixed)
 
     let cursor = leading
@@ -119,11 +117,11 @@ export class UIContainer<Props = UIContainerProps> extends ComponentX<Props> {
       if (horizontal) {
         child.x = ox + cursor + child.width * child.anchorX
         child.y = oy + cross + child.height * child.anchorY
-        cursor += child.width + m.after + p.gap
+        cursor += child.width + m.after
       } else {
         child.x = ox + cross + child.width * child.anchorX
         child.y = oy + cursor + child.height * child.anchorY
-        cursor += child.height + m.after + p.gap
+        cursor += child.height + m.after
       }
     }
   }
@@ -133,7 +131,8 @@ export class UIContainer<Props = UIContainerProps> extends ComponentX<Props> {
 
 interface UILayoutProps {
   direction?: LayoutDirection
-  gap?: number
+  spaceX?: number
+  spaceY?: number
   paddingTop?: number
   paddingLeft?: number
   paddingRight?: number
@@ -142,10 +141,10 @@ interface UILayoutProps {
 
 export class UILayout extends ComponentX<UILayoutProps> {
   private _lastChildRevision = -1
-  private _childSizes = new WeakMap<Node, { w: number; h: number }>()
+  private _childSizes = new WeakMap<Node, { w: number, h: number }>()
 
   private get _p(): Required<UILayoutProps> {
-    return { direction: 'horizontal', gap: 0, paddingTop: 0, paddingLeft: 0, paddingRight: 0, paddingBottom: 0, ...this.props }
+    return { direction: 'horizontal', spaceX: 0, spaceY: 0, paddingTop: 0, paddingLeft: 0, paddingRight: 0, paddingBottom: 0, ...this.props }
   }
 
   onRender() { }
@@ -205,10 +204,9 @@ export class UILayout extends ComponentX<UILayoutProps> {
     let totalF = 0
     for (const child of kids) {
       const lc = getLayoutChild(child)
-      if (lc && lc.flex > 0) { totalF += lc.flex; fixed += 0 }
-      else fixed += child.width
+      if (lc && lc.flex > 0) { totalF += lc.flex; fixed += 0 } else fixed += child.width
     }
-    fixed += p.gap * (kids.length - 1)
+    fixed += p.spaceX * (kids.length - 1)
     let cursor = pl
     for (const child of kids) {
       const lc = getLayoutChild(child)
@@ -216,7 +214,7 @@ export class UILayout extends ComponentX<UILayoutProps> {
         child.width = (availW - fixed) * lc.flex / totalF
       child.x = ox + cursor + child.width * child.anchorX
       child.y = oy + _pt + child.height * child.anchorY
-      cursor += child.width + p.gap
+      cursor += child.width + p.spaceX
     }
   }
 
@@ -230,10 +228,9 @@ export class UILayout extends ComponentX<UILayoutProps> {
     let totalF = 0
     for (const child of kids) {
       const lc = getLayoutChild(child)
-      if (lc && lc.flex > 0) { totalF += lc.flex; fixed += 0 }
-      else fixed += child.height
+      if (lc && lc.flex > 0) { totalF += lc.flex; fixed += 0 } else fixed += child.height
     }
-    fixed += p.gap * (kids.length - 1)
+    fixed += p.spaceY * (kids.length - 1)
     let cursor = pt
     for (const child of kids) {
       const lc = getLayoutChild(child)
@@ -241,7 +238,7 @@ export class UILayout extends ComponentX<UILayoutProps> {
         child.height = (availH - fixed) * lc.flex / totalF
       child.x = ox + p.paddingLeft + child.width * child.anchorX
       child.y = oy + cursor + child.height * child.anchorY
-      cursor += child.height + p.gap
+      cursor += child.height + p.spaceY
     }
   }
 
@@ -254,14 +251,14 @@ export class UILayout extends ComponentX<UILayoutProps> {
     const availH = nHeight(this.node) - pt - pb
     const cols = Math.max(1, Math.round(Math.sqrt(kids.length * availW / Math.max(1, availH))))
     const rows = Math.ceil(kids.length / cols)
-    const cellW = (availW - p.gap * (cols - 1)) / cols
-    const cellH = (availH - p.gap * (rows - 1)) / rows
+    const cellW = (availW - p.spaceX * (cols - 1)) / cols
+    const cellH = (availH - p.spaceY * (rows - 1)) / rows
     for (let i = 0; i < kids.length; i++) {
       const child = kids[i]
       const col = i % cols
       const row = Math.floor(i / cols)
-      child.x = ox + pl + col * (cellW + p.gap) + child.width * child.anchorX
-      child.y = oy + pt + row * (cellH + p.gap) + child.height * child.anchorY
+      child.x = ox + pl + col * (cellW + p.spaceX) + child.width * child.anchorX
+      child.y = oy + pt + row * (cellH + p.spaceY) + child.height * child.anchorY
     }
   }
 }
@@ -269,7 +266,7 @@ export class UILayout extends ComponentX<UILayoutProps> {
 function nWidth(node: Node | null): number { return node?.width ?? 0 }
 function nHeight(node: Node | null): number { return node?.height ?? 0 }
 
-export function worldRect(n: Node): { x: number; y: number; width: number; height: number } {
+export function worldRect(n: Node): { x: number, y: number, width: number, height: number } {
   const w = n.width * Math.abs(n.worldScaleX)
   const h = n.height * Math.abs(n.worldScaleY)
   return { x: n.worldX - n.anchorX * w, y: n.worldY - n.anchorY * h, width: w, height: h }
@@ -292,7 +289,7 @@ export class Toggle extends ComponentX {
   inputEnabled = true
   private pressed = false
 
-  private worldRect(): { x: number; y: number; width: number; height: number } {
+  private worldRect(): { x: number, y: number, width: number, height: number } {
     return worldRect(this.node)
   }
 

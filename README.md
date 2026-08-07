@@ -218,7 +218,7 @@ set `button.consumeInput = false` to allow propagation.
 ### UI
 
 UI components use the existing node tree and logical coordinate system.
-`UIContainer` supports horizontal and vertical stack layout, padding, gaps,
+`UIContainer` supports horizontal and vertical stack layout and padding,
 cross-axis alignment, flexible children, and anchor constraints. `Panel`,
 `UIImage`, `NineSlice`, `ProgressBar`, `TextInput`, `Toggle`, and `ScrollView`
 provide the standard retained widgets.
@@ -245,7 +245,6 @@ const hud = new Node("hud");
 const panel = hud.addComponent(Panel);
 panel.setSize(520, 180);
 panel.direction = "vertical";
-panel.gap = 12;
 panel.padding = { top: 20, right: 20, bottom: 20, left: 20 };
 
 const titleNode = panel.node!.addChild(new Node("title"));

@@ -10,7 +10,7 @@ mock.module('sdl3', () => ({
   releaseTexture: () => {},
 }))
 
-const { UIContainer, UIElement } = await import('../engine/components/UI')
+const { UIContainer, UIElement, UILayout } = await import('../engine/components/UI')
 
 class CountingContainer extends UIContainer {
   layoutPasses = 0
@@ -22,6 +22,46 @@ class CountingContainer extends UIContainer {
 }
 
 describe('UI layout dirtiness', () => {
+  test('uses axis-specific spacing in horizontal, vertical, and grid layouts', () => {
+    const layoutNode = new Node('layout')
+    layoutNode.anchorX = 0
+    layoutNode.anchorY = 0
+    layoutNode.width = 100
+    layoutNode.height = 100
+
+    const layout = layoutNode.addComponent(UILayout, { direction: 'horizontal', spaceX: 10, spaceY: 20 })
+    const first = new Node('first')
+    first.anchorX = 0
+    first.anchorY = 0
+    first.width = 30
+    const second = new Node('second')
+    second.anchorX = 0
+    second.anchorY = 0
+    second.width = 30
+    const third = new Node('third')
+    third.anchorX = 0
+    third.anchorY = 0
+    const fourth = new Node('fourth')
+    fourth.anchorX = 0
+    fourth.anchorY = 0
+    layoutNode.addChild(first)
+    layoutNode.addChild(second)
+    layoutNode.addChild(third)
+    layoutNode.addChild(fourth)
+
+    layout.layoutChildren()
+    expect(second.x).toBe(40)
+
+    layout.props.direction = 'vertical'
+    layout.layoutChildren()
+    expect(second.y).toBe(20)
+
+    layout.props.direction = 'grid'
+    layout.layoutChildren()
+    expect(second.x).toBe(55)
+    expect(second.y).toBe(0)
+  })
+
   test('skips redundant layout passes when nothing changed', () => {
     const root = new Node('root')
     const containerNode = new Node('container')
