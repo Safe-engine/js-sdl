@@ -1,5 +1,5 @@
 import { AssetManager, TextureAsset } from '../AssetManager'
-import { ComponentX } from '../core/ComponentX'
+import { BaseComponentProps, ComponentX } from '../core/ComponentX'
 import { loadTextAsset } from '../helper/text-resource'
 import type { InputEvent } from '../Input'
 import { globalCommandBuffer } from '../render/RenderCommandBuffer'
@@ -69,7 +69,7 @@ export class Particles extends ComponentX<ParticlesProps> {
   private frame: SpriteFrameRegion | null = null
   private loadVersion = 0
 
-  constructor(props?: ParticlesProps) {
+  constructor(props?: BaseComponentProps<Particles> & ParticlesProps) {
     super(props)
     this.inlineProps = { ...this.props }
   }
@@ -96,7 +96,7 @@ export class Particles extends ComponentX<ParticlesProps> {
     const baseRotation = options?.rotation ?? this.props.rotation
 
     for (let i = 0; i < count; i++) {
-      let angleRad = 0
+      let angleRad
       if (baseAngle !== undefined) {
         const spreadRad = (angleSpread * Math.PI) / 180
         const offset = spreadRad > 0 ? (Math.random() - 0.5) * spreadRad : 0
@@ -106,8 +106,8 @@ export class Particles extends ComponentX<ParticlesProps> {
       }
 
       const particleDuration = duration * (0.7 + Math.random() * 0.3)
-      let velocityX = 0
-      let velocityY = 0
+      let velocityX
+      let velocityY
 
       if (baseAngle !== undefined) {
         velocityX = Math.cos(angleRad) * speed * (0.85 + Math.random() * 0.3)
