@@ -1,6 +1,7 @@
 import {
   Button,
   DicedSprite,
+  Kine2D,
   Label,
   Scene,
   SpineSkeleton,
@@ -67,5 +68,14 @@ export class HomeScene extends Scene {
     this.node.addChild(diced.node)
     diced.node.x = 260
     diced.node.y = 240
+    const kine = instantiate(Kine2D, {
+      data: 'Kine/Demo.skel.json',
+      atlas: 'Kine/Demo.atlas.json',
+      animation: 'idle',
+      loop: true,
+    })
+    this.node.addChild(kine.node)
+    kine.node.x = 460
+    kine.node.y = 900
   }
 }

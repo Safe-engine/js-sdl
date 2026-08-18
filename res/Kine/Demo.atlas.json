@@ -1,0 +1,14 @@
+{
+  "image": "Demo.atlas.png",
+  "width": 128,
+  "height": 128,
+  "regions": [
+    {
+      "path": "soccer_ball.png",
+      "x": 0,
+      "y": 0,
+      "width": 128,
+      "height": 128
+    }
+  ]
+}

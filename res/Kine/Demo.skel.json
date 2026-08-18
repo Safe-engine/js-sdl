@@ -1,0 +1,107 @@
+{
+  "bones": [
+    {
+      "name": "root",
+      "x": 0,
+      "y": -15.070844343968215,
+      "rotation": 0,
+      "length": 0
+    }
+  ],
+  "slots": [
+    {
+      "id": "slot_zk8m",
+      "name": "soccer_ball",
+      "bone": "root",
+      "attachments": [
+        {
+          "path": "soccer_ball.png",
+          "size": {
+            "width": 128,
+            "height": 128
+          },
+          "x": -66.37946735042945,
+          "y": -1.0712763649727108
+        }
+      ],
+      "displayIndex": 0
+    }
+  ],
+  "skins": [],
+  "activeSkinId": "default",
+  "physicsConstraints": [],
+  "transformConstraints": [],
+  "animations": {
+    "idle": {
+      "name": "idle",
+      "length": 48,
+      "fps": 30,
+      "keyframes": {
+        "root": {
+          "0": {
+            "x": 0,
+            "y": 10.485703202925833
+          },
+          "24": {
+            "x": 0,
+            "y": -96.37869888063838
+          },
+          "48": {
+            "x": 0.4582163926914505,
+            "y": 42.82181646902359
+          }
+        }
+      },
+      "curves": {
+        "root": {
+          "0": {
+            "position": {
+              "x1": 0.34,
+              "y1": 0,
+              "x2": 0.64,
+              "y2": 1,
+              "type": "bounce-in"
+            },
+            "x": {
+              "x1": 0.34,
+              "y1": 0,
+              "x2": 0.64,
+              "y2": 1,
+              "type": "bounce-in"
+            },
+            "y": {
+              "x1": 0.34,
+              "y1": 0,
+              "x2": 0.64,
+              "y2": 1,
+              "type": "bounce-in"
+            }
+          },
+          "24": {
+            "position": {
+              "x1": 0.36,
+              "y1": 0,
+              "x2": 0.66,
+              "y2": 1,
+              "type": "bounce-out"
+            },
+            "x": {
+              "x1": 0.36,
+              "y1": 0,
+              "x2": 0.66,
+              "y2": 1,
+              "type": "bounce-out"
+            },
+            "y": {
+              "x1": 0.36,
+              "y1": 0,
+              "x2": 0.66,
+              "y2": 1,
+              "type": "bounce-out"
+            }
+          }
+        }
+      }
+    }
+  }
+}

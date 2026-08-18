@@ -128,4 +128,5 @@ export type {
 export { Spine, SpineSkeleton } from './spine'
 export type { SpineData, SpineSkeletonProps } from './spine'
 export { SpineBonesControl } from './spine/SpineBonesControl'
-
+export { Kine2D } from './kine2d'
+export type { Kine2DProps, KineAtlasData, KineSkeletonData } from './kine2d'
