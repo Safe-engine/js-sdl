@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from 'bun:test'
+import { ComponentX } from '../engine/core/ComponentX'
 import { Node } from '../engine/core/Node'
 
 const sdlState = globalThis as typeof globalThis & {
@@ -347,6 +348,23 @@ describe('Sprite sizing', () => {
       [5, 6, 12, 4, -20, 11, 42, 4],
       [17, 6, 3, 4, 22, 11, 3, 4],
     ])
+  })
+
+  test('uses texture height for a sliced sprite when its shared node omits height', () => {
+    const node = new Node('sliced')
+    node.width = 50
+    node.addComponent(ComponentX)
+    const sprite = node.addComponent(Sprite, {
+      spriteFrame: 'Texture/UI/panel.png',
+      capInsets: [2, 3, 4, 5],
+    })
+    textureSizes.set(sprite.textureId, { width: 20, height: 10 })
+
+    regionDrawCalls.length = 0
+    sprite.onRender()
+
+    expect(regionDrawCalls).toHaveLength(9)
+    expect(regionDrawCalls[4]).toMatchObject({ width: 42, height: 4 })
   })
 
   test('renders tiled sprites with clipped edge tiles', () => {
