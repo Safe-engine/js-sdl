@@ -30,7 +30,7 @@ export function loadJsonAsset<T = any>(path: string, label = 'JSON asset'): Prom
 export function loadBinaryAsset(path: string, label = 'binary asset'): Promise<ArrayBuffer> {
   let promise = binaryCache.get(path)
   if (!promise) {
-    if (typeof fetch === 'function') {
+    if (typeof window !== 'undefined' && typeof fetch === 'function') {
       promise = fetch(path).then((response) => {
         if (!response.ok) throw new Error(`Failed to load ${label}: ${path}`)
         return response.arrayBuffer()

@@ -6,7 +6,7 @@ const loadedTextCache = new Map<string, string>()
 export function loadTextAsset(path: string, label = 'text asset'): Promise<string> {
   let promise = textCache.get(path)
   if (!promise) {
-    if (typeof fetch === 'function') {
+    if (typeof window !== 'undefined' && typeof fetch === 'function') {
       promise = fetch(path).then((response) => {
         if (!response.ok) throw new Error(`Failed to load ${label}: ${path}`)
         return response.text()
