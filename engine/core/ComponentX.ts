@@ -34,7 +34,7 @@ export class ComponentX<Props = unknown> {
   }
 
   addComponent<T extends ComponentX>(component: Constructor<T> | T, data?: ConstructorParameters<Constructor<T>>[0]): T {
-    return this.node.addComponent(component, data)
+    return this.ensureNode().addComponent(component, data)
   }
 
   getComponent<T extends ComponentX>(component: Constructor<T>): T {
