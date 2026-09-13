@@ -7,6 +7,8 @@
 - [x] Unify monorepo workspace with `pnpm-workspace.yaml`.
 - [x] Standardize project documentation conforming to SGM layout (`docs/plan`, `docs/todo`, etc.).
 - [x] Document Semantic Versioning guidelines and GitHub Flow PR rules.
+- [x] Fix `ComponentX.addComponent` auto-node creation regression.
+- [ ] Refactor unit test suites to isolate `mock.module('sdl3')` from global leaks during bulk test runs.
 - [ ] Add unit tests for `PersistenceJSON` schema migrations (`tests/persistence.test.ts`).
 - [ ] Verify WebGL canvas context recovery on mobile orientation switch.
 - [ ] Review memory leaks during rapid scene reload (`loadScene(Loading)` -> `loadScene(Game)`).
