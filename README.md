@@ -1,3 +1,26 @@
+# @safe-engine/sdl (SafeX SDL Engine)
+> High-performance WebGL & Native SDL3 Hybrid Engine Core for 2D/3D Casual Games  
+> Maintained under SGM Unified Engineering Discipline
+
+[![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](LICENSE)
+[![NPM Version](https://img.shields.io/npm/v/@safe-engine/sdl.svg)](https://www.npmjs.com/package/@safe-engine/sdl)
+[![Docs](https://img.shields.io/badge/Docs-SGM%20Standard-green.svg)](docs/README.md)
+
+---
+
+## Documentation & Project Tracking
+
+- 📋 **[Documentation Index & Sitemap](docs/README.md)**
+- 🗺️ **[Milestone v1.4 Plan & Tracking](docs/plan/Milestone_V1.4_Plan.md)**
+- ✅ **[Active Task Checklist (Todo.md)](docs/todo/Todo.md)**
+- 📈 **[v1.3.x Progress & Changelog](docs/progress/V1.3_Progress.md)**
+- 🏷️ **[Semantic Versioning Rules](docs/SEMVER_&_RELEASE.md)**
+- 🤝 **[GitHub Flow & PR Guidelines](docs/CONTRIBUTING.md)**
+- 🛠️ **[Monorepo Developer Setup](docs/howto/Dev_Workflow.md)**
+- 🇻🇳 **[Tài liệu Tiếng Việt](docs/lang/vi/README.md)**
+
+---
+
 ### Install
 ```bash
 npm install @safe-engine/sdl
