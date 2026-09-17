@@ -24,7 +24,7 @@ export interface KineBone {
 
 interface KineAttachment {
   path: string
-  size: { width: number, height: number }
+  size?: { width: number, height: number }
   x?: number
   y?: number
   rotation?: number
@@ -34,9 +34,25 @@ interface KineAttachment {
 }
 
 interface KineSlot {
+  id?: string
+  name?: string
   bone: string
-  attachments: KineAttachment[]
-  displayIndex: number
+  attachment?: KineAttachment
+  attachments?: KineAttachment[]
+  displayIndex?: number
+  activeAttachmentPath?: string | null
+}
+
+interface KineSlotState {
+  attachment?: KineAttachment
+  attachments?: KineAttachment[]
+  displayIndex?: number
+  activeAttachmentPath?: string | null
+}
+
+interface KineSkin {
+  id: string
+  attachments: Record<string, KineSlotState | KineAttachment | null>
 }
 
 interface KineKeyframe {
@@ -49,14 +65,19 @@ interface KineKeyframe {
 }
 
 interface KineAnimation {
-  length: number
-  fps: number
+  length?: number
+  fps?: number
   keyframes: Record<string, Record<string, KineKeyframe>>
+  slotOrderKeyframes?: Record<string, string[]>
+  slotDisplayIndexKeyframes?: Record<string, Record<string, number>>
 }
 
 export interface KineSkeletonData {
+  canvasSize?: { width: number, height: number }
   bones: KineBone[]
   slots: KineSlot[]
+  skins?: KineSkin[]
+  activeSkinId?: string
   animations: Record<string, KineAnimation>
 }
 
@@ -80,10 +101,12 @@ export class Kine2D extends ComponentX<Kine2DProps> {
 
   onUpdate(dt: number): void {
     const animation = this.animation
-    if (!animation || animation.length <= 0 || animation.fps <= 0) return
+    const length = animation?.length ?? 0
+    const fps = animation?.fps ?? 0
+    if (length <= 0 || fps <= 0) return
 
     this.elapsed += dt
-    const duration = animation.length / animation.fps
+    const duration = length / fps
     if (this.props.loop ?? true) this.elapsed %= duration
     else this.elapsed = Math.min(this.elapsed, duration)
   }
@@ -96,35 +119,51 @@ export class Kine2D extends ComponentX<Kine2DProps> {
 
     const pose = this.samplePose()
     const regions = new Map(atlas.regions.map(region => [region.path, region]))
+    const canvasSize = skeleton.canvasSize ?? { width: 800, height: 600 }
     const node = this.node
     const opacity = node.opacity * (node.color.a ?? 255)
     const radians = node.worldRotation * Math.PI / 180
     const cosine = Math.cos(radians)
     const sine = Math.sin(radians)
 
-    for (const slot of skeleton.slots) {
-      const attachment = slot.attachments[slot.displayIndex]
+    for (const slot of this.sampleSlots()) {
+      const attachment = this.resolveAttachment(slot)
       const bone = pose.get(slot.bone)
       const region = attachment && regions.get(attachment.path)
       if (!attachment || !bone || !region) continue
+      const size = attachment.size ?? { width: region.width, height: region.height }
 
-      const scaleX = (bone.scaleX ?? bone.scale ?? 1) * (attachment.scaleX ?? attachment.scale ?? 1)
-      const scaleY = (bone.scaleY ?? bone.scale ?? 1) * (attachment.scaleY ?? attachment.scale ?? 1)
-      const localX = (bone.x + (attachment.x ?? 0)) * node.worldScaleX
-      const localY = (bone.y + (attachment.y ?? 0)) * node.worldScaleY
+      const attachmentScaleX = attachment.scaleX ?? attachment.scale ?? 1
+      const attachmentScaleY = attachment.scaleY ?? attachment.scale ?? 1
+      const attachmentX = attachment.x ?? 0
+      const attachmentY = attachment.y ?? 0
+      const scaleX = (bone.scaleX ?? bone.scale ?? 1) * attachmentScaleX
+      const scaleY = (bone.scaleY ?? bone.scale ?? 1) * attachmentScaleY
+      const rotation = bone.rotation + (attachment.rotation ?? 0)
+      const boneRadians = bone.rotation * Math.PI / 180
+      const centerX = attachmentX + (size.width * scaleX) / 2
+      const centerY = attachmentY
+      const boneX = bone.x * canvasSize.width / 100
+      const boneY = bone.y * canvasSize.height / 180
+      const worldX = boneX + centerX * Math.cos(boneRadians) - centerY * Math.sin(boneRadians)
+      const worldY = boneY + centerX * Math.sin(boneRadians) + centerY * Math.cos(boneRadians)
+      const localX = worldX * node.worldScaleX
+      const localY = worldY * node.worldScaleY
+      const width = size.width * scaleX * node.worldScaleX
+      const height = size.height * scaleY * node.worldScaleY
       globalCommandBuffer.pushRegion(
         texture.id,
         region.x,
         region.y,
         region.width,
         region.height,
-        node.worldX + localX * cosine - localY * sine,
-        node.worldY + localX * sine + localY * cosine,
-        attachment.size.width * scaleX * node.worldScaleX,
-        attachment.size.height * scaleY * node.worldScaleY,
-        node.worldRotation + bone.rotation + (attachment.rotation ?? 0),
-        0,
-        0,
+        node.worldX + localX * cosine - localY * sine - width / 2,
+        node.worldY + localX * sine + localY * cosine - height / 2,
+        width,
+        height,
+        node.worldRotation + rotation,
+        width / 2,
+        height / 2,
         node.flipX,
         node.flipY,
         node.color.r,
@@ -168,19 +207,55 @@ export class Kine2D extends ComponentX<Kine2DProps> {
     return animations[this.props.animation ?? Object.keys(animations)[0]]
   }
 
+  private sampleSlots(): KineSlot[] {
+    const slots = [...(this.skeleton?.slots ?? [])]
+    const animation = this.animation
+    const frame = animation ? this.elapsed * (animation.fps ?? 0) : 0
+    const order = sampleKeyframe(animation?.slotOrderKeyframes, frame)
+    if (!order) return slots
+
+    const byId = new Map(slots.map(slot => [slot.id ?? slot.name ?? slot.bone, slot]))
+    const ordered = order.flatMap(id => {
+      const slot = byId.get(id)
+      if (!slot) return []
+      byId.delete(id)
+      return [slot]
+    })
+    return [...ordered, ...byId.values()]
+  }
+
+  private resolveAttachment(slot: KineSlot): KineAttachment | undefined {
+    const skeleton = this.skeleton!
+    const skin = skeleton.activeSkinId && skeleton.activeSkinId !== 'default'
+      ? skeleton.skins?.find(item => item.id === skeleton.activeSkinId)
+      : undefined
+    const skinValue = skin?.attachments[slot.id ?? slot.name ?? slot.bone]
+    if (skinValue === null) return undefined
+    const state: KineSlotState = skinValue === undefined
+      ? slot
+      : isAttachment(skinValue)
+        ? { attachments: [skinValue], displayIndex: 0 }
+        : skinValue
+    const attachments = state.attachments ?? (state.attachment ? [state.attachment] : [])
+    const animation = this.animation
+    const frame = animation ? this.elapsed * (animation.fps ?? 0) : 0
+    const displayed = sampleKeyframe(animation?.slotDisplayIndexKeyframes, frame)?.[slot.id ?? slot.name ?? slot.bone]
+    const legacyIndex = state.activeAttachmentPath === null
+      ? -1
+      : typeof state.activeAttachmentPath === 'string'
+        ? attachments.findIndex(attachment => attachment.path === state.activeAttachmentPath)
+        : 0
+    const index = displayed ?? state.displayIndex ?? legacyIndex
+    return index >= 0 ? attachments[index] : undefined
+  }
+
   private samplePose(): Map<string, Pose> {
     const animation = this.animation
-    const frame = animation ? this.elapsed * animation.fps : 0
+    const frame = animation ? this.elapsed * (animation.fps ?? 0) : 0
     const pose = new Map<string, Pose>()
     for (const bone of this.skeleton!.bones) {
       const sampled = sampleBone(bone, animation?.keyframes[bone.name], frame)
-      const parent = bone.parent ? pose.get(bone.parent) : undefined
-      pose.set(bone.name, {
-        ...sampled,
-        x: sampled.x + (parent?.x ?? 0),
-        y: sampled.y + (parent?.y ?? 0),
-        rotation: sampled.rotation + (parent?.rotation ?? 0),
-      })
+      pose.set(bone.name, sampled)
     }
     return pose
   }
@@ -211,6 +286,18 @@ function sampleBone(
     if (from !== undefined) pose[key] = from + (to - from) * progress
   }
   return pose
+}
+
+function sampleKeyframe<T>(keyframes: Record<string, T> | undefined, frame: number): T | undefined {
+  if (!keyframes) return undefined
+  return Object.entries(keyframes)
+    .map(([key, value]) => ({ frame: Number(key), value }))
+    .filter(entry => Number.isFinite(entry.frame) && entry.frame <= frame)
+    .sort((a, b) => b.frame - a.frame)[0]?.value
+}
+
+function isAttachment(value: KineSlotState | KineAttachment): value is KineAttachment {
+  return 'path' in value
 }
 
 function resolveSiblingPath(path: string, sibling: string): string {

@@ -9,7 +9,7 @@ import {
 import { instantiate, loadScene } from '../engine/core/instantiate'
 import { DragonBones } from '../engine/dragonbones'
 import {
-  atlas_diced_json,
+  atlas_json,
   db_mecha_1004_d_show,
   lilita_one_regularFont,
   sf_atlas,
@@ -64,7 +64,7 @@ export class HomeScene extends Scene {
     spine1.node.x = 260
     spine1.node.y = 840
     spine1.node.scale = 0.3
-    const diced = instantiate(DicedSprite, { data: atlas_diced_json, animation: 'Heal', texture: sf_atlas, loop: true })
+    const diced = instantiate(DicedSprite, { data: atlas_json, animation: 'Heal', texture: sf_atlas, loop: true })
     this.node.addChild(diced.node)
     diced.node.x = 260
     diced.node.y = 240
