@@ -17,6 +17,8 @@ import {
   sp_spineboy_pma
 } from './assets'
 import { GameScene } from './GameScene'
+import { addShaderDemoBackground } from './ShaderDemo'
+import { createTextureShaderDemo } from './TextureShaderDemo'
 
 export class HomeScene extends Scene {
   db: DragonBones
@@ -35,6 +37,18 @@ export class HomeScene extends Scene {
   }
 
   __view() {
+    addShaderDemoBackground(this.node)
+    const textureShader = createTextureShaderDemo()
+    this.node.addChild(textureShader.node)
+    textureShader.node.x = 112
+    textureShader.node.y = 1080
+    textureShader.node.width = 150
+    textureShader.node.height = 150
+    let textureShaderTime = 0
+    textureShader.node.schedule((dt: number) => {
+      textureShaderTime += dt
+      textureShader.setUniform('u_time', textureShaderTime)
+    }, 0)
     const Button1 = instantiate(Button, {
       spriteFrame: sf_btn_shop,
       capInsets: [20, 20, 20, 20],

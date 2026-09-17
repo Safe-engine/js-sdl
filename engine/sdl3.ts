@@ -11,6 +11,8 @@ let resolutionLocation: WebGLUniformLocation | null = null
 let samplerLocation: WebGLUniformLocation | null = null
 let colorLocation: WebGLUniformLocation | null = null
 let whiteTexture: WebGLTexture | null = null
+let shaderPositionBuffer: WebGLBuffer | null = null
+let shaderUvBuffer: WebGLBuffer | null = null
 const clipStack: Array<[number, number, number, number]> = []
 let logicalWidth = 1
 let logicalHeight = 1
@@ -60,6 +62,20 @@ export interface RendererStats {
   frameTimeMs: number
   drawCalls: number
   vertices: number
+}
+
+export type GLSLUniformValue = number | readonly [number, number] | readonly [number, number, number] | readonly [number, number, number, number]
+
+export interface GLSLProgram {
+  program: WebGLProgram
+  positionLocation: number
+  uniforms: Map<string, WebGLUniformLocation | null>
+}
+
+export interface GLSLQuadOptions {
+  textureId?: number
+  textureUniform?: string
+  uvs?: Float32Array
 }
 
 const rendererStats: RendererStats = {
@@ -260,6 +276,97 @@ function createProgram(): WebGLProgram {
     throw new Error(context.getProgramInfoLog(result) ?? 'WebGL link failed')
   }
   return result
+}
+
+/** Compile a GLSL program for use with drawGLSLQuad(). */
+export function createGLSLProgram(vertexSource: string, fragmentSource: string): GLSLProgram {
+  const context = requireGl()
+  const vertexShader = compileShader(context.VERTEX_SHADER, vertexSource)
+  const fragmentShader = compileShader(context.FRAGMENT_SHADER, fragmentSource)
+  const result = context.createProgram()
+  if (!result) throw new Error('Unable to create WebGL program')
+  context.attachShader(result, vertexShader)
+  context.attachShader(result, fragmentShader)
+  context.linkProgram(result)
+  context.deleteShader(vertexShader)
+  context.deleteShader(fragmentShader)
+  if (!context.getProgramParameter(result, context.LINK_STATUS)) {
+    context.deleteProgram(result)
+    throw new Error(context.getProgramInfoLog(result) ?? 'WebGL link failed')
+  }
+  return {
+    program: result,
+    positionLocation: context.getAttribLocation(result, 'a_position'),
+    uniforms: new Map(),
+  }
+}
+
+/** Draw two triangles using a GLSLProgram. The vertex shader must declare `a_position`. */
+export function drawGLSLQuad(
+  shader: GLSLProgram,
+  positions: Float32Array,
+  uniforms: Record<string, GLSLUniformValue>,
+  options: GLSLQuadOptions = {},
+): void {
+  if (positions.length !== 12 || shader.positionLocation < 0) return
+  if (options.textureId !== undefined && !textures.get(options.textureId)?.texture) return
+  const uvs = options.uvs ?? new Float32Array([
+    0, 0, 1, 0, 0, 1,
+    0, 1, 1, 0, 1, 1,
+  ])
+  if (uvs.length !== positions.length) return
+  flushDrawBatch()
+  const context = requireGl()
+  if (!shaderPositionBuffer) shaderPositionBuffer = context.createBuffer()
+  if (!shaderPositionBuffer) throw new Error('Unable to create shader position buffer')
+
+  context.useProgram(shader.program)
+  for (const [name, value] of Object.entries(uniforms)) {
+    let location = shader.uniforms.get(name)
+    if (location === undefined) {
+      location = context.getUniformLocation(shader.program, name)
+      shader.uniforms.set(name, location)
+    }
+    if (!location) continue
+    if (typeof value === 'number') context.uniform1f(location, value)
+    else if (value.length === 2) context.uniform2f(location, value[0], value[1])
+    else if (value.length === 3) context.uniform3f(location, value[0], value[1], value[2])
+    else context.uniform4f(location, value[0], value[1], value[2], value[3])
+  }
+  context.bindBuffer(context.ARRAY_BUFFER, shaderPositionBuffer)
+  context.bufferData(context.ARRAY_BUFFER, positions, context.STREAM_DRAW)
+  context.enableVertexAttribArray(shader.positionLocation)
+  context.vertexAttribPointer(shader.positionLocation, 2, context.FLOAT, false, 0, 0)
+  const uvLocation = context.getAttribLocation(shader.program, 'a_uv')
+  if (uvLocation >= 0) {
+    if (!shaderUvBuffer) shaderUvBuffer = context.createBuffer()
+    if (!shaderUvBuffer) throw new Error('Unable to create shader UV buffer')
+    context.bindBuffer(context.ARRAY_BUFFER, shaderUvBuffer)
+    context.bufferData(context.ARRAY_BUFFER, uvs, context.STREAM_DRAW)
+    context.enableVertexAttribArray(uvLocation)
+    context.vertexAttribPointer(uvLocation, 2, context.FLOAT, false, 0, 0)
+  }
+  if (options.textureId !== undefined) {
+    const texture = textures.get(options.textureId)?.texture
+    const textureUniform = options.textureUniform ?? 'u_texture'
+    let location = shader.uniforms.get(textureUniform)
+    if (location === undefined) {
+      location = context.getUniformLocation(shader.program, textureUniform)
+      shader.uniforms.set(textureUniform, location)
+    }
+    if (texture && location) {
+      context.activeTexture(context.TEXTURE0)
+      context.bindTexture(context.TEXTURE_2D, texture)
+      context.uniform1i(location, 0)
+    }
+  }
+  context.drawArrays(context.TRIANGLES, 0, 6)
+  frameDrawCalls += 1
+  frameVertices += 6
+}
+
+export function destroyGLSLProgram(shader: GLSLProgram): void {
+  gl?.deleteProgram(shader.program)
 }
 
 function requireGl(): WebGLRenderingContext {

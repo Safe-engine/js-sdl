@@ -71,6 +71,24 @@ declare module 'sdl3' {
     vertices: number
   }
 
+  export type GLSLUniformValue = number | readonly [number, number] | readonly [number, number, number] | readonly [number, number, number, number]
+
+  export interface GLSLProgram {
+    program: WebGLProgram
+    positionLocation: number
+    uniforms: Map<string, WebGLUniformLocation | null>
+  }
+
+  export interface GLSLQuadOptions {
+    textureId?: number
+    textureUniform?: string
+    uvs?: Float32Array
+  }
+
+  export function createGLSLProgram(vertexSource: string, fragmentSource: string): GLSLProgram
+  export function drawGLSLQuad(shader: GLSLProgram, positions: Float32Array, uniforms: Record<string, GLSLUniformValue>, options?: GLSLQuadOptions): void
+  export function destroyGLSLProgram(shader: GLSLProgram): void
+
   /** Return the most recently completed frame's renderer counters. */
   export function getRendererStats(): RendererStats
 
