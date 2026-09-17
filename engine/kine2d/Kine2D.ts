@@ -31,6 +31,18 @@ interface KineAttachment {
   scale?: number
   scaleX?: number
   scaleY?: number
+  mesh?: KineMesh
+}
+
+interface KineMesh {
+  vertices: number[]
+  uvs: number[]
+  triangles: number[]
+  bones?: string[]
+  bindBones?: KineBone[]
+  weights?: Array<Record<string, number>>
+  width?: number
+  height?: number
 }
 
 interface KineSlot {
@@ -131,6 +143,10 @@ export class Kine2D extends ComponentX<Kine2DProps> {
       const bone = pose.get(slot.bone)
       const region = attachment && regions.get(attachment.path)
       if (!attachment || !bone || !region) continue
+      if (attachment.mesh) {
+        this.renderMesh(attachment, region, slot.bone, pose, canvasSize)
+        continue
+      }
       const size = attachment.size ?? { width: region.width, height: region.height }
 
       const attachmentScaleX = attachment.scaleX ?? attachment.scale ?? 1
@@ -172,6 +188,83 @@ export class Kine2D extends ComponentX<Kine2DProps> {
         opacity,
       )
     }
+  }
+
+  private renderMesh(
+    attachment: KineAttachment,
+    region: KineAtlasData['regions'][number],
+    slotBone: string,
+    pose: Map<string, Pose>,
+    canvasSize: { width: number, height: number },
+  ): void {
+    const mesh = attachment.mesh!
+    const texture = this.texture!
+    if (mesh.vertices.length !== mesh.uvs.length || mesh.vertices.length % 2 !== 0) return
+
+    const bindBones = mesh.bindBones?.length ? mesh.bindBones : this.skeleton!.bones
+    const bindPose = new Map(bindBones.map(bone => [bone.name, bone]))
+    const restSlotBone = bindPose.get(slotBone)
+    const currentSlotBone = pose.get(slotBone)
+    if (!restSlotBone || !currentSlotBone) return
+    const restPositions = transformMeshBySlotBone(attachment, restSlotBone, canvasSize)
+    const currentPositions = transformMeshBySlotBone(attachment, currentSlotBone, canvasSize)
+    const positions = new Float32Array(mesh.vertices.length)
+
+    for (let i = 0; i < positions.length; i += 2) {
+      const weights = mesh.weights?.[i / 2]
+      if (!weights) {
+        positions[i] = currentPositions[i]
+        positions[i + 1] = currentPositions[i + 1]
+        continue
+      }
+
+      let x = 0
+      let y = 0
+      let totalWeight = 0
+      for (const [boneName, weight] of Object.entries(weights)) {
+        if (weight <= 0) continue
+        const setup = bindPose.get(boneName)
+        const current = pose.get(boneName)
+        if (!setup || !current) continue
+        const point = transformFromSetupPose(
+          restPositions[i],
+          restPositions[i + 1],
+          setup,
+          current,
+          canvasSize,
+        )
+        x += point.x * weight
+        y += point.y * weight
+        totalWeight += weight
+      }
+      positions[i] = totalWeight > 0 ? x / totalWeight : currentPositions[i]
+      positions[i + 1] = totalWeight > 0 ? y / totalWeight : currentPositions[i + 1]
+    }
+
+    const uvs = new Float32Array(mesh.uvs.length)
+    for (let i = 0; i < uvs.length; i += 2) {
+      uvs[i] = (region.x + mesh.uvs[i] * region.width) / texture.width
+      uvs[i + 1] = (region.y + mesh.uvs[i + 1] * region.height) / texture.height
+    }
+
+    const node = this.node
+    const radians = node.worldRotation * Math.PI / 180
+    globalCommandBuffer.pushMesh(
+      texture.id,
+      positions,
+      uvs,
+      Uint16Array.from(mesh.triangles),
+      node.color.r,
+      node.color.g,
+      node.color.b,
+      node.opacity * (node.color.a ?? 255),
+      node.worldX,
+      node.worldY,
+      node.worldScaleX,
+      node.worldScaleY,
+      Math.cos(radians),
+      Math.sin(radians),
+    )
   }
 
   onDestroy(): void {
@@ -283,9 +376,16 @@ function sampleBone(
   for (const key of ['x', 'y', 'rotation', 'scale', 'scaleX', 'scaleY'] as const) {
     const from = previous.value[key] ?? pose[key]
     const to = next?.value[key] ?? from
-    if (from !== undefined) pose[key] = from + (to - from) * progress
+    if (from === undefined) continue
+    pose[key] = key === 'rotation'
+      ? from + shortestAngleDelta(from, to) * progress
+      : from + (to - from) * progress
   }
   return pose
+}
+
+function shortestAngleDelta(from: number, to: number): number {
+  return ((to - from + 540) % 360) - 180
 }
 
 function sampleKeyframe<T>(keyframes: Record<string, T> | undefined, frame: number): T | undefined {
@@ -298,6 +398,86 @@ function sampleKeyframe<T>(keyframes: Record<string, T> | undefined, frame: numb
 
 function isAttachment(value: KineSlotState | KineAttachment): value is KineAttachment {
   return 'path' in value
+}
+
+function transformMeshBySlotBone(
+  attachment: KineAttachment,
+  bone: KineBone,
+  canvasSize: { width: number, height: number },
+): Float32Array {
+  const mesh = attachment.mesh!
+  const scaleX = (bone.scaleX ?? bone.scale ?? 1) * (attachment.scaleX ?? attachment.scale ?? 1)
+  const scaleY = (bone.scaleY ?? bone.scale ?? 1) * (attachment.scaleY ?? attachment.scale ?? 1)
+  const local = new Float32Array(mesh.vertices.length)
+  let minX = Number.POSITIVE_INFINITY
+  let maxX = Number.NEGATIVE_INFINITY
+  let minY = Number.POSITIVE_INFINITY
+  let maxY = Number.NEGATIVE_INFINITY
+  for (let i = 0; i < local.length; i += 2) {
+    const x = (attachment.x ?? 0) + mesh.vertices[i] * scaleX
+    const y = (attachment.y ?? 0) + mesh.vertices[i + 1] * scaleY
+    local[i] = x
+    local[i + 1] = y
+    minX = Math.min(minX, x)
+    maxX = Math.max(maxX, x)
+    minY = Math.min(minY, y)
+    maxY = Math.max(maxY, y)
+  }
+  const centerX = mesh.width !== undefined && mesh.height !== undefined
+    ? (attachment.x ?? 0) + mesh.width * scaleX / 2
+    : (minX + maxX) / 2
+  const centerY = mesh.width !== undefined && mesh.height !== undefined
+    ? attachment.y ?? 0
+    : (minY + maxY) / 2
+  const attachmentRadians = (attachment.rotation ?? 0) * Math.PI / 180
+  const attachmentCosine = Math.cos(attachmentRadians)
+  const attachmentSine = Math.sin(attachmentRadians)
+  const radians = (bone.rotation ?? 0) * Math.PI / 180
+  const cosine = Math.cos(radians)
+  const sine = Math.sin(radians)
+  const originX = (bone.x ?? 0) * canvasSize.width / 100
+  const originY = (bone.y ?? 0) * canvasSize.height / 180
+  const result = new Float32Array(local.length)
+  for (let i = 0; i < local.length; i += 2) {
+    const offsetX = local[i] - centerX
+    const offsetY = local[i + 1] - centerY
+    const attachmentX = centerX + offsetX * attachmentCosine - offsetY * attachmentSine
+    const attachmentY = centerY + offsetX * attachmentSine + offsetY * attachmentCosine
+    result[i] = originX + attachmentX * cosine - attachmentY * sine
+    result[i + 1] = originY + attachmentX * sine + attachmentY * cosine
+  }
+  return result
+}
+
+function transformFromSetupPose(
+  x: number,
+  y: number,
+  setup: KineBone,
+  current: Pose,
+  canvasSize: { width: number, height: number },
+): { x: number, y: number } {
+  const setupX = (setup.x ?? 0) * canvasSize.width / 100
+  const setupY = (setup.y ?? 0) * canvasSize.height / 180
+  const currentX = current.x * canvasSize.width / 100
+  const currentY = current.y * canvasSize.height / 180
+  const setupRadians = -(setup.rotation ?? 0) * Math.PI / 180
+  const setupCosine = Math.cos(setupRadians)
+  const setupSine = Math.sin(setupRadians)
+  const setupScaleX = setup.scaleX ?? setup.scale ?? 1
+  const setupScaleY = setup.scaleY ?? setup.scale ?? 1
+  const localX = ((x - setupX) * setupCosine - (y - setupY) * setupSine) / setupScaleX
+  const localY = ((x - setupX) * setupSine + (y - setupY) * setupCosine) / setupScaleY
+  const currentRadians = current.rotation * Math.PI / 180
+  const currentCosine = Math.cos(currentRadians)
+  const currentSine = Math.sin(currentRadians)
+  const currentScaleX = current.scaleX ?? current.scale ?? 1
+  const currentScaleY = current.scaleY ?? current.scale ?? 1
+  const scaledX = localX * currentScaleX
+  const scaledY = localY * currentScaleY
+  return {
+    x: currentX + scaledX * currentCosine - scaledY * currentSine,
+    y: currentY + scaledX * currentSine + scaledY * currentCosine,
+  }
 }
 
 function resolveSiblingPath(path: string, sibling: string): string {
