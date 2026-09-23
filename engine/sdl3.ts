@@ -37,6 +37,8 @@ const fontIds = new Map<string, number>()
 const audioAssets = new Map<number, AudioAsset>()
 const audioIds = new Map<string, number>()
 const audioVoices = new Map<number, AudioVoice>()
+let audioCtx: AudioContext | null = null
+let masterGainNode: GainNode | null = null
 
 let initCallback: VoidCallback | null = null
 let updateCallback: UpdateCallback | null = null
@@ -397,6 +399,51 @@ function assetUrl(path: string): string {
   return normalized
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Web Audio API layer
+// ─────────────────────────────────────────────────────────────────────────────
+
+function getAudioContext(): AudioContext | null {
+  if (typeof AudioContext === 'undefined') return null
+  if (!audioCtx) {
+    audioCtx = new AudioContext()
+    masterGainNode = audioCtx.createGain()
+    masterGainNode.connect(audioCtx.destination)
+  }
+  return audioCtx
+}
+
+/** Called on first user interaction to satisfy browser autoplay policy. */
+function resumeAudioContext(): void {
+  if (audioCtx && audioCtx.state === 'suspended') {
+    void audioCtx.resume()
+  }
+}
+
+function decodeAudioAsset(asset: AudioAsset): Promise<void> {
+  if (asset.buffer !== null) return Promise.resolve()
+  if (asset.loading) return asset.loading
+
+  asset.loading = fetch(asset.url)
+    .then(r => r.arrayBuffer())
+    .then(buf => {
+      const ctx = getAudioContext()
+      if (!ctx) {
+        asset.loading = null
+        return
+      }
+      return ctx.decodeAudioData(buf).then(decoded => {
+        asset.buffer = decoded
+        asset.loading = null
+      })
+    })
+    .catch(() => {
+      asset.loading = null
+    })
+
+  return asset.loading!
+}
+
 export function loadAudio(path: string): number {
   const existingId = audioIds.get(path)
   if (existingId !== undefined) {
@@ -405,14 +452,26 @@ export function loadAudio(path: string): number {
   }
 
   const id = nextAudioId++
-  audioAssets.set(id, { url: assetUrl(path), refs: 1 })
+  const asset: AudioAsset = {
+    url: assetUrl(path),
+    refs: 1,
+    buffer: null,
+    loading: null,
+  }
+  audioAssets.set(id, asset)
   audioIds.set(path, id)
+
+  // Begin decoding eagerly (browser may cache the fetch)
+  void decodeAudioAsset(asset)
+
   return id
 }
 
 export function releaseAudio(id: number): void {
   const asset = audioAssets.get(id)
   if (!asset || --asset.refs > 0) return
+  asset.buffer = null
+  asset.loading = null
   audioAssets.delete(id)
   for (const [path, assetId] of audioIds) {
     if (assetId === id) {
@@ -422,65 +481,145 @@ export function releaseAudio(id: number): void {
   }
 }
 
+function _startVoiceSource(
+  ctx: AudioContext,
+  voice: AudioVoice,
+  offset: number,
+): void {
+  const src = ctx.createBufferSource()
+  src.buffer = voice.buffer
+  src.loop = voice.loop
+  src.connect(voice.gain)
+
+  src.addEventListener('ended', () => {
+    // Only mark ended when the source wasn't manually stopped/paused
+    if (!voice.paused) voice.ended = true
+  }, { once: true })
+
+  voice.source = src
+  voice.startedAt = ctx.currentTime - offset
+  src.start(0, offset)
+}
+
 export function playAudio(
   audioId: number,
   loop: boolean,
   volume: number,
 ): number {
+  const ctx = getAudioContext()
   const asset = audioAssets.get(audioId)
-  if (!asset) return -1
+  if (!ctx || !asset) return -1
 
-  const voiceId = nextAudioVoiceId++
-  const element = new Audio(asset.url)
-  const voice: AudioVoice = { element, ended: false }
-  element.loop = loop
-  element.volume = Math.max(0, Math.min(1, volume))
-  element.preload = 'auto'
-  element.addEventListener('ended', () => {
-    voice.ended = true
-  }, { once: true })
-  audioVoices.set(voiceId, voice)
-  void element.play().catch(() => {
-    voice.ended = true
-  })
-  return voiceId
+  if (!asset.buffer) {
+    // Asset not yet decoded — play once decoding completes
+    const voiceId = nextAudioVoiceId++
+    void decodeAudioAsset(asset).then(() => {
+      const v = audioVoices.get(voiceId)
+      if (!v || v.ended) return
+      _startVoiceSource(ctx, v, 0)
+    })
+
+    const gain = ctx.createGain()
+    gain.gain.value = Math.max(0, Math.min(1, volume))
+    gain.connect(masterGainNode!)
+
+    // Placeholder voice — source will be attached after decode
+    const placeholder = ctx.createBufferSource()
+    const voice: AudioVoice = {
+      source: placeholder,
+      gain,
+      buffer: new AudioBuffer({ length: 1, sampleRate: ctx.sampleRate }),
+      loop,
+      ended: false,
+      paused: false,
+      startedAt: 0,
+      pausedAt: 0,
+    }
+    audioVoices.set(voiceId, voice)
+    return voiceId
+  }
+
+  const gain = ctx.createGain()
+  gain.gain.value = Math.max(0, Math.min(1, volume))
+  gain.connect(masterGainNode!)
+
+  const voice: AudioVoice = {
+    source: ctx.createBufferSource(), // will be replaced by _startVoiceSource
+    gain,
+    buffer: asset.buffer,
+    loop,
+    ended: false,
+    paused: false,
+    startedAt: 0,
+    pausedAt: 0,
+  }
+
+  _startVoiceSource(ctx, voice, 0)
+  audioVoices.set(nextAudioVoiceId, voice)
+  return nextAudioVoiceId++
 }
 
 export function stopAudio(voiceId: number): void {
   const voice = audioVoices.get(voiceId)
   if (!voice) return
-  voice.element.pause()
-  voice.element.removeAttribute('src')
-  voice.element.load()
   voice.ended = true
+  voice.paused = false
+  try { voice.source.stop() } catch { /* already stopped */ }
+  voice.gain.disconnect()
   audioVoices.delete(voiceId)
 }
 
 export function pauseAudio(voiceId: number): void {
-  audioVoices.get(voiceId)?.element.pause()
+  const voice = audioVoices.get(voiceId)
+  if (!voice || voice.ended || voice.paused) return
+  const ctx = audioCtx
+  if (!ctx) return
+  // Record how far through the buffer we are
+  voice.pausedAt = ctx.currentTime - voice.startedAt
+  if (voice.loop && voice.buffer.duration > 0) {
+    voice.pausedAt = voice.pausedAt % voice.buffer.duration
+  }
+  voice.paused = true
+  try { voice.source.stop() } catch { /* already stopped */ }
 }
 
 export function resumeAudio(voiceId: number): void {
   const voice = audioVoices.get(voiceId)
-  if (!voice || voice.ended) return
-  void voice.element.play().catch(() => { })
+  if (!voice || voice.ended || !voice.paused) return
+  const ctx = getAudioContext()
+  if (!ctx || !voice.buffer) return
+  voice.paused = false
+  _startVoiceSource(ctx, voice, voice.pausedAt)
 }
 
 export function setAudioVolume(voiceId: number, volume: number): void {
   const voice = audioVoices.get(voiceId)
-  if (voice) voice.element.volume = Math.max(0, Math.min(1, volume))
+  if (!voice) return
+  const ctx = audioCtx
+  if (ctx) {
+    voice.gain.gain.setValueAtTime(
+      Math.max(0, Math.min(1, volume)),
+      ctx.currentTime,
+    )
+  } else {
+    voice.gain.gain.value = Math.max(0, Math.min(1, volume))
+  }
 }
 
 export function isAudioPlaying(voiceId: number): boolean {
   const voice = audioVoices.get(voiceId)
-  return !!voice && !voice.ended
+  return !!voice && !voice.ended && !voice.paused
 }
 
 export function updateAudio(): void {
   for (const [id, voice] of audioVoices) {
-    if (voice.ended) audioVoices.delete(id)
+    if (voice.ended) {
+      voice.gain.disconnect()
+      audioVoices.delete(id)
+    }
   }
 }
+
 
 function uploadSource(
   asset: TextureAsset,
@@ -763,6 +902,7 @@ export function createWindow(
     pointerDown = true
     event.preventDefault()
     canvas?.setPointerCapture(event.pointerId)
+    resumeAudioContext()
     touchStartCallback?.(...pointerPosition(event))
   })
   canvas.addEventListener('pointermove', (event) => {

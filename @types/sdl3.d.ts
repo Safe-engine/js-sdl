@@ -221,9 +221,20 @@ interface FontAsset {
 interface AudioAsset {
   url: string
   refs: number
+  buffer: AudioBuffer | null
+  loading: Promise<void> | null
 }
 
 interface AudioVoice {
-  element: HTMLAudioElement
+  source: AudioBufferSourceNode
+  gain: GainNode
+  buffer: AudioBuffer
+  loop: boolean
   ended: boolean
+  /** paused=true means source has been stopped and pausedAt records offset */
+  paused: boolean
+  /** AudioContext.currentTime when start() was last called */
+  startedAt: number
+  /** Buffer offset (seconds) at which playback should resume after unpause */
+  pausedAt: number
 }
