@@ -17,10 +17,10 @@ class RenderRecorder extends ComponentX<{ id: string, log: RenderEntry[] }> {
   onRender(): void {
     this.props.log.push({
       id: this.props.id,
-      x: this.node.worldX,
-      y: this.node.worldY,
-      rotation: this.node.worldRotation,
-      scale: this.node.worldScaleX,
+      x: this.node.renderX,
+      y: this.node.renderY,
+      rotation: Math.round(this.node.renderRotation),
+      scale: Math.round(this.node.renderScaleX),
     })
   }
 }
@@ -41,7 +41,7 @@ describe('Camera2D', () => {
     cameraNode.x = 100
     cameraNode.y = 50
     cameraNode.rotation = 90
-    cameraNode.addComponent(Camera2D, { zoom: 2 })
+    const camera = cameraNode.addComponent(Camera2D, { zoom: 2 })
     scene.node.addChild(cameraNode)
 
     const log: RenderEntry[] = []
@@ -62,8 +62,18 @@ describe('Camera2D', () => {
       rotation: 30,
       scale: 6,
     }])
+    // Scene world coordinates remain untouched by camera rendering
     expect(target.worldX).toBe(150)
     expect(target.worldY).toBe(50)
+
+    // Camera coordinate conversions
+    const screenPos = camera.worldToScreen(target.worldX, target.worldY)
+    expect(screenPos.x).toBeCloseTo(400)
+    expect(screenPos.y).toBeCloseTo(200)
+
+    const worldPos = camera.screenToWorld(400, 200)
+    expect(worldPos.x).toBeCloseTo(150)
+    expect(worldPos.y).toBeCloseTo(50)
   })
 
   test('renders enabled cameras by priority and supports overlapping masks', () => {

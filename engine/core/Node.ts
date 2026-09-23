@@ -1,5 +1,6 @@
 import { getActiveCamera } from './CameraRenderContext'
 import { ComponentX } from './ComponentX'
+import { Matrix2D } from '../math/Matrix2D'
 
 export const DEFAULT_NODE_WIDTH = 0
 export const DEFAULT_NODE_HEIGHT = 0
@@ -61,6 +62,10 @@ export class Node {
   private _worldRotation = 0
   private _worldScaleX = 1
   private _worldScaleY = 1
+  private readonly _localMatrix = new Matrix2D()
+  private readonly _worldMatrix = new Matrix2D()
+  private readonly _invWorldMatrix = new Matrix2D()
+  private readonly _renderMatrix = new Matrix2D()
   constructor(name?: string) {
     this.name = name
   }
@@ -73,6 +78,12 @@ export class Node {
     if (this._parent === value) return
     this._parent = value
     this._markTransformDirty()
+  }
+
+  get root(): Node {
+    let curr: Node = this
+    while (curr._parent) curr = curr._parent
+    return curr
   }
 
   get childRevision(): number {
@@ -148,39 +159,70 @@ export class Node {
     return !Number.isNaN(this._x) || !Number.isNaN(this._y)
   }
 
+  get localMatrix(): Matrix2D {
+    this._ensureWorldTransform()
+    return this._localMatrix
+  }
+
+  get worldMatrix(): Matrix2D {
+    this._ensureWorldTransform()
+    return this._worldMatrix
+  }
+
   get worldX(): number {
     this._ensureWorldTransform()
-    const camera = getActiveCamera()
-    if (!camera) return this._worldX
-    const radians = camera.rotation * Math.PI / 180
-    const x = this._worldX - camera.x
-    const y = this._worldY - camera.y
-    return camera.centerX + (x * Math.cos(radians) + y * Math.sin(radians)) * camera.zoom
+    return this._worldX
   }
 
   get worldY(): number {
     this._ensureWorldTransform()
-    const camera = getActiveCamera()
-    if (!camera) return this._worldY
-    const radians = camera.rotation * Math.PI / 180
-    const x = this._worldX - camera.x
-    const y = this._worldY - camera.y
-    return camera.centerY + (-x * Math.sin(radians) + y * Math.cos(radians)) * camera.zoom
+    return this._worldY
   }
 
   get worldRotation(): number {
     this._ensureWorldTransform()
-    return this._worldRotation - (getActiveCamera()?.rotation ?? 0)
+    return this._worldRotation
   }
 
   get worldScaleX(): number {
     this._ensureWorldTransform()
-    return this._worldScaleX * (getActiveCamera()?.zoom ?? 1)
+    return this._worldScaleX
   }
 
   get worldScaleY(): number {
     this._ensureWorldTransform()
-    return this._worldScaleY * (getActiveCamera()?.zoom ?? 1)
+    return this._worldScaleY
+  }
+
+  get renderMatrix(): Matrix2D {
+    this._ensureWorldTransform()
+    const camera = getActiveCamera()
+    if (!camera) return this._worldMatrix
+    return camera.viewMatrix.multiply(this._worldMatrix, this._renderMatrix)
+  }
+
+  get renderX(): number {
+    return this.renderMatrix.tx
+  }
+
+  get renderY(): number {
+    return this.renderMatrix.ty
+  }
+
+  get renderRotation(): number {
+    const m = this.renderMatrix
+    return (Math.atan2(m.b, m.a) * 180) / Math.PI
+  }
+
+  get renderScaleX(): number {
+    const m = this.renderMatrix
+    return Math.hypot(m.a, m.b)
+  }
+
+  get renderScaleY(): number {
+    const m = this.renderMatrix
+    const det = m.a * m.d - m.b * m.c
+    return Math.hypot(m.c, m.d) * (det < 0 ? -1 : 1)
   }
 
   get rotation(): number {
@@ -241,29 +283,14 @@ export class Node {
   }
 
   localToWorld(x: number, y: number): Point {
-    const radians = this.worldRotation * Math.PI / 180
-    const cos = Math.cos(radians)
-    const sin = Math.sin(radians)
-    const scaledX = x * this.worldScaleX
-    const scaledY = y * this.worldScaleY
-
-    return {
-      x: this.worldX + scaledX * cos - scaledY * sin,
-      y: this.worldY + scaledX * sin + scaledY * cos,
-    }
+    this._ensureWorldTransform()
+    return this._worldMatrix.transformPoint(x, y)
   }
 
   convertToNodeSpace(point: Vec2): Vec2 {
-    const radians = this.worldRotation * Math.PI / 180
-    const cos = Math.cos(radians)
-    const sin = Math.sin(radians)
-    const x = point.x - this.worldX
-    const y = point.y - this.worldY
-
-    return {
-      x: (x * cos + y * sin) / this.worldScaleX,
-      y: (-x * sin + y * cos) / this.worldScaleY,
-    }
+    this._ensureWorldTransform()
+    this._worldMatrix.invert(this._invWorldMatrix)
+    return this._invWorldMatrix.transformPoint(point.x, point.y)
   }
 
   get position(): Point {
@@ -517,7 +544,16 @@ export class Node {
     if (!this._transformDirty) return
 
     const parent = this.parent
+    this._localMatrix.fromTransform(
+      this.x,
+      this.y,
+      this.scaleX,
+      this.scaleY,
+      this.rotation,
+    )
+
     if (!parent) {
+      this._worldMatrix.copy(this._localMatrix)
       this._worldX = this.x
       this._worldY = this.y
       this._worldRotation = this.rotation
@@ -528,17 +564,14 @@ export class Node {
     }
 
     parent._ensureWorldTransform()
-    const radians = parent._worldRotation * Math.PI / 180
-    const cos = Math.cos(radians)
-    const sin = Math.sin(radians)
-    const scaledX = this.x * parent._worldScaleX
-    const scaledY = this.y * parent._worldScaleY
+    parent._worldMatrix.multiply(this._localMatrix, this._worldMatrix)
 
-    this._worldX = parent._worldX + scaledX * cos - scaledY * sin
-    this._worldY = parent._worldY + scaledX * sin + scaledY * cos
-    this._worldRotation = parent._worldRotation + this.rotation
-    this._worldScaleX = parent._worldScaleX * this.scaleX
-    this._worldScaleY = parent._worldScaleY * this.scaleY
+    this._worldX = this._worldMatrix.tx
+    this._worldY = this._worldMatrix.ty
+    this._worldRotation = (Math.atan2(this._worldMatrix.b, this._worldMatrix.a) * 180) / Math.PI
+    this._worldScaleX = Math.hypot(this._worldMatrix.a, this._worldMatrix.b)
+    const det = this._worldMatrix.a * this._worldMatrix.d - this._worldMatrix.b * this._worldMatrix.c
+    this._worldScaleY = Math.hypot(this._worldMatrix.c, this._worldMatrix.d) * (det < 0 ? -1 : 1)
     this._transformDirty = false
   }
 

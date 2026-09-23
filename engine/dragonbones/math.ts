@@ -16,6 +16,10 @@ export function composeMatrix(root: DragonBonesRenderRoot, local: Matrix): Matri
 
 export function composeRootMatrix(root: DragonBonesRenderRoot): Matrix {
   const node = root.node
+  const m = node.renderMatrix
+  if (m) {
+    return { a: m.a, b: m.b, c: m.c, d: m.d, tx: m.tx, ty: m.ty } as Matrix
+  }
   const radians = node.worldRotation * Math.PI / 180
   const cos = Math.cos(radians)
   const sin = Math.sin(radians)

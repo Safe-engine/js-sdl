@@ -108,10 +108,10 @@ export class Sprite<Props extends SpriteProps = SpriteProps> extends ComponentX<
     const naturalHeight = this.naturalHeight || frame?.height || this.texture?.height || 0
     const baseWidth = this.node.width || naturalWidth
     const baseHeight = this.node.height || naturalHeight
-    const w = baseWidth * t.worldScaleX
-    const h = baseHeight * t.worldScaleY
-    const dx = t.worldX - t.anchorX * w
-    const dy = t.worldY - t.anchorY * h
+    const w = baseWidth * t.renderScaleX
+    const h = baseHeight * t.renderScaleY
+    const dx = t.renderX - t.anchorX * w
+    const dy = t.renderY - t.anchorY * h
     if (this.spriteFillRange <= 0) return
     if (this.spriteFillRange < 1) {
       const source = frame ?? {
@@ -152,7 +152,7 @@ export class Sprite<Props extends SpriteProps = SpriteProps> extends ComponentX<
       this.textureId,
       dx, dy,
       w, h,
-      t.worldRotation,
+      t.renderRotation,
       t.anchorX * w,
       t.anchorY * h,
       this.node.flipX,
@@ -247,10 +247,10 @@ export class Sprite<Props extends SpriteProps = SpriteProps> extends ComponentX<
       globalCommandBuffer.pushRegion(
         this.textureId,
         frame.x, frame.y, frame.width, frame.height,
-        t.worldX - t.anchorX * width,
-        t.worldY - t.anchorY * height,
+        t.renderX - t.anchorX * width,
+        t.renderY - t.anchorY * height,
         width, height,
-        t.worldRotation,
+        t.renderRotation,
         t.anchorX * width,
         t.anchorY * height,
         this.node.flipX, this.node.flipY,
@@ -268,10 +268,10 @@ export class Sprite<Props extends SpriteProps = SpriteProps> extends ComponentX<
     globalCommandBuffer.pushRegion(
       this.textureId,
       frame.x, frame.y, frame.height, frame.width,
-      t.worldX - centerX,
-      t.worldY - centerY,
+      t.renderX - centerX,
+      t.renderY - centerY,
       drawWidth, drawHeight,
-      t.worldRotation - 90,
+      t.renderRotation - 90,
       centerX,
       centerY,
       this.node.flipX, this.node.flipY,
@@ -322,7 +322,7 @@ export class Sprite<Props extends SpriteProps = SpriteProps> extends ComponentX<
       this.textureId,
       sourceX, sourceY, sourceWidth, sourceHeight,
       x, y, width, height,
-      t.worldRotation,
+      t.renderRotation,
       t.anchorX * w - (x - dx),
       t.anchorY * h - (y - dy),
       this.node.flipX, this.node.flipY,
@@ -343,8 +343,8 @@ export class Sprite<Props extends SpriteProps = SpriteProps> extends ComponentX<
 
     const t = this.node
     const opacity = this.node.opacity * (this.node.color.a ?? 255)
-    const tileWidth = source.width * t.worldScaleX
-    const tileHeight = source.height * t.worldScaleY
+    const tileWidth = source.width * t.renderScaleX
+    const tileHeight = source.height * t.renderScaleY
     if (tileWidth <= 0 || tileHeight <= 0) return
 
     for (let y = 0; y < h; y += tileHeight) {
@@ -357,7 +357,7 @@ export class Sprite<Props extends SpriteProps = SpriteProps> extends ComponentX<
           this.textureId,
           source.x, source.y, sourceWidth, sourceHeight,
           dx + x, dy + y, drawWidth, drawHeight,
-          t.worldRotation,
+          t.renderRotation,
           t.anchorX * w - x,
           t.anchorY * h - y,
           this.node.flipX, this.node.flipY,
@@ -387,8 +387,8 @@ export class Sprite<Props extends SpriteProps = SpriteProps> extends ComponentX<
     const sourceBottom = Math.max(0, bottom)
     const [leftSource, centerSourceWidth, rightSource] = this.splitInsets(source.width, sourceLeft, sourceRight)
     const [topSource, centerSourceHeight, bottomSource] = this.splitInsets(source.height, sourceTop, sourceBottom)
-    const [leftDest, centerDestWidth, rightDest] = this.splitInsets(w, sourceLeft * t.worldScaleX, sourceRight * t.worldScaleX)
-    const [topDest, centerDestHeight, bottomDest] = this.splitInsets(h, sourceTop * t.worldScaleY, sourceBottom * t.worldScaleY)
+    const [leftDest, centerDestWidth, rightDest] = this.splitInsets(w, sourceLeft * t.renderScaleX, sourceRight * t.renderScaleX)
+    const [topDest, centerDestHeight, bottomDest] = this.splitInsets(h, sourceTop * t.renderScaleY, sourceBottom * t.renderScaleY)
     const sourceColumns = [leftSource, centerSourceWidth, rightSource]
     const sourceRows = [topSource, centerSourceHeight, bottomSource]
     const destColumns = [leftDest, centerDestWidth, rightDest]
@@ -410,7 +410,7 @@ export class Sprite<Props extends SpriteProps = SpriteProps> extends ComponentX<
             this.textureId,
             sourceX, sourceY, sourceWidth, sourceHeight,
             destX, destY, destWidth, destHeight,
-            t.worldRotation,
+            t.renderRotation,
             t.anchorX * w - (destX - dx),
             t.anchorY * h - (destY - dy),
             this.node.flipX, this.node.flipY,

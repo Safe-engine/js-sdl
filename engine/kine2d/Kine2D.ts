@@ -134,7 +134,7 @@ export class Kine2D extends ComponentX<Kine2DProps> {
     const canvasSize = skeleton.canvasSize ?? { width: 800, height: 600 }
     const node = this.node
     const opacity = node.opacity * (node.color.a ?? 255)
-    const radians = node.worldRotation * Math.PI / 180
+    const radians = node.renderRotation * Math.PI / 180
     const cosine = Math.cos(radians)
     const sine = Math.sin(radians)
 
@@ -161,23 +161,23 @@ export class Kine2D extends ComponentX<Kine2DProps> {
       const centerY = attachmentY
       const boneX = bone.x * canvasSize.width / 100
       const boneY = bone.y * canvasSize.height / 180
-      const worldX = boneX + centerX * Math.cos(boneRadians) - centerY * Math.sin(boneRadians)
-      const worldY = boneY + centerX * Math.sin(boneRadians) + centerY * Math.cos(boneRadians)
-      const localX = worldX * node.worldScaleX
-      const localY = worldY * node.worldScaleY
-      const width = size.width * scaleX * node.worldScaleX
-      const height = size.height * scaleY * node.worldScaleY
+      const boneWorldX = boneX + centerX * Math.cos(boneRadians) - centerY * Math.sin(boneRadians)
+      const boneWorldY = boneY + centerX * Math.sin(boneRadians) + centerY * Math.cos(boneRadians)
+      const localX = boneWorldX * node.renderScaleX
+      const localY = boneWorldY * node.renderScaleY
+      const width = size.width * scaleX * node.renderScaleX
+      const height = size.height * scaleY * node.renderScaleY
       globalCommandBuffer.pushRegion(
         texture.id,
         region.x,
         region.y,
         region.width,
         region.height,
-        node.worldX + localX * cosine - localY * sine - width / 2,
-        node.worldY + localX * sine + localY * cosine - height / 2,
+        node.renderX + localX * cosine - localY * sine - width / 2,
+        node.renderY + localX * sine + localY * cosine - height / 2,
         width,
         height,
-        node.worldRotation + rotation,
+        node.renderRotation + rotation,
         width / 2,
         height / 2,
         node.flipX,
@@ -248,7 +248,7 @@ export class Kine2D extends ComponentX<Kine2DProps> {
     }
 
     const node = this.node
-    const radians = node.worldRotation * Math.PI / 180
+    const radians = node.renderRotation * Math.PI / 180
     globalCommandBuffer.pushMesh(
       texture.id,
       positions,
@@ -258,10 +258,10 @@ export class Kine2D extends ComponentX<Kine2DProps> {
       node.color.g,
       node.color.b,
       node.opacity * (node.color.a ?? 255),
-      node.worldX,
-      node.worldY,
-      node.worldScaleX,
-      node.worldScaleY,
+      node.renderX,
+      node.renderY,
+      node.renderScaleX,
+      node.renderScaleY,
       Math.cos(radians),
       Math.sin(radians),
     )

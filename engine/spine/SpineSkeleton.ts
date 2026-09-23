@@ -390,12 +390,12 @@ const IDENTITY_TRANSFORM: SpineTransform = {
 function getTransform(root: SpineSkeleton): SpineTransform {
   const node = root.node
   if (!node) return { x: 0, y: 0, scaleX: 1, scaleY: 1, cos: 1, sin: 0 }
-  const radians = node.worldRotation * Math.PI / 180
+  const radians = node.renderRotation * Math.PI / 180
   return {
-    x: node.worldX,
-    y: node.worldY,
-    scaleX: node.worldScaleX,
-    scaleY: node.worldScaleY,
+    x: node.renderX,
+    y: node.renderY,
+    scaleX: node.renderScaleX,
+    scaleY: node.renderScaleY,
     cos: Math.cos(radians),
     sin: Math.sin(radians),
   }

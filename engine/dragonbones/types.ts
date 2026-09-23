@@ -30,6 +30,7 @@ export interface DragonBonesRenderNode {
   worldScaleY: number
   worldX: number
   worldY: number
+  renderMatrix?: import('../math/Matrix2D').Matrix2D
 }
 
 export interface DragonBonesRenderRoot {

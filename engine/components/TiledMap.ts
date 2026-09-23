@@ -215,19 +215,19 @@ export class TiledMap extends ComponentX<TiledMapProps> {
     const mapHeight = this.getMapPixelHeight()
     const originX = -this.node.anchorX * mapWidth
     const originY = -this.node.anchorY * mapHeight
-    const radians = this.node.worldRotation * Math.PI / 180
+    const radians = this.node.renderRotation * Math.PI / 180
     const cos = Math.cos(radians)
     const sin = Math.sin(radians)
-    const scaleX = this.node.worldScaleX
-    const scaleY = this.node.worldScaleY
-    const worldX = this.node.worldX
-    const worldY = this.node.worldY
+    const scaleX = this.node.renderScaleX
+    const scaleY = this.node.renderScaleY
+    const renderX = this.node.renderX
+    const renderY = this.node.renderY
     const red = this.node.color.r
     const green = this.node.color.g
     const blue = this.node.color.b
     const alpha = this.node.opacity * (this.node.color.a ?? 255)
-    const translateX = worldX + originX * scaleX * cos - originY * scaleY * sin
-    const translateY = worldY + originX * scaleX * sin + originY * scaleY * cos
+    const translateX = renderX + originX * scaleX * cos - originY * scaleY * sin
+    const translateY = renderY + originX * scaleX * sin + originY * scaleY * cos
 
     for (const batch of this.tileBatches) {
       const uvs = this.node.flipX || this.node.flipY

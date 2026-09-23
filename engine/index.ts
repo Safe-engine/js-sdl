@@ -57,6 +57,8 @@ export { InputEvent, InputSystem, Touch } from './Input'
 export type { InputEventType } from './Input'
 export { Localization } from './Localization'
 export type { TranslationTable } from './Localization'
+export { Matrix2D } from './math/Matrix2D'
+export type { Point2D, TransformData } from './math/Matrix2D'
 export { PersistenceJSON } from './PersistenceJSON'
 export type {
   LocalStorage,

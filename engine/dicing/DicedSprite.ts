@@ -123,21 +123,21 @@ export class DicedSprite extends ComponentX<DicedSpriteProps> {
     if (!this.node.visible || !atlas || !texture || !meshes) return
 
     const node = this.node
-    const radians = node.worldRotation * Math.PI / 180
+    const radians = node.renderRotation * Math.PI / 180
     const cosine = Math.cos(radians)
     const sine = Math.sin(radians)
     const meshVariant = (node.flipX ? 1 : 0) | (node.flipY ? 2 : 0)
     const opacity = node.opacity * (node.color.a ?? 255)
-    const anchorX = -node.anchorX * atlas.meta.rawWidth * node.worldScaleX
-    const anchorY = -node.anchorY * atlas.meta.rawHeight * node.worldScaleY
-    const translateX = node.worldX + anchorX * cosine - anchorY * sine
-    const translateY = node.worldY + anchorX * sine + anchorY * cosine
+    const anchorX = -node.anchorX * atlas.meta.rawWidth * node.renderScaleX
+    const anchorY = -node.anchorY * atlas.meta.rawHeight * node.renderScaleY
+    const translateX = node.renderX + anchorX * cosine - anchorY * sine
+    const translateY = node.renderY + anchorX * sine + anchorY * cosine
 
     for (const mesh of meshes) {
       globalCommandBuffer.pushMesh(
         texture.id, mesh.positions[meshVariant], mesh.uvs[meshVariant], mesh.indices,
         node.color.r, node.color.g, node.color.b, opacity,
-        translateX, translateY, node.worldScaleX, node.worldScaleY, cosine, sine,
+        translateX, translateY, node.renderScaleX, node.renderScaleY, cosine, sine,
       )
     }
   }

@@ -111,15 +111,20 @@ export class Scene {
     if (cameras.length === 0) {
       this.node._renderTree()
     } else {
+      const viewportWidth = this.node.width
+      const viewportHeight = this.node.height
       for (const camera of cameras) {
+        const viewMatrix = camera.getViewMatrix(viewportWidth, viewportHeight)
         setActiveCamera({
+          camera,
+          viewMatrix,
+          mask: camera.mask,
           x: camera.node.worldX,
           y: camera.node.worldY,
           rotation: camera.node.worldRotation,
           zoom: camera.zoom,
-          centerX: this.node.width * 0.5,
-          centerY: this.node.height * 0.5,
-          mask: camera.mask,
+          centerX: viewportWidth * 0.5,
+          centerY: viewportHeight * 0.5,
         })
         try {
           this.node._renderTree()

@@ -182,11 +182,11 @@ export class RichText extends ComponentX<RichTextProps> {
     color: Color,
     origin?: Point,
   ): void {
-    const radians = transform.worldRotation * Math.PI / 180
-    const scaledX = localX * transform.worldScaleX
-    const scaledY = localY * transform.worldScaleY
-    const originX = origin?.x ?? transform.worldX
-    const originY = origin?.y ?? transform.worldY
+    const radians = transform.renderRotation * Math.PI / 180
+    const scaledX = localX * transform.renderScaleX
+    const scaledY = localY * transform.renderScaleY
+    const originX = origin?.x ?? transform.renderX
+    const originY = origin?.y ?? transform.renderY
     const x = originX
       + scaledX * Math.cos(radians) - scaledY * Math.sin(radians)
     const y = originY
@@ -196,9 +196,9 @@ export class RichText extends ComponentX<RichTextProps> {
       segment.texture.id,
       x,
       y,
-      segment.texture.width * transform.worldScaleX,
-      segment.texture.height * transform.worldScaleY,
-      transform.worldRotation,
+      segment.texture.width * transform.renderScaleX,
+      segment.texture.height * transform.renderScaleY,
+      transform.renderRotation,
       0,
       0,
       false,
