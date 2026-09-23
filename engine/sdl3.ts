@@ -3,14 +3,14 @@ export const isNative = false
 let canvas: HTMLCanvasElement | null = null
 let gl: WebGLRenderingContext | null = null
 let program: WebGLProgram | null = null
-let positionBuffer: WebGLBuffer | null = null
-let uvBuffer: WebGLBuffer | null = null
+let batchVbo: WebGLBuffer | null = null
 let positionLocation = -1
 let uvLocation = -1
+let colorLocation = -1
 let resolutionLocation: WebGLUniformLocation | null = null
 let samplerLocation: WebGLUniformLocation | null = null
-let colorLocation: WebGLUniformLocation | null = null
 let whiteTexture: WebGLTexture | null = null
+let whiteTextureAsset: TextureAsset | null = null
 let shaderPositionBuffer: WebGLBuffer | null = null
 let shaderUvBuffer: WebGLBuffer | null = null
 const clipStack: Array<[number, number, number, number]> = []
@@ -30,7 +30,7 @@ let frameVertices = 0
 let pointerDown = false
 let resizeObserver: ResizeObserver | null = null
 
-const textures = new Map<number, TextureAsset>()
+export const textures = new Map<number, TextureAsset>()
 const textureIds = new Map<string, number>()
 const fonts = new Map<number, FontAsset>()
 const fontIds = new Map<string, number>()
@@ -85,12 +85,23 @@ const rendererStats: RendererStats = {
   vertices: 0,
 }
 
+const VERTEX_STRIDE_BYTES = 20
+const VERTEX_STRIDE_FLOATS = 5
 const MAX_BATCH_VERTICES = 6000
+const batchArrayBuffer = new ArrayBuffer(MAX_BATCH_VERTICES * VERTEX_STRIDE_BYTES)
+const batchFloatView = new Float32Array(batchArrayBuffer)
+const batchUint32View = new Uint32Array(batchArrayBuffer)
+let batchVertexCount = 0
 let batchTexture: WebGLTexture | null = null
-let batchColor: [number, number, number, number] | null = null
 let batchAdditive = false
-const batchPositions: number[] = []
-const batchUvs: number[] = []
+
+function packColor(red: number, green: number, blue: number, alpha: number): number {
+  const r = Math.max(0, Math.min(255, Math.round(red))) & 0xff
+  const g = Math.max(0, Math.min(255, Math.round(green))) & 0xff
+  const b = Math.max(0, Math.min(255, Math.round(blue))) & 0xff
+  const a = Math.max(0, Math.min(255, Math.round(alpha))) & 0xff
+  return ((a << 24) | (b << 16) | (g << 8) | r) >>> 0
+}
 
 function colorToUniform(
   red: number,
@@ -108,48 +119,50 @@ function colorToUniform(
 
 function sameBatch(
   texture: WebGLTexture,
-  color: [number, number, number, number],
   additive: boolean,
 ): boolean {
-  return batchTexture === texture
-    && !!batchColor
-    && batchColor[0] === color[0]
-    && batchColor[1] === color[1]
-    && batchColor[2] === color[2]
-    && batchColor[3] === color[3]
-    && batchAdditive === additive
+  return batchTexture === texture && batchAdditive === additive
 }
 
 function queueDraw(
   asset: TextureAsset,
-  positions: readonly number[],
-  uvs: readonly number[],
-  color: [number, number, number, number],
+  positions: readonly number[] | Float32Array,
+  uvs: readonly number[] | Float32Array,
+  color: [number, number, number, number] | number,
   additive = false,
 ): void {
-  if (!asset.texture || !program || !positionBuffer || !uvBuffer) return
+  if (!asset.texture || !program || !batchVbo) return
   const vertexCount = positions.length / 2
   frameVertices += vertexCount
-  if (!sameBatch(asset.texture, color, additive)
-    || batchPositions.length / 2 + vertexCount > MAX_BATCH_VERTICES) {
+  if (!sameBatch(asset.texture, additive)
+    || batchVertexCount + vertexCount > MAX_BATCH_VERTICES) {
     flushDrawBatch()
   }
 
   batchTexture = asset.texture
-  batchColor = color
   batchAdditive = additive
-  for (let i = 0; i < positions.length; i++) batchPositions.push(positions[i])
-  for (let i = 0; i < uvs.length; i++) batchUvs.push(uvs[i])
+
+  const packed = typeof color === 'number'
+    ? color
+    : packColor(color[0] * 255, color[1] * 255, color[2] * 255, color[3] * 255)
+
+  for (let i = 0; i < vertexCount; i++) {
+    const offset = (batchVertexCount + i) * VERTEX_STRIDE_FLOATS
+    batchFloatView[offset] = positions[i * 2]
+    batchFloatView[offset + 1] = positions[i * 2 + 1]
+    batchFloatView[offset + 2] = uvs[i * 2]
+    batchFloatView[offset + 3] = uvs[i * 2 + 1]
+    batchUint32View[offset + 4] = packed
+  }
+  batchVertexCount += vertexCount
 }
 
 function flushDrawBatch(): void {
-  if (!batchTexture || !batchColor || batchPositions.length === 0) return
-  if (!program || !positionBuffer || !uvBuffer) {
+  if (!batchTexture || batchVertexCount === 0) return
+  if (!program || !batchVbo) {
     batchTexture = null
-    batchColor = null
     batchAdditive = false
-    batchPositions.length = 0
-    batchUvs.length = 0
+    batchVertexCount = 0
     return
   }
 
@@ -158,25 +171,27 @@ function flushDrawBatch(): void {
   context.useProgram(program)
   context.uniform2f(resolutionLocation, logicalWidth, logicalHeight)
   context.uniform1i(samplerLocation, 0)
-  context.uniform4f(colorLocation, batchColor[0], batchColor[1], batchColor[2], batchColor[3])
   context.activeTexture(context.TEXTURE0)
   context.bindTexture(context.TEXTURE_2D, batchTexture)
-  context.bindBuffer(context.ARRAY_BUFFER, positionBuffer)
-  context.bufferData(context.ARRAY_BUFFER, new Float32Array(batchPositions), context.STREAM_DRAW)
+
+  context.bindBuffer(context.ARRAY_BUFFER, batchVbo)
+  context.bufferSubData(context.ARRAY_BUFFER, 0, batchFloatView.subarray(0, batchVertexCount * VERTEX_STRIDE_FLOATS))
+
   context.enableVertexAttribArray(positionLocation)
-  context.vertexAttribPointer(positionLocation, 2, context.FLOAT, false, 0, 0)
-  context.bindBuffer(context.ARRAY_BUFFER, uvBuffer)
-  context.bufferData(context.ARRAY_BUFFER, new Float32Array(batchUvs), context.STREAM_DRAW)
+  context.vertexAttribPointer(positionLocation, 2, context.FLOAT, false, VERTEX_STRIDE_BYTES, 0)
+
   context.enableVertexAttribArray(uvLocation)
-  context.vertexAttribPointer(uvLocation, 2, context.FLOAT, false, 0, 0)
-  context.drawArrays(context.TRIANGLES, 0, batchPositions.length / 2)
+  context.vertexAttribPointer(uvLocation, 2, context.FLOAT, false, VERTEX_STRIDE_BYTES, 8)
+
+  context.enableVertexAttribArray(colorLocation)
+  context.vertexAttribPointer(colorLocation, 4, context.UNSIGNED_BYTE, true, VERTEX_STRIDE_BYTES, 16)
+
+  context.drawArrays(context.TRIANGLES, 0, batchVertexCount)
   frameDrawCalls += 1
 
   batchTexture = null
-  batchColor = null
   batchAdditive = false
-  batchPositions.length = 0
-  batchUvs.length = 0
+  batchVertexCount = 0
 }
 
 function ensureHiddenTextInput(): HTMLInputElement {
@@ -245,23 +260,26 @@ function createProgram(): WebGLProgram {
   const vertexShader = compileShader(context.VERTEX_SHADER, `
     attribute vec2 a_position;
     attribute vec2 a_uv;
+    attribute vec4 a_color;
     uniform vec2 u_resolution;
     varying vec2 v_uv;
+    varying vec4 v_color;
 
     void main() {
       vec2 clip = (a_position / u_resolution) * 2.0 - 1.0;
       gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
       v_uv = a_uv;
+      v_color = a_color;
     }
   `)
   const fragmentShader = compileShader(context.FRAGMENT_SHADER, `
     precision mediump float;
     uniform sampler2D u_texture;
-    uniform vec4 u_color;
     varying vec2 v_uv;
+    varying vec4 v_color;
 
     void main() {
-      vec4 color = vec4(u_color.rgb * u_color.a, u_color.a);
+      vec4 color = vec4(v_color.rgb * v_color.a, v_color.a);
       gl_FragColor = texture2D(u_texture, v_uv) * color;
     }
   `)
@@ -701,13 +719,14 @@ export function createWindow(
   if (!gl) throw new Error('WebGL is not supported by this browser')
 
   program = createProgram()
-  positionBuffer = gl.createBuffer()
-  uvBuffer = gl.createBuffer()
+  batchVbo = gl.createBuffer()
+  gl.bindBuffer(gl.ARRAY_BUFFER, batchVbo)
+  gl.bufferData(gl.ARRAY_BUFFER, MAX_BATCH_VERTICES * VERTEX_STRIDE_BYTES, gl.DYNAMIC_DRAW)
   positionLocation = gl.getAttribLocation(program, 'a_position')
   uvLocation = gl.getAttribLocation(program, 'a_uv')
+  colorLocation = gl.getAttribLocation(program, 'a_color')
   resolutionLocation = gl.getUniformLocation(program, 'u_resolution')
   samplerLocation = gl.getUniformLocation(program, 'u_texture')
-  colorLocation = gl.getUniformLocation(program, 'u_color')
   whiteTexture = gl.createTexture()
   gl.bindTexture(gl.TEXTURE_2D, whiteTexture)
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
@@ -723,6 +742,13 @@ export function createWindow(
     gl.UNSIGNED_BYTE,
     new Uint8Array([255, 255, 255, 255]),
   )
+  whiteTextureAsset = {
+    texture: whiteTexture,
+    width: 1,
+    height: 1,
+    refs: 1,
+    key: '__white',
+  }
   gl.enable(gl.BLEND)
   gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
   gl.viewport(0, 0, width, height)
@@ -924,6 +950,146 @@ export function clear(): void {
   context.clear(context.COLOR_BUFFER_BIT)
 }
 
+function drawAsset(
+  asset: TextureAsset,
+  sx: number,
+  sy: number,
+  sw: number,
+  sh: number,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  angle: number,
+  centerX: number,
+  centerY: number,
+  flipX: boolean,
+  flipY: boolean,
+  red = 255,
+  green = 255,
+  blue = 255,
+  alpha = 255,
+  additive = false,
+): void {
+  if (!asset.texture || !program || !batchVbo) return
+
+  if (!sameBatch(asset.texture, additive)
+    || batchVertexCount + 6 > MAX_BATCH_VERTICES) {
+    flushDrawBatch()
+  }
+
+  batchTexture = asset.texture
+  batchAdditive = additive
+
+  let u0 = sx / asset.width
+  let v0 = sy / asset.height
+  let u1 = (sx + sw) / asset.width
+  let v1 = (sy + sh) / asset.height
+  if (flipX) {
+    const tmp = u0
+    u0 = u1
+    u1 = tmp
+  }
+  if (flipY) {
+    const tmp = v0
+    v0 = v1
+    v1 = tmp
+  }
+
+  let x0 = 0
+  let y0 = 0
+  let x1 = 0
+  let y1 = 0
+  let x2 = 0
+  let y2 = 0
+  let x3 = 0
+  let y3 = 0
+
+  if (angle === 0) {
+    x0 = x
+    y0 = y
+    x1 = x + width
+    y1 = y
+    x2 = x
+    y2 = y + height
+    x3 = x + width
+    y3 = y + height
+  } else {
+    const radians = angle * Math.PI / 180
+    const cosine = Math.cos(radians)
+    const sine = Math.sin(radians)
+
+    const cx = x + centerX
+    const cy = y + centerY
+
+    const lx0 = -centerX
+    const ly0 = -centerY
+    const lx1 = width - centerX
+    const ly1 = -centerY
+    const lx2 = -centerX
+    const ly2 = height - centerY
+    const lx3 = width - centerX
+    const ly3 = height - centerY
+
+    x0 = cx + lx0 * cosine - ly0 * sine
+    y0 = cy + lx0 * sine + ly0 * cosine
+    x1 = cx + lx1 * cosine - ly1 * sine
+    y1 = cy + lx1 * sine + ly1 * cosine
+    x2 = cx + lx2 * cosine - ly2 * sine
+    y2 = cy + lx2 * sine + ly2 * cosine
+    x3 = cx + lx3 * cosine - ly3 * sine
+    y3 = cy + lx3 * sine + ly3 * cosine
+  }
+
+  const packedColor = packColor(red, green, blue, alpha)
+  const offset = batchVertexCount * VERTEX_STRIDE_FLOATS
+
+  // v0 (top-left)
+  batchFloatView[offset] = x0
+  batchFloatView[offset + 1] = y0
+  batchFloatView[offset + 2] = u0
+  batchFloatView[offset + 3] = v0
+  batchUint32View[offset + 4] = packedColor
+
+  // v1 (top-right)
+  batchFloatView[offset + 5] = x1
+  batchFloatView[offset + 6] = y1
+  batchFloatView[offset + 7] = u1
+  batchFloatView[offset + 8] = v0
+  batchUint32View[offset + 9] = packedColor
+
+  // v2 (bottom-left)
+  batchFloatView[offset + 10] = x2
+  batchFloatView[offset + 11] = y2
+  batchFloatView[offset + 12] = u0
+  batchFloatView[offset + 13] = v1
+  batchUint32View[offset + 14] = packedColor
+
+  // v3 (= bottom-left)
+  batchFloatView[offset + 15] = x2
+  batchFloatView[offset + 16] = y2
+  batchFloatView[offset + 17] = u0
+  batchFloatView[offset + 18] = v1
+  batchUint32View[offset + 19] = packedColor
+
+  // v4 (= top-right)
+  batchFloatView[offset + 20] = x1
+  batchFloatView[offset + 21] = y1
+  batchFloatView[offset + 22] = u1
+  batchFloatView[offset + 23] = v0
+  batchUint32View[offset + 24] = packedColor
+
+  // v5 (bottom-right)
+  batchFloatView[offset + 25] = x3
+  batchFloatView[offset + 26] = y3
+  batchFloatView[offset + 27] = u1
+  batchFloatView[offset + 28] = v1
+  batchUint32View[offset + 29] = packedColor
+
+  batchVertexCount += 6
+  frameVertices += 6
+}
+
 function draw(
   id: number,
   sx: number,
@@ -946,39 +1112,16 @@ function draw(
   additive = false,
 ): void {
   const asset = textures.get(id)
-  if (!asset?.texture || !program || !positionBuffer || !uvBuffer) return
-  const radians = angle * Math.PI / 180
-  const cosine = Math.cos(radians)
-  const sine = Math.sin(radians)
-  const point = (px: number, py: number): [number, number] => {
-    const localX = px - centerX
-    const localY = py - centerY
-    return [
-      x + centerX + localX * cosine - localY * sine,
-      y + centerY + localX * sine + localY * cosine,
-    ]
-  }
-  const topLeft = point(0, 0)
-  const topRight = point(width, 0)
-  const bottomLeft = point(0, height)
-  const bottomRight = point(width, height)
-  const positions = [
-    ...topLeft, ...topRight, ...bottomLeft,
-    ...bottomLeft, ...topRight, ...bottomRight,
-  ]
-
-  let u0 = sx / asset.width
-  let v0 = sy / asset.height
-  let u1 = (sx + sw) / asset.width
-  let v1 = (sy + sh) / asset.height
-  if (flipX) [u0, u1] = [u1, u0]
-  if (flipY) [v0, v1] = [v1, v0]
-  const uvs = [
-    u0, v0, u1, v0, u0, v1,
-    u0, v1, u1, v0, u1, v1,
-  ]
-
-  queueDraw(asset, positions, uvs, colorToUniform(red, green, blue, alpha), additive)
+  if (!asset) return
+  drawAsset(
+    asset,
+    sx, sy, sw, sh,
+    x, y, width, height,
+    angle, centerX, centerY,
+    flipX, flipY,
+    red, green, blue, alpha,
+    additive,
+  )
 }
 
 export function drawTexture(id: number, x: number, y: number): void {
@@ -1063,19 +1206,66 @@ export function drawTextureQuad(
   green = 255,
   blue = 255,
   alpha = 255,
+  additive = false,
 ): void {
   const asset = textures.get(id)
-  if (!asset?.texture || !program || !positionBuffer || !uvBuffer) return
-  const positions = [
-    x0, y0, x1, y1, x2, y2,
-    x2, y2, x1, y1, x3, y3,
-  ]
-  const uvs = [
-    u0, v0, u1, v1, u2, v2,
-    u2, v2, u1, v1, u3, v3,
-  ]
+  if (!asset?.texture || !program || !batchVbo) return
 
-  queueDraw(asset, positions, uvs, colorToUniform(red, green, blue, alpha))
+  if (!sameBatch(asset.texture, additive)
+    || batchVertexCount + 6 > MAX_BATCH_VERTICES) {
+    flushDrawBatch()
+  }
+
+  batchTexture = asset.texture
+  batchAdditive = additive
+
+  const packedColor = packColor(red, green, blue, alpha)
+  const offset = batchVertexCount * VERTEX_STRIDE_FLOATS
+
+  // v0 (tri 1: 0, 1, 2)
+  batchFloatView[offset] = x0
+  batchFloatView[offset + 1] = y0
+  batchFloatView[offset + 2] = u0
+  batchFloatView[offset + 3] = v0
+  batchUint32View[offset + 4] = packedColor
+
+  // v1
+  batchFloatView[offset + 5] = x1
+  batchFloatView[offset + 6] = y1
+  batchFloatView[offset + 7] = u1
+  batchFloatView[offset + 8] = v1
+  batchUint32View[offset + 9] = packedColor
+
+  // v2
+  batchFloatView[offset + 10] = x2
+  batchFloatView[offset + 11] = y2
+  batchFloatView[offset + 12] = u2
+  batchFloatView[offset + 13] = v2
+  batchUint32View[offset + 14] = packedColor
+
+  // v3 (= v2) (tri 2: 2, 1, 3)
+  batchFloatView[offset + 15] = x2
+  batchFloatView[offset + 16] = y2
+  batchFloatView[offset + 17] = u2
+  batchFloatView[offset + 18] = v2
+  batchUint32View[offset + 19] = packedColor
+
+  // v4 (= v1)
+  batchFloatView[offset + 20] = x1
+  batchFloatView[offset + 21] = y1
+  batchFloatView[offset + 22] = u1
+  batchFloatView[offset + 23] = v1
+  batchUint32View[offset + 24] = packedColor
+
+  // v5 (= v3)
+  batchFloatView[offset + 25] = x3
+  batchFloatView[offset + 26] = y3
+  batchFloatView[offset + 27] = u3
+  batchFloatView[offset + 28] = v3
+  batchUint32View[offset + 29] = packedColor
+
+  batchVertexCount += 6
+  frameVertices += 6
 }
 
 export function drawTextureMesh(
@@ -1093,23 +1283,46 @@ export function drawTextureMesh(
   scaleY = 1,
   cosine = 1,
   sine = 0,
+  additive = false,
 ): void {
   const asset = textures.get(id)
-  if (!asset?.texture || positions.length !== uvs.length || indices.length % 3 !== 0) return
+  if (!asset?.texture || !program || !batchVbo || positions.length !== uvs.length || indices.length % 3 !== 0) return
 
-  const trianglePositions = new Array<number>(indices.length * 2)
-  const triangleUvs = new Array<number>(indices.length * 2)
+  const numVertices = indices.length
+  if (!sameBatch(asset.texture, additive)
+    || batchVertexCount + numVertices > MAX_BATCH_VERTICES) {
+    flushDrawBatch()
+  }
+
+  batchTexture = asset.texture
+  batchAdditive = additive
+
+  const packedColor = packColor(red, green, blue, alpha)
+
   for (let i = 0; i < indices.length; i++) {
+    if (batchVertexCount >= MAX_BATCH_VERTICES) {
+      flushDrawBatch()
+      batchTexture = asset.texture
+      batchAdditive = additive
+    }
     const index = indices[i] * 2
     if (index + 1 >= positions.length) return
     const x = positions[index] * scaleX
     const y = positions[index + 1] * scaleY
-    trianglePositions[i * 2] = translateX + x * cosine - y * sine
-    trianglePositions[i * 2 + 1] = translateY + x * sine + y * cosine
-    triangleUvs[i * 2] = uvs[index]
-    triangleUvs[i * 2 + 1] = uvs[index + 1]
+    const vx = translateX + x * cosine - y * sine
+    const vy = translateY + x * sine + y * cosine
+    const vu = uvs[index]
+    const vv = uvs[index + 1]
+
+    const offset = batchVertexCount * VERTEX_STRIDE_FLOATS
+    batchFloatView[offset] = vx
+    batchFloatView[offset + 1] = vy
+    batchFloatView[offset + 2] = vu
+    batchFloatView[offset + 3] = vv
+    batchUint32View[offset + 4] = packedColor
+    batchVertexCount++
   }
-  queueDraw(asset, trianglePositions, triangleUvs, colorToUniform(red, green, blue, alpha))
+  frameVertices += numVertices
 }
 
 export function drawRect(
@@ -1122,18 +1335,16 @@ export function drawRect(
   blue: number,
   alpha = 255,
 ): void {
-  if (!whiteTexture || !program || !positionBuffer || !uvBuffer) return
-  const id = -1
-  textures.set(id, {
-    texture: whiteTexture,
-    width: 1,
-    height: 1,
-    refs: 1,
-    key: '__white',
-  })
-  draw(id, 0, 0, 1, 1, x, y, width, height, 0, 0, 0, false, false,
-    red, green, blue, alpha)
-  textures.delete(id)
+  if (!whiteTextureAsset || !program || !batchVbo) return
+  drawAsset(
+    whiteTextureAsset,
+    0, 0, 1, 1,
+    x, y, width, height,
+    0, 0, 0,
+    false, false,
+    red, green, blue, alpha,
+    false,
+  )
 }
 
 export function drawLine(
@@ -1147,19 +1358,18 @@ export function drawLine(
   alpha = 255,
 ): void {
   const length = Math.hypot(x2 - x1, y2 - y1)
-  if (length <= 0 || !whiteTexture) return
+  if (length <= 0 || !whiteTextureAsset || !program || !batchVbo) return
   const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI
-  const id = -1
-  textures.set(id, {
-    texture: whiteTexture,
-    width: 1,
-    height: 1,
-    refs: 1,
-    key: '__white',
-  })
-  draw(id, 0, 0, 1, 1, x1, y1 - 0.5, length, 1, angle, 0, 0, false, false,
-    red, green, blue, alpha)
-  textures.delete(id)
+  drawAsset(
+    whiteTextureAsset,
+    0, 0, 1, 1,
+    x1, y1 - 0.5,
+    length, 1,
+    angle, 0, 0,
+    false, false,
+    red, green, blue, alpha,
+    false,
+  )
 }
 
 export function drawPoint(
