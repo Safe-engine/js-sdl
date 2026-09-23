@@ -224,4 +224,50 @@ describe('WebGL Renderer Batching', async () => {
     expect(drawArraysCalls.length).toBe(1)
     expect(drawArraysCalls[0].count).toBe(18) // 3 primitives * 6 vertices
   })
+
+  it('correctly handles pushSprite, pushRegion, pushQuad, and pushMesh in submitCommandBuffer', async () => {
+    const { RenderCommandBuffer } = await import('../engine/render/RenderCommandBuffer')
+    const buffer = new RenderCommandBuffer()
+    buffer.beginFrame()
+
+    const tex = mockGl.createTexture()
+    sdl3.textures.set(200, { texture: tex, width: 100, height: 100, refs: 1, key: 'batch_test_tex' })
+
+    // pushSprite
+    buffer.pushSprite(200, 10, 20, 50, 50, 0, 0, 0, false, false, 255, 0, 0, 255)
+    // pushRegion
+    buffer.pushRegion(200, 0, 0, 50, 50, 60, 20, 50, 50, 0, 0, 0, false, false, 0, 255, 0, 255)
+    // pushQuad
+    buffer.pushQuad(200, 0, 0, 0, 0, 10, 0, 1, 0, 0, 10, 0, 1, 10, 10, 1, 1, 0, 0, 255, 255)
+    // pushMesh (1 triangle = 3 vertices)
+    const positions = new Float32Array([0, 0, 20, 0, 0, 20])
+    const uvs = new Float32Array([0, 0, 1, 0, 0, 1])
+    const indices = new Uint16Array([0, 1, 2])
+    buffer.pushMesh(200, positions, uvs, indices, 255, 255, 0, 255)
+
+    sdl3.submitCommandBuffer(buffer.getBufferView())
+    sdl3.present()
+
+    // Since they all use texture 200 and normal blend mode, they MUST batch together!
+    // 3 quads (18 vertices) + 1 mesh triangle (3 vertices) = 21 vertices
+    expect(drawArraysCalls.length).toBe(1)
+    expect(drawArraysCalls[0].count).toBe(21)
+  })
+
+  it('handles clip push and pop inside command buffer', async () => {
+    const { RenderCommandBuffer } = await import('../engine/render/RenderCommandBuffer')
+    const buffer = new RenderCommandBuffer()
+    buffer.beginFrame()
+
+    buffer.pushRect(0, 0, 100, 100)
+    buffer.pushClipRect(10, 10, 50, 50)
+    buffer.pushRect(10, 10, 20, 20)
+    buffer.popClipRect()
+
+    sdl3.submitCommandBuffer(buffer.getBufferView())
+    sdl3.present()
+
+    // Clipping forces batch flush so scissors can apply
+    expect(drawArraysCalls.length).toBeGreaterThanOrEqual(2)
+  })
 })

@@ -1460,6 +1460,9 @@ export function submitCommandBuffer(buffer: SpriteBatchBuffer): void {
 
   const numCmds = commands.length
 
+  let cachedId = -1
+  let cachedAsset: TextureAsset | null = null
+
   while (cmdIdx < numCmds) {
     const op = commands[cmdIdx++]
     if (op === 0) break
@@ -1479,12 +1482,79 @@ export function submitCommandBuffer(buffer: SpriteBatchBuffer): void {
       const flipX = floatBuffer[floatIdx++] !== 0
       const flipY = floatBuffer[floatIdx++] !== 0
 
-      const r = (c >>> 24) & 0xff
-      const g = (c >>> 16) & 0xff
-      const b = (c >>> 8) & 0xff
-      const a = c & 0xff
+      if (id !== cachedId) {
+        cachedId = id
+        cachedAsset = textures.get(id) ?? null
+      }
+      if (!cachedAsset?.texture || !program || !batchVbo) continue
 
-      drawTextureRotated(id, x, y, w, h, angle, cx, cy, flipX, flipY, r, g, b, a, additive)
+      if (!sameBatch(cachedAsset.texture, additive) || batchVertexCount + 6 > MAX_BATCH_VERTICES) {
+        flushDrawBatch()
+      }
+
+      batchTexture = cachedAsset.texture
+      batchAdditive = additive
+
+      let u0 = 0
+      let v0 = 0
+      let u1 = 1
+      let v1 = 1
+      if (flipX) { u0 = 1; u1 = 0 }
+      if (flipY) { v0 = 1; v1 = 0 }
+
+      let x0 = 0
+      let y0 = 0
+      let x1 = 0
+      let y1 = 0
+      let x2 = 0
+      let y2 = 0
+      let x3 = 0
+      let y3 = 0
+      if (angle === 0) {
+        x0 = x
+        y0 = y
+        x1 = x + w
+        y1 = y
+        x2 = x
+        y2 = y + h
+        x3 = x + w
+        y3 = y + h
+      } else {
+        const radians = angle * Math.PI / 180
+        const cos = Math.cos(radians)
+        const sin = Math.sin(radians)
+        const originX = x + cx
+        const originY = y + cy
+        const lx0 = -cx
+        const ly0 = -cy
+        const lx1 = w - cx
+        const ly1 = -cy
+        const lx2 = -cx
+        const ly2 = h - cy
+        const lx3 = w - cx
+        const ly3 = h - cy
+        x0 = originX + lx0 * cos - ly0 * sin
+        y0 = originY + lx0 * sin + ly0 * cos
+        x1 = originX + lx1 * cos - ly1 * sin
+        y1 = originY + lx1 * sin + ly1 * cos
+        x2 = originX + lx2 * cos - ly2 * sin
+        y2 = originY + lx2 * sin + ly2 * cos
+        x3 = originX + lx3 * cos - ly3 * sin
+        y3 = originY + lx3 * sin + ly3 * cos
+      }
+
+      const packedColor = ((c << 24) | ((c & 0xff00) << 8) | ((c >> 8) & 0xff00) | (c >>> 24)) >>> 0
+      const offset = batchVertexCount * VERTEX_STRIDE_FLOATS
+
+      batchFloatView[offset] = x0; batchFloatView[offset + 1] = y0; batchFloatView[offset + 2] = u0; batchFloatView[offset + 3] = v0; batchUint32View[offset + 4] = packedColor
+      batchFloatView[offset + 5] = x1; batchFloatView[offset + 6] = y1; batchFloatView[offset + 7] = u1; batchFloatView[offset + 8] = v0; batchUint32View[offset + 9] = packedColor
+      batchFloatView[offset + 10] = x2; batchFloatView[offset + 11] = y2; batchFloatView[offset + 12] = u0; batchFloatView[offset + 13] = v1; batchUint32View[offset + 14] = packedColor
+      batchFloatView[offset + 15] = x2; batchFloatView[offset + 16] = y2; batchFloatView[offset + 17] = u0; batchFloatView[offset + 18] = v1; batchUint32View[offset + 19] = packedColor
+      batchFloatView[offset + 20] = x1; batchFloatView[offset + 21] = y1; batchFloatView[offset + 22] = u1; batchFloatView[offset + 23] = v0; batchUint32View[offset + 24] = packedColor
+      batchFloatView[offset + 25] = x3; batchFloatView[offset + 26] = y3; batchFloatView[offset + 27] = u1; batchFloatView[offset + 28] = v1; batchUint32View[offset + 29] = packedColor
+
+      batchVertexCount += 6
+      frameVertices += 6
     } else if (op === 8) { // CMD_DRAW_REGION
       const texture = uintBuffer[uintIdx++]
       const additive = (texture & 0x80000000) !== 0
@@ -1504,14 +1574,79 @@ export function submitCommandBuffer(buffer: SpriteBatchBuffer): void {
       const flipX = floatBuffer[floatIdx++] !== 0
       const flipY = floatBuffer[floatIdx++] !== 0
 
-      const r = (c >>> 24) & 0xff
-      const g = (c >>> 16) & 0xff
-      const b = (c >>> 8) & 0xff
-      const a = c & 0xff
+      if (id !== cachedId) {
+        cachedId = id
+        cachedAsset = textures.get(id) ?? null
+      }
+      if (!cachedAsset?.texture || !program || !batchVbo) continue
 
-      drawTextureRegionRotated(
-        id, sx, sy, sw, sh, dx, dy, dw, dh, angle, cx, cy, flipX, flipY, r, g, b, a, additive,
-      )
+      if (!sameBatch(cachedAsset.texture, additive) || batchVertexCount + 6 > MAX_BATCH_VERTICES) {
+        flushDrawBatch()
+      }
+
+      batchTexture = cachedAsset.texture
+      batchAdditive = additive
+
+      let u0 = sx / cachedAsset.width
+      let v0 = sy / cachedAsset.height
+      let u1 = (sx + sw) / cachedAsset.width
+      let v1 = (sy + sh) / cachedAsset.height
+      if (flipX) { const tmp = u0; u0 = u1; u1 = tmp }
+      if (flipY) { const tmp = v0; v0 = v1; v1 = tmp }
+
+      let x0 = 0
+      let y0 = 0
+      let x1 = 0
+      let y1 = 0
+      let x2 = 0
+      let y2 = 0
+      let x3 = 0
+      let y3 = 0
+      if (angle === 0) {
+        x0 = dx
+        y0 = dy
+        x1 = dx + dw
+        y1 = dy
+        x2 = dx
+        y2 = dy + dh
+        x3 = dx + dw
+        y3 = dy + dh
+      } else {
+        const radians = angle * Math.PI / 180
+        const cos = Math.cos(radians)
+        const sin = Math.sin(radians)
+        const originX = dx + cx
+        const originY = dy + cy
+        const lx0 = -cx
+        const ly0 = -cy
+        const lx1 = dw - cx
+        const ly1 = -cy
+        const lx2 = -cx
+        const ly2 = dh - cy
+        const lx3 = dw - cx
+        const ly3 = dh - cy
+        x0 = originX + lx0 * cos - ly0 * sin
+        y0 = originY + lx0 * sin + ly0 * cos
+        x1 = originX + lx1 * cos - ly1 * sin
+        y1 = originY + lx1 * sin + ly1 * cos
+        x2 = originX + lx2 * cos - ly2 * sin
+        y2 = originY + lx2 * sin + ly2 * cos
+        x3 = originX + lx3 * cos - ly3 * sin
+        y3 = originY + lx3 * sin + ly3 * cos
+      }
+
+      const packedColor = ((c << 24) | ((c & 0xff00) << 8) | ((c >> 8) & 0xff00) | (c >>> 24)) >>> 0
+      const offset = batchVertexCount * VERTEX_STRIDE_FLOATS
+
+      batchFloatView[offset] = x0; batchFloatView[offset + 1] = y0; batchFloatView[offset + 2] = u0; batchFloatView[offset + 3] = v0; batchUint32View[offset + 4] = packedColor
+      batchFloatView[offset + 5] = x1; batchFloatView[offset + 6] = y1; batchFloatView[offset + 7] = u1; batchFloatView[offset + 8] = v0; batchUint32View[offset + 9] = packedColor
+      batchFloatView[offset + 10] = x2; batchFloatView[offset + 11] = y2; batchFloatView[offset + 12] = u0; batchFloatView[offset + 13] = v1; batchUint32View[offset + 14] = packedColor
+      batchFloatView[offset + 15] = x2; batchFloatView[offset + 16] = y2; batchFloatView[offset + 17] = u0; batchFloatView[offset + 18] = v1; batchUint32View[offset + 19] = packedColor
+      batchFloatView[offset + 20] = x1; batchFloatView[offset + 21] = y1; batchFloatView[offset + 22] = u1; batchFloatView[offset + 23] = v0; batchUint32View[offset + 24] = packedColor
+      batchFloatView[offset + 25] = x3; batchFloatView[offset + 26] = y3; batchFloatView[offset + 27] = u1; batchFloatView[offset + 28] = v1; batchUint32View[offset + 29] = packedColor
+
+      batchVertexCount += 6
+      frameVertices += 6
     } else if (op === 2) { // CMD_DRAW_QUAD
       const id = uintBuffer[uintIdx++]
       const c = uintBuffer[uintIdx++]
@@ -1524,24 +1659,40 @@ export function submitCommandBuffer(buffer: SpriteBatchBuffer): void {
       const x3 = floatBuffer[floatIdx++], y3 = floatBuffer[floatIdx++]
       const u3 = floatBuffer[floatIdx++], v3 = floatBuffer[floatIdx++]
 
-      const r = (c >>> 24) & 0xff
-      const g = (c >>> 16) & 0xff
-      const b = (c >>> 8) & 0xff
-      const a = c & 0xff
+      if (id !== cachedId) {
+        cachedId = id
+        cachedAsset = textures.get(id) ?? null
+      }
+      if (!cachedAsset?.texture || !program || !batchVbo) continue
 
-      drawTextureQuad(
-        id, x0, y0, u0, v0, x1, y1, u1, v1, x2, y2, u2, v2, x3, y3, u3, v3, r, g, b, a,
-      )
+      if (!sameBatch(cachedAsset.texture, false) || batchVertexCount + 6 > MAX_BATCH_VERTICES) {
+        flushDrawBatch()
+      }
+
+      batchTexture = cachedAsset.texture
+      batchAdditive = false
+
+      const packedColor = ((c << 24) | ((c & 0xff00) << 8) | ((c >> 8) & 0xff00) | (c >>> 24)) >>> 0
+      const offset = batchVertexCount * VERTEX_STRIDE_FLOATS
+
+      batchFloatView[offset] = x0; batchFloatView[offset + 1] = y0; batchFloatView[offset + 2] = u0; batchFloatView[offset + 3] = v0; batchUint32View[offset + 4] = packedColor
+      batchFloatView[offset + 5] = x1; batchFloatView[offset + 6] = y1; batchFloatView[offset + 7] = u1; batchFloatView[offset + 8] = v1; batchUint32View[offset + 9] = packedColor
+      batchFloatView[offset + 10] = x2; batchFloatView[offset + 11] = y2; batchFloatView[offset + 12] = u2; batchFloatView[offset + 13] = v2; batchUint32View[offset + 14] = packedColor
+      batchFloatView[offset + 15] = x2; batchFloatView[offset + 16] = y2; batchFloatView[offset + 17] = u2; batchFloatView[offset + 18] = v2; batchUint32View[offset + 19] = packedColor
+      batchFloatView[offset + 20] = x1; batchFloatView[offset + 21] = y1; batchFloatView[offset + 22] = u1; batchFloatView[offset + 23] = v1; batchUint32View[offset + 24] = packedColor
+      batchFloatView[offset + 25] = x3; batchFloatView[offset + 26] = y3; batchFloatView[offset + 27] = u3; batchFloatView[offset + 28] = v3; batchUint32View[offset + 29] = packedColor
+
+      batchVertexCount += 6
+      frameVertices += 6
     } else if (op === 3) { // CMD_DRAW_MESH
       const id = uintBuffer[uintIdx++]
       const c = uintBuffer[uintIdx++]
       const vCount = uintBuffer[uintIdx++]
       const iCount = uintBuffer[uintIdx++]
 
-      const positions = floatBuffer.subarray(floatIdx, floatIdx + vCount * 2)
+      const posOffset = floatIdx
       floatIdx += vCount * 2
-
-      const uvs = floatBuffer.subarray(floatIdx, floatIdx + vCount * 2)
+      const uvOffset = floatIdx
       floatIdx += vCount * 2
 
       const tx = floatBuffer[floatIdx++]
@@ -1551,15 +1702,47 @@ export function submitCommandBuffer(buffer: SpriteBatchBuffer): void {
       const cos = floatBuffer[floatIdx++]
       const sin = floatBuffer[floatIdx++]
 
-      const indices = shortBuffer ? shortBuffer.subarray(shortIdx, shortIdx + iCount) : new Uint16Array(0)
+      const indOffset = shortIdx
       shortIdx += iCount
 
-      const r = (c >>> 24) & 0xff
-      const g = (c >>> 16) & 0xff
-      const b = (c >>> 8) & 0xff
-      const a = c & 0xff
+      if (id !== cachedId) {
+        cachedId = id
+        cachedAsset = textures.get(id) ?? null
+      }
+      if (!cachedAsset?.texture || !program || !batchVbo || !shortBuffer || iCount % 3 !== 0) continue
 
-      drawTextureMesh(id, positions, uvs, indices, r, g, b, a, tx, ty, sx, sy, cos, sin)
+      if (!sameBatch(cachedAsset.texture, false) || batchVertexCount + iCount > MAX_BATCH_VERTICES) {
+        flushDrawBatch()
+      }
+
+      batchTexture = cachedAsset.texture
+      batchAdditive = false
+
+      const packedColor = ((c << 24) | ((c & 0xff00) << 8) | ((c >> 8) & 0xff00) | (c >>> 24)) >>> 0
+
+      for (let i = 0; i < iCount; i++) {
+        if (batchVertexCount >= MAX_BATCH_VERTICES) {
+          flushDrawBatch()
+          batchTexture = cachedAsset.texture
+          batchAdditive = false
+        }
+        const vertIndex = shortBuffer[indOffset + i] * 2
+        const px = floatBuffer[posOffset + vertIndex] * sx
+        const py = floatBuffer[posOffset + vertIndex + 1] * sy
+        const vx = tx + px * cos - py * sin
+        const vy = ty + px * sin + py * cos
+        const vu = floatBuffer[uvOffset + vertIndex]
+        const vv = floatBuffer[uvOffset + vertIndex + 1]
+
+        const offset = batchVertexCount * VERTEX_STRIDE_FLOATS
+        batchFloatView[offset] = vx
+        batchFloatView[offset + 1] = vy
+        batchFloatView[offset + 2] = vu
+        batchFloatView[offset + 3] = vv
+        batchUint32View[offset + 4] = packedColor
+        batchVertexCount++
+      }
+      frameVertices += iCount
     } else if (op === 4) { // CMD_DRAW_RECT
       const c = uintBuffer[uintIdx++]
       const x = floatBuffer[floatIdx++]
@@ -1567,12 +1750,27 @@ export function submitCommandBuffer(buffer: SpriteBatchBuffer): void {
       const w = floatBuffer[floatIdx++]
       const h = floatBuffer[floatIdx++]
 
-      const r = (c >>> 24) & 0xff
-      const g = (c >>> 16) & 0xff
-      const b = (c >>> 8) & 0xff
-      const a = c & 0xff
+      if (!whiteTextureAsset || !program || !batchVbo) continue
 
-      drawRect(x, y, w, h, r, g, b, a)
+      if (!sameBatch(whiteTextureAsset.texture, false) || batchVertexCount + 6 > MAX_BATCH_VERTICES) {
+        flushDrawBatch()
+      }
+
+      batchTexture = whiteTextureAsset.texture
+      batchAdditive = false
+
+      const packedColor = ((c << 24) | ((c & 0xff00) << 8) | ((c >> 8) & 0xff00) | (c >>> 24)) >>> 0
+      const offset = batchVertexCount * VERTEX_STRIDE_FLOATS
+
+      batchFloatView[offset] = x; batchFloatView[offset + 1] = y; batchFloatView[offset + 2] = 0; batchFloatView[offset + 3] = 0; batchUint32View[offset + 4] = packedColor
+      batchFloatView[offset + 5] = x + w; batchFloatView[offset + 6] = y; batchFloatView[offset + 7] = 1; batchFloatView[offset + 8] = 0; batchUint32View[offset + 9] = packedColor
+      batchFloatView[offset + 10] = x; batchFloatView[offset + 11] = y + h; batchFloatView[offset + 12] = 0; batchFloatView[offset + 13] = 1; batchUint32View[offset + 14] = packedColor
+      batchFloatView[offset + 15] = x; batchFloatView[offset + 16] = y + h; batchFloatView[offset + 17] = 0; batchFloatView[offset + 18] = 1; batchUint32View[offset + 19] = packedColor
+      batchFloatView[offset + 20] = x + w; batchFloatView[offset + 21] = y; batchFloatView[offset + 22] = 1; batchFloatView[offset + 23] = 0; batchUint32View[offset + 24] = packedColor
+      batchFloatView[offset + 25] = x + w; batchFloatView[offset + 26] = y + h; batchFloatView[offset + 27] = 1; batchFloatView[offset + 28] = 1; batchUint32View[offset + 29] = packedColor
+
+      batchVertexCount += 6
+      frameVertices += 6
     } else if (op === 5) { // CMD_DRAW_LINE
       const c = uintBuffer[uintIdx++]
       const x1 = floatBuffer[floatIdx++]
@@ -1580,12 +1778,48 @@ export function submitCommandBuffer(buffer: SpriteBatchBuffer): void {
       const x2 = floatBuffer[floatIdx++]
       const y2 = floatBuffer[floatIdx++]
 
-      const r = (c >>> 24) & 0xff
-      const g = (c >>> 16) & 0xff
-      const b = (c >>> 8) & 0xff
-      const a = c & 0xff
+      if (!whiteTextureAsset || !program || !batchVbo) continue
 
-      drawLine(x1, y1, x2, y2, r, g, b, a)
+      const length = Math.hypot(x2 - x1, y2 - y1)
+      if (length <= 0) continue
+
+      if (!sameBatch(whiteTextureAsset.texture, false) || batchVertexCount + 6 > MAX_BATCH_VERTICES) {
+        flushDrawBatch()
+      }
+
+      batchTexture = whiteTextureAsset.texture
+      batchAdditive = false
+
+      const angle = Math.atan2(y2 - y1, x2 - x1)
+      const cos = Math.cos(angle)
+      const sin = Math.sin(angle)
+
+      const lx0 = 0, ly0 = -0.5
+      const lx1 = length, ly1 = -0.5
+      const lx2 = 0, ly2 = 0.5
+      const lx3 = length, ly3 = 0.5
+
+      const x0 = x1 + lx0 * cos - ly0 * sin
+      const y0 = y1 + lx0 * sin + ly0 * cos
+      const x1_ = x1 + lx1 * cos - ly1 * sin
+      const y1_ = y1 + lx1 * sin + ly1 * cos
+      const x2_ = x1 + lx2 * cos - ly2 * sin
+      const y2_ = y1 + lx2 * sin + ly2 * cos
+      const x3_ = x1 + lx3 * cos - ly3 * sin
+      const y3_ = y1 + lx3 * sin + ly3 * cos
+
+      const packedColor = ((c << 24) | ((c & 0xff00) << 8) | ((c >> 8) & 0xff00) | (c >>> 24)) >>> 0
+      const offset = batchVertexCount * VERTEX_STRIDE_FLOATS
+
+      batchFloatView[offset] = x0; batchFloatView[offset + 1] = y0; batchFloatView[offset + 2] = 0; batchFloatView[offset + 3] = 0; batchUint32View[offset + 4] = packedColor
+      batchFloatView[offset + 5] = x1_; batchFloatView[offset + 6] = y1_; batchFloatView[offset + 7] = 1; batchFloatView[offset + 8] = 0; batchUint32View[offset + 9] = packedColor
+      batchFloatView[offset + 10] = x2_; batchFloatView[offset + 11] = y2_; batchFloatView[offset + 12] = 0; batchFloatView[offset + 13] = 1; batchUint32View[offset + 14] = packedColor
+      batchFloatView[offset + 15] = x2_; batchFloatView[offset + 16] = y2_; batchFloatView[offset + 17] = 0; batchFloatView[offset + 18] = 1; batchUint32View[offset + 19] = packedColor
+      batchFloatView[offset + 20] = x1_; batchFloatView[offset + 21] = y1_; batchFloatView[offset + 22] = 1; batchFloatView[offset + 23] = 0; batchUint32View[offset + 24] = packedColor
+      batchFloatView[offset + 25] = x3_; batchFloatView[offset + 26] = y3_; batchFloatView[offset + 27] = 1; batchFloatView[offset + 28] = 1; batchUint32View[offset + 29] = packedColor
+
+      batchVertexCount += 6
+      frameVertices += 6
     } else if (op === 6) { // CMD_PUSH_CLIP
       const x = floatBuffer[floatIdx++]
       const y = floatBuffer[floatIdx++]

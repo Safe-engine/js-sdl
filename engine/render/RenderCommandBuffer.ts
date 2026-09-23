@@ -349,16 +349,23 @@ export class RenderCommandBuffer {
     this.autoSubmitIfInactive()
   }
 
+  private _bufferView: SpriteBatchBuffer = {
+    commands: new Int32Array(0),
+    floatBuffer: new Float32Array(0),
+    uintBuffer: new Uint32Array(0),
+    shortBuffer: new Uint16Array(0),
+  }
+
   public getBufferView(): SpriteBatchBuffer {
     this.ensureCapacities(1, 0, 0, 0)
     this.commands[this.cmdOffset] = 0
 
-    return {
-      commands: this.commands.subarray(0, this.cmdOffset),
-      floatBuffer: this.floatBuffer.subarray(0, this.floatOffset),
-      uintBuffer: this.uintBuffer.subarray(0, this.uintOffset),
-      shortBuffer: this.shortBuffer.subarray(0, this.shortOffset),
-    }
+    this._bufferView.commands = this.commands.subarray(0, this.cmdOffset)
+    this._bufferView.floatBuffer = this.floatBuffer.subarray(0, this.floatOffset)
+    this._bufferView.uintBuffer = this.uintBuffer.subarray(0, this.uintOffset)
+    this._bufferView.shortBuffer = this.shortBuffer.subarray(0, this.shortOffset)
+
+    return this._bufferView
   }
 
   public submit(): void {
