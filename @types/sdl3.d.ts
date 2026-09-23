@@ -55,6 +55,12 @@ declare module 'sdl3' {
   /** Rasterize or acquire a cached text texture. */
   export function loadTextTexture(fontId: number, text: string): number
 
+  /** Create a dynamic texture (e.g. for dynamic font atlas). Returns texture id. */
+  export function createDynamicTexture(width: number, height: number, source?: any): number
+
+  /** Update an existing dynamic texture with canvas or pixel source. */
+  export function updateDynamicTexture(id: number, source: any, width?: number, height?: number): void
+
   /** Release one acquired texture/text-texture reference. */
   export function releaseTexture(id: number): void
 

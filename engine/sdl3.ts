@@ -919,6 +919,38 @@ export function loadTextTexture(fontId: number, text: string): number {
   return id
 }
 
+export function createDynamicTexture(width: number, height: number, source?: TexImageSource): number {
+  const id = nextTextureId++
+  const key = `dynamic:${id}`
+  const asset: TextureAsset = {
+    texture: null,
+    width,
+    height,
+    refs: 1,
+    key,
+  }
+  textures.set(id, asset)
+  textureIds.set(key, id)
+  if (source) {
+    try {
+      uploadSource(asset, source, width, height)
+    } catch {
+      // Ignored in headless/uninitialized gl environments
+    }
+  }
+  return id
+}
+
+export function updateDynamicTexture(id: number, source: TexImageSource, width?: number, height?: number): void {
+  const asset = textures.get(id)
+  if (!asset) return
+  try {
+    uploadSource(asset, source, width ?? asset.width, height ?? asset.height)
+  } catch {
+    // Ignored in headless/uninitialized gl environments
+  }
+}
+
 export function releaseTexture(id: number): void {
   const asset = textures.get(id)
   if (!asset || --asset.refs > 0) return

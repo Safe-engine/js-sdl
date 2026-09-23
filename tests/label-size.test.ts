@@ -1,4 +1,4 @@
-import { describe, expect, mock, test } from 'bun:test'
+import { beforeEach, describe, expect, mock, test } from 'bun:test'
 import { Node } from '../engine/core/Node'
 
 const sdlState = globalThis as typeof globalThis & {
@@ -63,6 +63,8 @@ mock.module('sdl3', () => ({
   },
   releaseFont: () => {},
   releaseTexture: () => {},
+  createDynamicTexture: () => nextAssetId(),
+  updateDynamicTexture: () => {},
   submitCommandBuffer: (buf: any) => {
     if (!buf) return
     const { commands, floatBuffer, uintBuffer } = buf
@@ -96,6 +98,10 @@ const { Label } = await import('../engine/components/Label')
 const { Sprite } = await import('../engine/components/Sprite')
 
 describe('Label sizing', () => {
+  beforeEach(() => {
+    drawCalls.length = 0
+  })
+
   test('renders a shared-node label component at its own size without stealing parent auto size', () => {
     const parent = new Node('gem')
     parent.x = 904

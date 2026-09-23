@@ -73,11 +73,17 @@ export type {
   ViewportMetrics
 } from './Viewport'
 // Components
+export { BitmapText } from './components/BitmapText'
+export type { BitmapTextAlign, BitmapTextProps } from './components/BitmapText'
 export { Button } from './components/Button'
 export { Camera2D } from './components/Camera2D'
 export type { Camera2DProps } from './components/Camera2D'
 export { CircleProgress } from './components/CircleProgress'
 export type { CircleProgressProps } from './components/CircleProgress'
+export { BitmapFont } from './font/BitmapFont'
+export type { BitmapFontAtlasOptions, BitmapFontChar, BitmapFontData } from './font/BitmapFont'
+export { DynamicFontAtlas, dynamicFontAtlas } from './font/DynamicFontAtlas'
+export type { DynamicFontRenderOptions, DynamicGlyph } from './font/DynamicFontAtlas'
 export { GLSLShader } from './components/GLSLShader'
 export type { GLSLShaderProps, GLSLUniformValue } from './components/GLSLShader'
 export { Label } from './components/Label'

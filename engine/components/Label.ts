@@ -7,12 +7,16 @@ import {
 import { ComponentX } from '../core/ComponentX'
 import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH, Node } from '../core/Node'
 import { Localization } from '../Localization'
+import { BitmapFont } from '../font/BitmapFont'
+import { dynamicFontAtlas } from '../font/DynamicFontAtlas'
 
 export type TextAlignment = 'left' | 'center' | 'right'
 export type VerticalTextAlignment = 'top' | 'middle' | 'bottom'
 
 interface LabelProps {
   font?: string
+  bitmapFont?: string | BitmapFont
+  useDynamicAtlas?: boolean
   string?: string
   size?: number
   align?: TextAlignment
@@ -30,6 +34,8 @@ export class Label extends ComponentX<LabelProps> {
   fontPath = ''
   declare fontSize
   fontId = -1
+  bitmapFont: BitmapFont | null = null
+  useDynamicAtlas = false
   // outlineColor: Color = { r: 0, g: 0, b: 0, a: 255 }
   // outlineWidth = 0
   lineHeight = 1.2
@@ -50,10 +56,27 @@ export class Label extends ComponentX<LabelProps> {
     if (this.props.string !== undefined) {
       this.string = this.props.string
     }
+    if (this.props.useDynamicAtlas !== undefined) {
+      this.useDynamicAtlas = this.props.useDynamicAtlas
+    }
+    if (this.props.bitmapFont !== undefined) {
+      this.setBitmapFont(this.props.bitmapFont)
+    }
     this.fontSize = this.props.size ?? Label.defaultSize
     this.setFont(this.props.font || Label.defaultFont, this.fontSize)
     this.align = this.props.align ?? 'center'
     this.verticalAlign = this.props.verticalAlign ?? 'middle'
+  }
+
+  setBitmapFont(font: string | BitmapFont | null): this {
+    if (!font) {
+      this.bitmapFont = null
+    } else if (font instanceof BitmapFont) {
+      this.bitmapFont = font
+    } else {
+      this.bitmapFont = BitmapFont.get(font)
+    }
+    return this
   }
 
   onStart(): void {
@@ -95,6 +118,25 @@ export class Label extends ComponentX<LabelProps> {
   }
 
   onRender(): void {
+    const bmFont = this.bitmapFont || (this.fontPath ? BitmapFont.get(this.fontPath) : null)
+    if (bmFont) {
+      this.renderBitmapFont(bmFont)
+      return
+    }
+
+    if (this.useDynamicAtlas) {
+      dynamicFontAtlas.renderText(this.node, this.text, {
+        family: this.fontPath || 'sans-serif',
+        size: this.fontSize,
+        lineHeight: this.lineHeight,
+        align: this.align,
+        verticalAlign: this.verticalAlign,
+        shadow: this.props.shadow,
+        outline: this.props.outline,
+      })
+      return
+    }
+
     this.ensureAssets()
     if (this.lineTextures.length === 0) return
     const t = this.node
@@ -285,6 +327,103 @@ export class Label extends ComponentX<LabelProps> {
     this.loadedSignature = ''
     this.naturalWidth = 0
     this.naturalHeight = 0
+  }
+
+  private renderBitmapFont(bmFont: BitmapFont): void {
+    const t = this.node
+    if (!t) return
+
+    const fontScale = this.fontSize > 0 && bmFont.data.size > 0 ? this.fontSize / bmFont.data.size : 1
+    const baseLineHeight = this.lineHeight > 0 ? this.fontSize * this.lineHeight : bmFont.data.lineHeight * fontScale
+
+    const lines = this.text.split(/\r?\n/)
+    const measuredLines: { line: string, width: number }[] = []
+    let maxLineWidth = 0
+
+    for (const line of lines) {
+      let lineWidth = 0
+      let prevCode = -1
+      for (const char of line) {
+        const code = char.codePointAt(0) ?? char.charCodeAt(0)
+        const charData = bmFont.getChar(code)
+        if (!charData) continue
+        const kerning = prevCode !== -1 ? bmFont.getKerning(prevCode, code) : 0
+        lineWidth += (charData.xadvance + kerning) * fontScale
+        prevCode = code
+      }
+      measuredLines.push({ line, width: lineWidth })
+      if (lineWidth > maxLineWidth) maxLineWidth = lineWidth
+    }
+
+    const layoutWidth = this.node.width > 0 ? this.node.width : maxLineWidth
+    const totalTextHeight = measuredLines.length * baseLineHeight
+    const layoutHeight = this.node.height > 0 ? this.node.height : totalTextHeight
+
+    let top = 0
+    if (this.verticalAlign === 'middle') top = (layoutHeight - totalTextHeight) * 0.5
+    if (this.verticalAlign === 'bottom') top = layoutHeight - totalTextHeight
+
+    const radians = (t.renderRotation * Math.PI) / 180
+    const cos = Math.cos(radians)
+    const sin = Math.sin(radians)
+    const scaleX = t.renderScaleX
+    const scaleY = t.renderScaleY
+    const opacity = t.opacity * (t.color.a ?? 255)
+
+    let currentY = top - t.anchorY * layoutHeight
+
+    for (const { line, width: lineWidth } of measuredLines) {
+      let currentX = -t.anchorX * layoutWidth
+      if (this.align === 'center') {
+        currentX += (layoutWidth - lineWidth) * 0.5
+      } else if (this.align === 'right') {
+        currentX += layoutWidth - lineWidth
+      }
+
+      let prevCode = -1
+      for (const char of line) {
+        const code = char.codePointAt(0) ?? char.charCodeAt(0)
+        const charData = bmFont.getChar(code)
+        if (!charData) continue
+
+        const kerning = prevCode !== -1 ? bmFont.getKerning(prevCode, code) : 0
+        currentX += kerning * fontScale
+
+        const lx = (currentX + charData.xoffset * fontScale) * scaleX
+        const ly = (currentY + charData.yoffset * fontScale) * scaleY
+        const renderX = t.renderX + lx * cos - ly * sin
+        const renderY = t.renderY + lx * sin + ly * cos
+        const renderW = charData.width * fontScale * scaleX
+        const renderH = charData.height * fontScale * scaleY
+
+        globalCommandBuffer.pushRegion(
+          bmFont.texture.id,
+          charData.x,
+          charData.y,
+          charData.width,
+          charData.height,
+          renderX,
+          renderY,
+          renderW,
+          renderH,
+          t.renderRotation,
+          0,
+          0,
+          t.flipX,
+          t.flipY,
+          t.color.r,
+          t.color.g,
+          t.color.b,
+          opacity,
+          false,
+        )
+
+        currentX += charData.xadvance * fontScale
+        prevCode = code
+      }
+
+      currentY += baseLineHeight
+    }
   }
 
   private releaseAssets(): void {
