@@ -34,7 +34,8 @@ interface UIContainerProps {
 
 export class UIContainer<Props = UIContainerProps> extends ComponentX<Props> {
   private _align: LayoutAlignment = 'start'
-  private _lastChildRevision = -1
+  /** Every input layoutChildren reads, captured after the last layout pass. */
+  private _lastLayoutKey: unknown[] = []
 
   private get _p(): Required<UIContainerProps> {
     return { direction: 'none', paddingTop: 0, paddingLeft: 0, paddingRight: 0, paddingBottom: 0, ...this.props as any }
@@ -47,12 +48,37 @@ export class UIContainer<Props = UIContainerProps> extends ComponentX<Props> {
     const dir = this._p.direction
     if (dir !== 'none' && this.needsChildLayout()) {
       this.layoutChildren()
-      this._lastChildRevision = this.node?.childRevision ?? -1
+      // Captured after layout so sizes it assigns (flex, stretch) are not changes.
+      this._lastLayoutKey = this.layoutKey()
     }
   }
 
   private needsChildLayout(): boolean {
-    return this.node?.childRevision !== this._lastChildRevision
+    const key = this.layoutKey()
+    const last = this._lastLayoutKey
+    if (key.length !== last.length) return true
+    for (let i = 0; i < key.length; i++) {
+      if (key[i] !== last[i]) return true
+    }
+    return false
+  }
+
+  private layoutKey(): unknown[] {
+    const n = this.node
+    if (!n) return []
+    const p = this._p
+    const key: unknown[] = [
+      n.childRevision, n.width, n.height, n.anchorX, n.anchorY, this._align,
+      p.direction, p.paddingTop, p.paddingRight, p.paddingBottom, p.paddingLeft,
+    ]
+    for (const child of n.children) {
+      const lc = getLayoutChild(child)
+      key.push(
+        child.width, child.height, child.anchorX, child.anchorY,
+        lc?.flex ?? 0, marginTop(lc), marginRight(lc), marginBottom(lc), marginLeft(lc),
+      )
+    }
+    return key
   }
 
   layoutChildren(): void {

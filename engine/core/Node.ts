@@ -30,7 +30,7 @@ export class Node {
   private _parent: Node | null = null
   children: Node[] = []
   components: ComponentX[] = []
-  active = true
+  private _active = true
   private _width = DEFAULT_NODE_WIDTH
   private _height = DEFAULT_NODE_HEIGHT
   flipX = false
@@ -89,6 +89,26 @@ export class Node {
     let curr: Node = this
     while (curr._parent) curr = curr._parent
     return curr
+  }
+
+  get active(): boolean {
+    return this._active
+  }
+
+  /** Toggling calls onEnable/onDisable on started components in the subtree. */
+  set active(value: boolean) {
+    if (this._active === value) return
+    this._active = value
+    this._refreshEnabledTree()
+  }
+
+  /** Whether this node and all of its ancestors are active. */
+  get activeInHierarchy(): boolean {
+    if (!this._active) return false
+    for (let node = this._parent; node; node = node._parent) {
+      if (!node._active) return false
+    }
+    return true
   }
 
   /** False once `destroy()` has been called on this node or an ancestor. */
@@ -345,7 +365,10 @@ export class Node {
       this.components.push(component)
     }
     component.onAwake()
-    if (isNew && this._started) component.onStart()
+    if (isNew && this._started) {
+      this._syncComponentEnabled(component)
+      component.onStart()
+    }
     return component
   }
 
@@ -374,7 +397,8 @@ export class Node {
       children.push(child)
     }
     this._childRevision += 1
-    if (this._started) child._startTree()
+    if (child._started) child._refreshEnabledTree()
+    else if (this._started) child._startTree()
     return child
   }
 
@@ -493,7 +517,8 @@ export class Node {
     if (!this._actionsAndSchedulePaused) {
       this._updateScheduledCallbacks(dt)
       for (let i = 0; i < this.components.length; i++) {
-        this.components[i].onUpdate(dt)
+        const component = this.components[i]
+        if (component.enabled) component.onUpdate(dt)
       }
     }
     const children = this.children
@@ -516,7 +541,8 @@ export class Node {
     const renderComponents = !camera || (camera.mask & this.cameraMask) !== 0
     if (renderComponents) {
       for (let i = 0; i < this.components.length; i++) {
-        this.components[i].onRender()
+        const component = this.components[i]
+        if (component.enabled) component.onRender()
       }
     }
     const renderChildren = this.getRenderChildren()
@@ -532,7 +558,8 @@ export class Node {
     }
     if (renderComponents) {
       for (let i = this.components.length - 1; i >= 0; i--) {
-        this.components[i].onRenderEnd()
+        const component = this.components[i]
+        if (component.enabled) component.onRenderEnd()
       }
     }
   }
@@ -541,7 +568,11 @@ export class Node {
   _startTree(): void {
     if (this._started || this._destroyed) return
     this._started = true
-    for (const c of [...this.components]) c.onStart()
+    const activeInHierarchy = this.activeInHierarchy
+    for (const c of [...this.components]) {
+      this._syncComponentEnabled(c, activeInHierarchy)
+      c.onStart()
+    }
     const children = this.children
     this._iteratingChildren++
     this._childrenShared = true
@@ -559,12 +590,33 @@ export class Node {
     this._destroyed = true
     this.unscheduleAllCallbacks()
     this._eventListeners.clear()
-    for (const c of [...this.components]) c.onDestroy()
+    for (const c of [...this.components]) {
+      this._syncComponentEnabled(c, false)
+      c.onDestroy()
+    }
     for (const child of [...this.children]) child.destroy()
     this.removeFromParent()
     this.components = []
     this.children = []
     this._childRevision += 1
+  }
+
+  /**
+   * Engine-internal: call onEnable/onDisable if the component's effective state
+   * (started, alive, active in hierarchy, enabled) differs from what it last saw.
+   */
+  _syncComponentEnabled(component: ComponentX, activeInHierarchy = this.activeInHierarchy): void {
+    const shouldBeEnabled = this._started && !this._destroyed && activeInHierarchy && component.enabled
+    if (component._enableCalled === shouldBeEnabled) return
+    component._enableCalled = shouldBeEnabled
+    if (shouldBeEnabled) component.onEnable()
+    else component.onDisable()
+  }
+
+  private _refreshEnabledTree(parentActive = this._parent ? this._parent.activeInHierarchy : true): void {
+    const active = parentActive && this._active
+    for (const component of [...this.components]) this._syncComponentEnabled(component, active)
+    for (const child of [...this.children]) child._refreshEnabledTree(active)
   }
 
   /** Children array safe to mutate; copied once if a traversal is iterating it. */
@@ -665,6 +717,7 @@ export class Node {
     }
   }
 
+  /** Components on direct children only; see getComponentsInDescendants for all depths. */
   getComponentsInChildren<T extends ComponentX>(component: Constructor<T>): T[] {
     if (!this.children.length) {
       return []
@@ -673,6 +726,20 @@ export class Node {
       return child.getComponent(component)
     })
     return listHave.map(node => node.getComponent(component))
+  }
+
+  /** Components on every descendant (not this node), depth-first in child order. */
+  getComponentsInDescendants<T extends ComponentX>(component: Constructor<T>): T[] {
+    const found: T[] = []
+    const visit = (node: Node) => {
+      for (const child of node.children) {
+        const match = child.getComponent(component)
+        if (match) found.push(match)
+        visit(child)
+      }
+    }
+    visit(this)
+    return found
   }
 
   getComponentInChildren<T extends ComponentX>(component: Constructor<T>): T {

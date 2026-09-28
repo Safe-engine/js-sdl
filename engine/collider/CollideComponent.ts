@@ -32,7 +32,6 @@ export const CollisionType = {
 
 export class Collider<Props extends ColliderProps = ColliderProps> extends ComponentX<Props> {
   tag = 0
-  enabled = true
   readonly worldPoints: Vec2[] = []
   worldPosition = Vec2()
   worldRadius = 0

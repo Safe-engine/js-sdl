@@ -16,12 +16,29 @@ export class ComponentX<Props = unknown> {
   declare node: Node
   inputEnabled = false
   inputPriority = 0
+  private _enabled = true
+  /** Engine-internal: whether onEnable has run without a matching onDisable. */
+  _enableCalled = false
   __view?()
   private readonly scheduledCallbacks
     = new WeakMap<(arg: any) => void, (arg: any) => void>()
 
   constructor(data?: BaseComponentProps<ComponentX> & Props) {
     this.init(data)
+  }
+
+  /**
+   * Disabled components are skipped by update, render and input. Changing it
+   * calls onEnable/onDisable once the node is started and active in hierarchy.
+   */
+  get enabled(): boolean {
+    return this._enabled
+  }
+
+  set enabled(value: boolean) {
+    if (this._enabled === value) return
+    this._enabled = value
+    this.node?._syncComponentEnabled(this)
   }
 
   init(data?: Props) {
@@ -69,8 +86,13 @@ export class ComponentX<Props = unknown> {
     this.node.scheduleOnce(this.resolveScheduledCallback(callback), delay)
   }
 
+  /** Components on direct children only; see getComponentsInDescendants. */
   getComponentsInChildren<T extends ComponentX>(component: Constructor<T>): T[] {
     return this.node.getComponentsInChildren(component)
+  }
+
+  getComponentsInDescendants<T extends ComponentX>(component: Constructor<T>): T[] {
+    return this.node.getComponentsInDescendants(component)
   }
 
   getComponentInChildren<T extends ComponentX>(component: Constructor<T>): T {
@@ -82,6 +104,10 @@ export class ComponentX<Props = unknown> {
   }
 
   onAwake(): void { }
+  /** Called when the component becomes enabled and active in hierarchy (before its first onStart). */
+  onEnable(): void { }
+  /** Called when the component stops being enabled and active in hierarchy, including before onDestroy. */
+  onDisable(): void { }
   onStart(): void { }
   onUpdate(_dt: number): void { }
   onRender(): void { }

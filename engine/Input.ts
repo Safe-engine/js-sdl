@@ -152,7 +152,7 @@ export class InputSystem {
     y: number,
   ): boolean {
     const captured = this.captured.filter(({ component }) =>
-      component.inputEnabled && this.isInteractive(component.node)
+      component.inputEnabled && component.enabled && this.isInteractive(component.node)
     )
     if (captured.length === 0) return false
 
@@ -185,6 +185,7 @@ export class InputSystem {
         // Mirrors Node._renderTree: a masked-out node hides only its own components.
         if ((view.mask & node.cameraMask) !== 0) {
           for (const component of node.components) {
+            if (!component.enabled) continue
             if (component.inputEnabled && component.hitTest(point.x, point.y)) {
               // A later camera draws on top, so its hit replaces an earlier one.
               byComponent.set(component, { component, view, renderOrder })

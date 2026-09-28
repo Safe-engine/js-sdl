@@ -134,9 +134,7 @@ export class Kine2D extends ComponentX<Kine2DProps> {
     const canvasSize = skeleton.canvasSize ?? { width: 800, height: 600 }
     const node = this.node
     const opacity = node.worldOpacity * (node.color.a ?? 255)
-    const radians = node.renderRotation * Math.PI / 180
-    const cosine = Math.cos(radians)
-    const sine = Math.sin(radians)
+    const m = node.renderMatrix
 
     for (const slot of this.sampleSlots()) {
       const attachment = this.resolveAttachment(slot)
@@ -163,21 +161,37 @@ export class Kine2D extends ComponentX<Kine2DProps> {
       const boneY = bone.y * canvasSize.height / 180
       const boneWorldX = boneX + centerX * Math.cos(boneRadians) - centerY * Math.sin(boneRadians)
       const boneWorldY = boneY + centerX * Math.sin(boneRadians) + centerY * Math.cos(boneRadians)
-      const localX = boneWorldX * node.renderScaleX
-      const localY = boneWorldY * node.renderScaleY
-      const width = size.width * scaleX * node.renderScaleX
-      const height = size.height * scaleY * node.renderScaleY
-      globalCommandBuffer.pushRegion(
+      // Attachment matrix in node space (centred, rotated), composed with the
+      // node's render matrix so non-uniform node scale is applied after rotation.
+      const attachmentRadians = rotation * Math.PI / 180
+      const cos = Math.cos(attachmentRadians)
+      const sin = Math.sin(attachmentRadians)
+      const matrix = {
+        a: m.a * cos + m.c * sin,
+        b: m.b * cos + m.d * sin,
+        c: m.c * cos - m.a * sin,
+        d: m.d * cos - m.b * sin,
+        tx: m.a * boneWorldX + m.c * boneWorldY + m.tx,
+        ty: m.b * boneWorldX + m.d * boneWorldY + m.ty,
+      }
+      const matrixScaleX = Math.hypot(matrix.a, matrix.b)
+      const matrixScaleY = Math.hypot(matrix.c, matrix.d) * (matrix.a * matrix.d - matrix.b * matrix.c < 0 ? -1 : 1)
+      const width = size.width * scaleX * matrixScaleX
+      const height = size.height * scaleY * matrixScaleY
+      globalCommandBuffer.pushRegionTransformed(
+        matrix,
         texture.id,
+        texture.width,
+        texture.height,
         region.x,
         region.y,
         region.width,
         region.height,
-        node.renderX + localX * cosine - localY * sine - width / 2,
-        node.renderY + localX * sine + localY * cosine - height / 2,
+        matrix.tx - width / 2,
+        matrix.ty - height / 2,
         width,
         height,
-        node.renderRotation + rotation,
+        Math.atan2(matrix.b, matrix.a) * 180 / Math.PI,
         width / 2,
         height / 2,
         node.flipX,

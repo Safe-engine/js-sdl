@@ -35,7 +35,6 @@ export class Camera2D extends ComponentX<Camera2DProps> {
     return active.sort((a, b) => a.priority - b.priority)
   }
 
-  enabled = true
   mask = 0xffffffff
   priority = 0
   zoom = 1
