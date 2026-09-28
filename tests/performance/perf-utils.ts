@@ -7,16 +7,19 @@
  * PERF_BUDGET_SCALE to loosen or tighten every budget at once, and PERF_LOG=1
  * to print the measured medians.
  */
-const budgetScale = Number(process.env.PERF_BUDGET_SCALE ?? 1) || 1
+// `process` is absent when this runs under QuickJS on a device (device-bench.ts).
+const env: Record<string, string | undefined> = typeof process === 'undefined' ? {} : process.env
+const budgetScale = Number(env.PERF_BUDGET_SCALE ?? 1) || 1
+const now = typeof performance === 'undefined' ? () => Date.now() : () => performance.now()
 
 /** Median wall time in milliseconds of `run`, after `warmup` untimed calls. */
 export function measure(run: () => void, { warmup = 3, samples = 7 } = {}): number {
   for (let i = 0; i < warmup; i++) run()
   const times: number[] = []
   for (let i = 0; i < samples; i++) {
-    const start = performance.now()
+    const start = now()
     run()
-    times.push(performance.now() - start)
+    times.push(now() - start)
   }
   times.sort((a, b) => a - b)
   return times[times.length >> 1]
@@ -28,7 +31,7 @@ export function budget(ms: number): number {
 }
 
 export function report(label: string, ms: number): void {
-  if (process.env.PERF_LOG) console.log(`[perf] ${label}: ${ms.toFixed(3)} ms`)
+  if (env.PERF_LOG) console.log(`[perf] ${label}: ${ms.toFixed(3)} ms`)
 }
 
 /** Deterministic PRNG so workloads are identical between runs. */
