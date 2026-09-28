@@ -1,4 +1,5 @@
 import { submitCommandBuffer, type SpriteBatchBuffer } from 'sdl3'
+import type { Matrix2D } from '../math/Matrix2D'
 
 export const CMD_DRAW_SPRITE = 1
 export const CMD_DRAW_QUAD = 2
@@ -10,6 +11,17 @@ export const CMD_POP_CLIP = 7
 export const CMD_DRAW_REGION = 8
 
 const ADDITIVE_TEXTURE_FLAG = 0x80000000
+/** Relative tolerance below which a matrix's axes count as perpendicular. */
+const SKEW_EPSILON = 1e-6
+
+/**
+ * Whether an affine matrix shears (its axes are not perpendicular), which the
+ * decomposed x/y/w/h/angle draw commands cannot represent.
+ */
+export function matrixHasSkew(matrix: Matrix2D): boolean {
+  const { a, b, c, d } = matrix
+  return Math.abs(a * c + b * d) > SKEW_EPSILON * Math.abs(a * d - b * c)
+}
 
 export class RenderCommandBuffer {
   public commands: Int32Array
@@ -90,6 +102,126 @@ export class RenderCommandBuffer {
     this.autoSubmitIfInactive()
   }
 
+  /**
+   * `pushRegion` for a node drawn with `matrix` (its render matrix), with the
+   * destination in the usual decomposed form (rotation and scale taken from the
+   * matrix, any pivot). Without skew this is exactly `pushRegion`; with skew
+   * (non-uniform parent scale plus rotation) the rectangle is mapped back into
+   * the node's local space and emitted as a quad through the full matrix.
+   */
+  public pushRegionTransformed(
+    matrix: Matrix2D,
+    textureId: number,
+    textureWidth: number,
+    textureHeight: number,
+    sx: number,
+    sy: number,
+    sw: number,
+    sh: number,
+    dx: number,
+    dy: number,
+    dw: number,
+    dh: number,
+    angle: number,
+    cx: number,
+    cy: number,
+    flipX: boolean,
+    flipY: boolean,
+    r = 255,
+    g = 255,
+    b = 255,
+    a = 255,
+    additive = false,
+  ): void {
+    if (!matrixHasSkew(matrix)) {
+      this.pushRegion(textureId, sx, sy, sw, sh, dx, dy, dw, dh, angle, cx, cy, flipX, flipY, r, g, b, a, additive)
+      return
+    }
+    const { a: ma, b: mb, c: mc, d: md } = matrix
+    const scaleX = Math.hypot(ma, mb)
+    const det = ma * md - mb * mc
+    const scaleY = Math.hypot(mc, md) * (det < 0 ? -1 : 1)
+    if (scaleX === 0 || scaleY === 0 || textureWidth <= 0 || textureHeight <= 0) return
+
+    // Undo the decomposition (translate, rotate, scale) to find the pivot in
+    // the node's local space.
+    const nodeAngle = Math.atan2(mb, ma)
+    const nodeCos = Math.cos(nodeAngle)
+    const nodeSin = Math.sin(nodeAngle)
+    const px = dx + cx - matrix.tx
+    const py = dy + cy - matrix.ty
+    const pivotX = (px * nodeCos + py * nodeSin) / scaleX
+    const pivotY = (py * nodeCos - px * nodeSin) / scaleY
+    // Rotation beyond the node's own (e.g. -90 for rotated atlas frames).
+    const extra = angle * Math.PI / 180 - nodeAngle
+    const cos = Math.cos(extra)
+    const sin = Math.sin(extra)
+    const corner = (u: number, v: number, out: number[], offset: number) => {
+      // Offset from the pivot in the decomposed (rotated, scaled) space.
+      const ox = u - cx
+      const oy = v - cy
+      const localX = pivotX + (ox * cos - oy * sin) / scaleX
+      const localY = pivotY + (ox * sin + oy * cos) / scaleY
+      out[offset] = ma * localX + mc * localY + matrix.tx
+      out[offset + 1] = mb * localX + md * localY + matrix.ty
+    }
+    const p = this._quadCorners
+    corner(0, 0, p, 0)
+    corner(dw, 0, p, 2)
+    corner(0, dh, p, 4)
+    corner(dw, dh, p, 6)
+
+    let u0 = sx / textureWidth
+    let u1 = (sx + sw) / textureWidth
+    let v0 = sy / textureHeight
+    let v1 = (sy + sh) / textureHeight
+    if (flipX) [u0, u1] = [u1, u0]
+    if (flipY) [v0, v1] = [v1, v0]
+    this.pushQuad(
+      textureId,
+      p[0], p[1], u0, v0,
+      p[2], p[3], u1, v0,
+      p[4], p[5], u0, v1,
+      p[6], p[7], u1, v1,
+      r, g, b, a,
+      additive,
+    )
+  }
+
+  private readonly _quadCorners = [0, 0, 0, 0, 0, 0, 0, 0]
+
+  /** `pushSprite` counterpart of `pushRegionTransformed` (whole texture). */
+  public pushSpriteTransformed(
+    matrix: Matrix2D,
+    textureId: number,
+    textureWidth: number,
+    textureHeight: number,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    angle = 0,
+    centerX = 0,
+    centerY = 0,
+    flipX = false,
+    flipY = false,
+    r = 255,
+    g = 255,
+    b = 255,
+    a = 255,
+    additive = false,
+  ): void {
+    if (!matrixHasSkew(matrix)) {
+      this.pushSprite(textureId, x, y, width, height, angle, centerX, centerY, flipX, flipY, r, g, b, a, additive)
+      return
+    }
+    this.pushRegionTransformed(
+      matrix, textureId, textureWidth, textureHeight,
+      0, 0, textureWidth, textureHeight,
+      x, y, width, height, angle, centerX, centerY, flipX, flipY, r, g, b, a, additive,
+    )
+  }
+
   public pushSprite(
     textureId: number,
     x: number,
@@ -150,13 +282,14 @@ export class RenderCommandBuffer {
     g = 255,
     b = 255,
     a = 255,
+    additive = false,
   ): void {
     this.ensureCapacities(1, 16, 2, 0)
     const c = this.packColor(r, g, b, a)
 
     this.commands[this.cmdOffset++] = CMD_DRAW_QUAD
 
-    this.uintBuffer[this.uintOffset++] = textureId >>> 0
+    this.uintBuffer[this.uintOffset++] = (textureId | (additive ? ADDITIVE_TEXTURE_FLAG : 0)) >>> 0
     this.uintBuffer[this.uintOffset++] = c
 
     this.floatBuffer[this.floatOffset++] = x0
@@ -194,6 +327,7 @@ export class RenderCommandBuffer {
     sy = 1,
     cos = 1,
     sin = 0,
+    additive = false,
   ): void {
     const vCount = (positions.length / 2) | 0
     const iCount = indices.length
@@ -204,7 +338,7 @@ export class RenderCommandBuffer {
 
     this.commands[this.cmdOffset++] = CMD_DRAW_MESH
 
-    this.uintBuffer[this.uintOffset++] = textureId >>> 0
+    this.uintBuffer[this.uintOffset++] = (textureId | (additive ? ADDITIVE_TEXTURE_FLAG : 0)) >>> 0
     this.uintBuffer[this.uintOffset++] = c
     this.uintBuffer[this.uintOffset++] = vCount >>> 0
     this.uintBuffer[this.uintOffset++] = iCount >>> 0

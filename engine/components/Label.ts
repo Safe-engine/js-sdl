@@ -205,8 +205,11 @@ export class Label extends ComponentX<LabelProps> {
       + scaledX * Math.cos(radians) - scaledY * Math.sin(radians)
     const y = originY
       + scaledX * Math.sin(radians) + scaledY * Math.cos(radians)
-    globalCommandBuffer.pushSprite(
+    globalCommandBuffer.pushSpriteTransformed(
+      transform.renderMatrix,
       texture.id,
+      texture.width,
+      texture.height,
       x,
       y,
       texture.width * transform.renderScaleX,
@@ -396,8 +399,11 @@ export class Label extends ComponentX<LabelProps> {
         const renderW = charData.width * fontScale * scaleX
         const renderH = charData.height * fontScale * scaleY
 
-        globalCommandBuffer.pushRegion(
+        globalCommandBuffer.pushRegionTransformed(
+          t.renderMatrix,
           bmFont.texture.id,
+          bmFont.texture.width,
+          bmFont.texture.height,
           charData.x,
           charData.y,
           charData.width,

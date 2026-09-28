@@ -147,9 +147,11 @@ export class Sprite<Props extends SpriteProps = SpriteProps> extends ComponentX<
       this.drawFrame(frame, w, h)
       return
     }
-
-    globalCommandBuffer.pushSprite(
+    globalCommandBuffer.pushSpriteTransformed(
+      t.renderMatrix,
       this.textureId,
+      this.texture?.width ?? 0,
+      this.texture?.height ?? 0,
       dx, dy,
       w, h,
       t.renderRotation,
@@ -244,8 +246,11 @@ export class Sprite<Props extends SpriteProps = SpriteProps> extends ComponentX<
     const t = this.node
     const opacity = this.node.worldOpacity * (this.node.color.a ?? 255)
     if (!frame.rotated) {
-      globalCommandBuffer.pushRegion(
+      globalCommandBuffer.pushRegionTransformed(
+        t.renderMatrix,
         this.textureId,
+        this.texture?.width ?? 0,
+        this.texture?.height ?? 0,
         frame.x, frame.y, frame.width, frame.height,
         t.renderX - t.anchorX * width,
         t.renderY - t.anchorY * height,
@@ -265,8 +270,11 @@ export class Sprite<Props extends SpriteProps = SpriteProps> extends ComponentX<
     const drawHeight = width
     const centerX = height * (1 - t.anchorY)
     const centerY = width * t.anchorX
-    globalCommandBuffer.pushRegion(
+    globalCommandBuffer.pushRegionTransformed(
+      t.renderMatrix,
       this.textureId,
+      this.texture?.width ?? 0,
+      this.texture?.height ?? 0,
       frame.x, frame.y, frame.height, frame.width,
       t.renderX - centerX,
       t.renderY - centerY,
@@ -318,8 +326,11 @@ export class Sprite<Props extends SpriteProps = SpriteProps> extends ComponentX<
       }
     }
 
-    globalCommandBuffer.pushRegion(
+    globalCommandBuffer.pushRegionTransformed(
+      t.renderMatrix,
       this.textureId,
+      this.texture?.width ?? 0,
+      this.texture?.height ?? 0,
       sourceX, sourceY, sourceWidth, sourceHeight,
       x, y, width, height,
       t.renderRotation,
@@ -353,8 +364,11 @@ export class Sprite<Props extends SpriteProps = SpriteProps> extends ComponentX<
       for (let x = 0; x < w; x += tileWidth) {
         const drawWidth = Math.min(tileWidth, w - x)
         const sourceWidth = source.width * (drawWidth / tileWidth)
-        globalCommandBuffer.pushRegion(
+        globalCommandBuffer.pushRegionTransformed(
+          t.renderMatrix,
           this.textureId,
+          this.texture?.width ?? 0,
+          this.texture?.height ?? 0,
           source.x, source.y, sourceWidth, sourceHeight,
           dx + x, dy + y, drawWidth, drawHeight,
           t.renderRotation,
@@ -406,8 +420,11 @@ export class Sprite<Props extends SpriteProps = SpriteProps> extends ComponentX<
         const sourceWidth = sourceColumns[column]
         const destWidth = destColumns[column]
         if (sourceWidth > 0 && sourceHeight > 0 && destWidth > 0 && destHeight > 0) {
-          globalCommandBuffer.pushRegion(
+          globalCommandBuffer.pushRegionTransformed(
+            t.renderMatrix,
             this.textureId,
+            this.texture?.width ?? 0,
+            this.texture?.height ?? 0,
             sourceX, sourceY, sourceWidth, sourceHeight,
             destX, destY, destWidth, destHeight,
             t.renderRotation,

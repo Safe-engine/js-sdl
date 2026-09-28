@@ -1855,7 +1855,9 @@ export function submitCommandBuffer(buffer: SpriteBatchBuffer): void {
       batchVertexCount += 6
       frameVertices += 6
     } else if (op === 2) { // CMD_DRAW_QUAD
-      const id = uintBuffer[uintIdx++]
+      const texture = uintBuffer[uintIdx++]
+      const additive = (texture & 0x80000000) !== 0
+      const id = texture & 0x7fffffff
       const c = uintBuffer[uintIdx++]
       const x0 = floatBuffer[floatIdx++], y0 = floatBuffer[floatIdx++]
       const u0 = floatBuffer[floatIdx++], v0 = floatBuffer[floatIdx++]
@@ -1872,12 +1874,12 @@ export function submitCommandBuffer(buffer: SpriteBatchBuffer): void {
       }
       if (!cachedAsset?.texture || !program || !batchVbo) continue
 
-      if (!sameBatch(cachedAsset.texture, false) || batchVertexCount + 6 > MAX_BATCH_VERTICES) {
+      if (!sameBatch(cachedAsset.texture, additive) || batchVertexCount + 6 > MAX_BATCH_VERTICES) {
         flushDrawBatch()
       }
 
       batchTexture = cachedAsset.texture
-      batchAdditive = false
+      batchAdditive = additive
 
       const packedColor = ((c << 24) | ((c & 0xff00) << 8) | ((c >> 8) & 0xff00) | (c >>> 24)) >>> 0
       const offset = batchVertexCount * VERTEX_STRIDE_FLOATS
@@ -1892,7 +1894,9 @@ export function submitCommandBuffer(buffer: SpriteBatchBuffer): void {
       batchVertexCount += 6
       frameVertices += 6
     } else if (op === 3) { // CMD_DRAW_MESH
-      const id = uintBuffer[uintIdx++]
+      const texture = uintBuffer[uintIdx++]
+      const additive = (texture & 0x80000000) !== 0
+      const id = texture & 0x7fffffff
       const c = uintBuffer[uintIdx++]
       const vCount = uintBuffer[uintIdx++]
       const iCount = uintBuffer[uintIdx++]
@@ -1918,12 +1922,12 @@ export function submitCommandBuffer(buffer: SpriteBatchBuffer): void {
       }
       if (!cachedAsset?.texture || !program || !batchVbo || !shortBuffer || iCount % 3 !== 0) continue
 
-      if (!sameBatch(cachedAsset.texture, false) || batchVertexCount + iCount > MAX_BATCH_VERTICES) {
+      if (!sameBatch(cachedAsset.texture, additive) || batchVertexCount + iCount > MAX_BATCH_VERTICES) {
         flushDrawBatch()
       }
 
       batchTexture = cachedAsset.texture
-      batchAdditive = false
+      batchAdditive = additive
 
       const packedColor = ((c << 24) | ((c & 0xff00) << 8) | ((c >> 8) & 0xff00) | (c >>> 24)) >>> 0
 
@@ -1931,7 +1935,7 @@ export function submitCommandBuffer(buffer: SpriteBatchBuffer): void {
         if (batchVertexCount >= MAX_BATCH_VERTICES) {
           flushDrawBatch()
           batchTexture = cachedAsset.texture
-          batchAdditive = false
+          batchAdditive = additive
         }
         const vertIndex = shortBuffer[indOffset + i] * 2
         const px = floatBuffer[posOffset + vertIndex] * sx

@@ -122,8 +122,11 @@ export class BitmapText extends ComponentX<BitmapTextProps> {
         const renderW = charWidth * scaleX
         const renderH = charHeight * scaleY
 
-        globalCommandBuffer.pushRegion(
+        globalCommandBuffer.pushRegionTransformed(
+          node.renderMatrix,
           font.texture.id,
+          font.texture.width,
+          font.texture.height,
           charData.x,
           charData.y,
           charData.width,

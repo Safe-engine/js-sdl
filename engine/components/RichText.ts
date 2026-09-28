@@ -192,8 +192,11 @@ export class RichText extends ComponentX<RichTextProps> {
     const y = originY
       + scaledX * Math.sin(radians) + scaledY * Math.cos(radians)
 
-    globalCommandBuffer.pushSprite(
+    globalCommandBuffer.pushSpriteTransformed(
+      transform.renderMatrix,
       segment.texture.id,
+      segment.texture.width,
+      segment.texture.height,
       x,
       y,
       segment.texture.width * transform.renderScaleX,

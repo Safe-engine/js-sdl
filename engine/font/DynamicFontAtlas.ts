@@ -299,8 +299,11 @@ export class DynamicFontAtlas {
             const renderW = glyph.width * scaleX
             const renderH = glyph.height * scaleY
 
-            globalCommandBuffer.pushRegion(
+            globalCommandBuffer.pushRegionTransformed(
+              node.renderMatrix,
               glyph.textureId,
+              this.width,
+              this.height,
               glyph.x,
               glyph.y,
               glyph.width,
