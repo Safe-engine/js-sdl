@@ -134,7 +134,8 @@ export class DicedSprite extends ComponentX<DicedSpriteProps> {
     const translateY = node.renderY + anchorX * sine + anchorY * cosine
 
     for (const mesh of meshes) {
-      globalCommandBuffer.pushMesh(
+      globalCommandBuffer.pushMeshTransformed(
+        node.renderMatrix,
         texture.id, mesh.positions[meshVariant], mesh.uvs[meshVariant], mesh.indices,
         node.color.r, node.color.g, node.color.b, opacity,
         translateX, translateY, node.renderScaleX, node.renderScaleY, cosine, sine,

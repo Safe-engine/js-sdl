@@ -263,7 +263,8 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
   private flushBatch(): void {
     if (!this.batchTexture || !this.batchColor || this.batchIndexCount === 0) return
     const transform = this.renderTransform
-    globalCommandBuffer.pushMesh(
+    globalCommandBuffer.pushMeshTransformed(
+      this.node?.renderMatrix ?? IDENTITY_MATRIX,
       this.batchTexture.id,
       this.batchPositions.subarray(0, this.batchVertexCount * 2),
       this.batchUvs.subarray(0, this.batchVertexCount * 2),
@@ -377,6 +378,8 @@ interface SpineTransform {
   cos: number
   sin: number
 }
+
+const IDENTITY_MATRIX = { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 }
 
 const IDENTITY_TRANSFORM: SpineTransform = {
   x: 0,

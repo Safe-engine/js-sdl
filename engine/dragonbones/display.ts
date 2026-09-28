@@ -197,8 +197,11 @@ export class SdlSlot extends Slot {
     const centerX = display.pivotX * scaleX
     const centerY = display.pivotY * scaleY
 
-    globalCommandBuffer.pushRegion(
+    globalCommandBuffer.pushRegionTransformed(
+      matrix,
       texture.id,
+      texture.width,
+      texture.height,
       region.x,
       region.y,
       region.width,

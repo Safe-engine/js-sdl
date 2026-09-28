@@ -52,7 +52,7 @@ describe('Particles', () => {
 
   test('loads PMA particle textures with PMA enabled', () => {
     const scene = new Scene()
-    const particles = new Particles({ spriteFrame: 'particle-pma.png', pma: true })
+    const particles = new Particles({ spriteFrame: 'particle-pma.png', additive: true })
     scene.node.addComponent(particles)
 
     expect(loadTexture).toHaveBeenLastCalledWith('particle-pma.png', true)
@@ -60,7 +60,7 @@ describe('Particles', () => {
 
   test('renders PMA particles additively so black backgrounds do not obscure the scene', () => {
     const scene = new Scene()
-    const particles = new Particles({ count: 1, spriteFrame: 'particle-black.png', pma: true })
+    const particles = new Particles({ count: 1, spriteFrame: 'particle-black.png', additive: true })
     scene.node.addComponent(particles)
 
     particles.emit(100, 200)

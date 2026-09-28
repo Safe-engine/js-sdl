@@ -274,4 +274,45 @@ describe('WebGL Renderer Batching', async () => {
     // Clipping forces batch flush so scissors can apply
     expect(drawArraysCalls.length).toBeGreaterThanOrEqual(2)
   })
+
+  it('positions CMD_DRAW_MESH and CMD_DRAW_MESH_AFFINE vertices through their transforms', async () => {
+    const { RenderCommandBuffer } = await import('../engine/render/RenderCommandBuffer')
+    const { Matrix2D } = await import('../engine/math/Matrix2D')
+    const uploads: Float32Array[] = []
+    const originalBufferSubData = mockGl.bufferSubData
+    mockGl.bufferSubData = (_target: number, _offset: number, data: Float32Array) => {
+      uploads.push(new Float32Array(data))
+    }
+    try {
+      sdl3.textures.set(300, { texture: mockGl.createTexture(), width: 1, height: 1, refs: 1, key: 'mesh_affine_tex' })
+      const positions = new Float32Array([0, 0, 10, 0, 0, 10])
+      const uvs = new Float32Array([0, 0, 1, 0, 0, 1])
+      const indices = new Uint16Array([0, 1, 2])
+      const vertexXY = (upload: Float32Array) =>
+        [0, 1, 2].flatMap(i => [upload[i * 5], upload[i * 5 + 1]])
+
+      // Unskewed: decomposed op 3 (translate 5,6; scale 2; rotate 90 degrees).
+      const plain = new RenderCommandBuffer()
+      plain.beginFrame()
+      plain.pushMesh(300, positions, uvs, indices, 255, 255, 255, 255, 5, 6, 2, 2, 0, 1)
+      sdl3.submitCommandBuffer(plain.getBufferView())
+      sdl3.present()
+      const plainXY = vertexXY(uploads.at(-1)!)
+      ;[5, 6, 5, 26, -15, 6].forEach((v, i) => expect(plainXY[i]).toBeCloseTo(v, 4))
+
+      // Skewed: the matrix shears x by y, so op 9 must carry it.
+      const skewed = new Matrix2D()
+      skewed.set(1, 0, 0.5, 1, 100, 200)
+      const affine = new RenderCommandBuffer()
+      affine.beginFrame()
+      affine.pushMeshTransformed(skewed, 300, positions, uvs, indices, 255, 255, 255, 255, 100, 200, 1, 1, 1, 0)
+      expect([...affine.getBufferView().commands]).toEqual([9])
+      sdl3.submitCommandBuffer(affine.getBufferView())
+      sdl3.present()
+      const affineXY = vertexXY(uploads.at(-1)!)
+      ;[100, 200, 110, 200, 105, 210].forEach((v, i) => expect(affineXY[i]).toBeCloseTo(v, 4))
+    } finally {
+      mockGl.bufferSubData = originalBufferSubData
+    }
+  })
 })

@@ -2,9 +2,17 @@ import { beforeAll, describe, expect, test } from 'bun:test'
 import { TextureAsset, TextureAtlas } from '../engine/AssetManager'
 import { BitmapText } from '../engine/components/BitmapText'
 import { Sprite } from '../engine/components/Sprite'
+import { DicedSprite, type DicedJSON } from '../engine/dicing/DicedSprite'
 import { BitmapFont } from '../engine/font/BitmapFont'
 import { Node } from '../engine/core/Node'
-import { CMD_DRAW_QUAD, CMD_DRAW_REGION, CMD_DRAW_SPRITE } from '../engine/render/RenderCommandBuffer'
+import {
+  CMD_DRAW_MESH,
+  CMD_DRAW_MESH_AFFINE,
+  CMD_DRAW_QUAD,
+  CMD_DRAW_REGION,
+  CMD_DRAW_SPRITE,
+  globalCommandBuffer,
+} from '../engine/render/RenderCommandBuffer'
 import { spriteFrameCache } from '../engine/SpriteFrameCache'
 import { installSdl3 } from './setup/sdl3'
 
@@ -136,5 +144,52 @@ describe('rendering under skewed transforms', () => {
     })
     expectCloseArray(quads[0].corners, expected)
     expectCloseArray(quads[0].uvs, [128 / 512, 0, 148 / 512, 0, 128 / 512, 30 / 512, 148 / 512, 30 / 512])
+  })
+
+  test('meshes use an affine mesh command only when skewed', () => {
+    const atlas: DicedJSON = {
+      meta: {
+        name: 'skew', rawWidth: 32, rawHeight: 16,
+        cellW: 16, cellH: 16, atlasCols: 2, atlasRows: 1,
+        anchorX: 0.25, anchorY: 0.75,
+      },
+      animations: [{ name: 'idle', fps: 10, frames: [[[0, 1]]] }],
+    }
+    const renderDiced = (parentScaleX: number, parentScaleY: number) => {
+      const parent = new Node('parent')
+      parent.scaleX = parentScaleX
+      parent.scaleY = parentScaleY
+      parent.x = 40
+      const sprite = new DicedSprite({ data: atlas, animation: 'idle' })
+      const node = parent.addChild(sprite.ensureNode())
+      node.rotation = 30
+      node.anchorX = 0.25
+      node.anchorY = 0.75
+      const internals = sprite as any
+      internals.atlas = atlas
+      internals.texture = { id: 7, width: 32, height: 16 }
+      internals.texturePath = 'skew.png'
+      internals.setCurrentAnimation('idle')
+      globalCommandBuffer.beginFrame()
+      sprite.onRender()
+      return { node, view: globalCommandBuffer.getBufferView() }
+    }
+
+    expect([...renderDiced(2, 2).view.commands]).toEqual([CMD_DRAW_MESH])
+
+    const { node, view } = renderDiced(2, 1)
+    expect([...view.commands]).toEqual([CMD_DRAW_MESH_AFFINE])
+    const vertexCount = view.uintBuffer[2]
+    const floats = view.floatBuffer
+    const [a, b, c, d, tx, ty] = floats.subarray(vertexCount * 4, vertexCount * 4 + 6)
+    const m = node.renderMatrix
+    for (let i = 0; i < vertexCount; i++) {
+      const px = floats[i * 2]
+      const py = floats[i * 2 + 1]
+      // Diced mesh positions are relative to the raw image's top-left corner.
+      const expected = m.transformPoint(px - 0.25 * 32, py - 0.75 * 16)
+      expect(a * px + c * py + tx).toBeCloseTo(expected.x, 3)
+      expect(b * px + d * py + ty).toBeCloseTo(expected.y, 3)
+    }
   })
 })

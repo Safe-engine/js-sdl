@@ -82,7 +82,8 @@ export class CircleProgress extends Sprite {
   }
 
   private pointAt(x: number, y: number): Point {
-    return this.node.localToWorld(
+    // renderMatrix includes the active camera, unlike localToWorld.
+    return this.node.renderMatrix.transformPoint(
       (x - this.node.anchorX) * this.node.width,
       (y - this.node.anchorY) * this.node.height,
     )

@@ -1893,7 +1893,7 @@ export function submitCommandBuffer(buffer: SpriteBatchBuffer): void {
 
       batchVertexCount += 6
       frameVertices += 6
-    } else if (op === 3) { // CMD_DRAW_MESH
+    } else if (op === 3 || op === 9) { // CMD_DRAW_MESH, CMD_DRAW_MESH_AFFINE
       const texture = uintBuffer[uintIdx++]
       const additive = (texture & 0x80000000) !== 0
       const id = texture & 0x7fffffff
@@ -1906,12 +1906,28 @@ export function submitCommandBuffer(buffer: SpriteBatchBuffer): void {
       const uvOffset = floatIdx
       floatIdx += vCount * 2
 
-      const tx = floatBuffer[floatIdx++]
-      const ty = floatBuffer[floatIdx++]
-      const sx = floatBuffer[floatIdx++]
-      const sy = floatBuffer[floatIdx++]
-      const cos = floatBuffer[floatIdx++]
-      const sin = floatBuffer[floatIdx++]
+      // Both layouts end in six floats, folded here into one affine matrix:
+      // op 3 carries (tx, ty, sx, sy, cos, sin), op 9 carries (a, b, c, d, tx, ty).
+      let ma: number, mb: number, mc: number, md: number, mtx: number, mty: number
+      if (op === 3) {
+        mtx = floatBuffer[floatIdx++]
+        mty = floatBuffer[floatIdx++]
+        const sx = floatBuffer[floatIdx++]
+        const sy = floatBuffer[floatIdx++]
+        const cos = floatBuffer[floatIdx++]
+        const sin = floatBuffer[floatIdx++]
+        ma = sx * cos
+        mb = sx * sin
+        mc = -sy * sin
+        md = sy * cos
+      } else {
+        ma = floatBuffer[floatIdx++]
+        mb = floatBuffer[floatIdx++]
+        mc = floatBuffer[floatIdx++]
+        md = floatBuffer[floatIdx++]
+        mtx = floatBuffer[floatIdx++]
+        mty = floatBuffer[floatIdx++]
+      }
 
       const indOffset = shortIdx
       shortIdx += iCount
@@ -1938,10 +1954,10 @@ export function submitCommandBuffer(buffer: SpriteBatchBuffer): void {
           batchAdditive = additive
         }
         const vertIndex = shortBuffer[indOffset + i] * 2
-        const px = floatBuffer[posOffset + vertIndex] * sx
-        const py = floatBuffer[posOffset + vertIndex + 1] * sy
-        const vx = tx + px * cos - py * sin
-        const vy = ty + px * sin + py * cos
+        const px = floatBuffer[posOffset + vertIndex]
+        const py = floatBuffer[posOffset + vertIndex + 1]
+        const vx = ma * px + mc * py + mtx
+        const vy = mb * px + md * py + mty
         const vu = floatBuffer[uvOffset + vertIndex]
         const vv = floatBuffer[uvOffset + vertIndex + 1]
 

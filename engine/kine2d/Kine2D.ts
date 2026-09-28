@@ -249,7 +249,8 @@ export class Kine2D extends ComponentX<Kine2DProps> {
 
     const node = this.node
     const radians = node.renderRotation * Math.PI / 180
-    globalCommandBuffer.pushMesh(
+    globalCommandBuffer.pushMeshTransformed(
+      node.renderMatrix,
       texture.id,
       positions,
       uvs,

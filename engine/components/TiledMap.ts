@@ -233,7 +233,8 @@ export class TiledMap extends ComponentX<TiledMapProps> {
       const uvs = this.node.flipX || this.node.flipY
         ? flipTileUvs(batch.uvs, batch.flippedUvs, this.node.flipX, this.node.flipY)
         : batch.uvs
-      globalCommandBuffer.pushMesh(
+      globalCommandBuffer.pushMeshTransformed(
+        this.node.renderMatrix,
         batch.texture.id,
         batch.positions,
         uvs,

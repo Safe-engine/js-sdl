@@ -18,7 +18,7 @@
     "test": "bun test tests",
     "sync-res": "bun ./node_modules/safex-sync-res/src/index.ts",
     "predev": "bun run sync-res",
-    "compile": "tsc --build tsconfig.json",
+    "compile": "rm -rf lib tsconfig.tsbuildinfo && tsc --build tsconfig.json",
     "dev": "vite  --host",
     "build": "vite build "
   },

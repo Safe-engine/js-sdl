@@ -1,5 +1,13 @@
 import { submitCommandBuffer, type SpriteBatchBuffer } from 'sdl3'
-import type { Matrix2D } from '../math/Matrix2D'
+/** Any 2D affine matrix: `Matrix2D`, or plain objects such as DragonBones matrices. */
+export interface AffineMatrix {
+  a: number
+  b: number
+  c: number
+  d: number
+  tx: number
+  ty: number
+}
 
 export const CMD_DRAW_SPRITE = 1
 export const CMD_DRAW_QUAD = 2
@@ -9,6 +17,8 @@ export const CMD_DRAW_LINE = 5
 export const CMD_PUSH_CLIP = 6
 export const CMD_POP_CLIP = 7
 export const CMD_DRAW_REGION = 8
+/** Mesh with a full affine transform (a, b, c, d, tx, ty); emitted only for skewed nodes. */
+export const CMD_DRAW_MESH_AFFINE = 9
 
 const ADDITIVE_TEXTURE_FLAG = 0x80000000
 /** Relative tolerance below which a matrix's axes count as perpendicular. */
@@ -18,7 +28,7 @@ const SKEW_EPSILON = 1e-6
  * Whether an affine matrix shears (its axes are not perpendicular), which the
  * decomposed x/y/w/h/angle draw commands cannot represent.
  */
-export function matrixHasSkew(matrix: Matrix2D): boolean {
+export function matrixHasSkew(matrix: AffineMatrix): boolean {
   const { a, b, c, d } = matrix
   return Math.abs(a * c + b * d) > SKEW_EPSILON * Math.abs(a * d - b * c)
 }
@@ -110,7 +120,7 @@ export class RenderCommandBuffer {
    * the node's local space and emitted as a quad through the full matrix.
    */
   public pushRegionTransformed(
-    matrix: Matrix2D,
+    matrix: AffineMatrix,
     textureId: number,
     textureWidth: number,
     textureHeight: number,
@@ -192,7 +202,7 @@ export class RenderCommandBuffer {
 
   /** `pushSprite` counterpart of `pushRegionTransformed` (whole texture). */
   public pushSpriteTransformed(
-    matrix: Matrix2D,
+    matrix: AffineMatrix,
     textureId: number,
     textureWidth: number,
     textureHeight: number,
@@ -337,11 +347,7 @@ export class RenderCommandBuffer {
     const c = this.packColor(r, g, b, a)
 
     this.commands[this.cmdOffset++] = CMD_DRAW_MESH
-
-    this.uintBuffer[this.uintOffset++] = (textureId | (additive ? ADDITIVE_TEXTURE_FLAG : 0)) >>> 0
-    this.uintBuffer[this.uintOffset++] = c
-    this.uintBuffer[this.uintOffset++] = vCount >>> 0
-    this.uintBuffer[this.uintOffset++] = iCount >>> 0
+    this.writeMeshHeader(textureId, additive, c, vCount, iCount)
 
     this.floatBuffer.set(positions, this.floatOffset)
     this.floatOffset += positions.length
@@ -356,6 +362,65 @@ export class RenderCommandBuffer {
     this.floatBuffer[this.floatOffset++] = cos
     this.floatBuffer[this.floatOffset++] = sin
 
+    this.shortBuffer.set(indices, this.shortOffset)
+    this.shortOffset += iCount
+
+    this.autoSubmitIfInactive()
+  }
+
+  /**
+   * `pushMesh` for a node drawn with `matrix` (its render matrix), taking the
+   * same decomposed transform. Without skew this is exactly `pushMesh`; with
+   * skew the translation is mapped back into the node's local space and the
+   * mesh is emitted with the full affine matrix (CMD_DRAW_MESH_AFFINE).
+   */
+  public pushMeshTransformed(
+    matrix: AffineMatrix,
+    textureId: number,
+    positions: Float32Array,
+    uvs: Float32Array,
+    indices: Uint16Array,
+    r = 255,
+    g = 255,
+    b = 255,
+    a = 255,
+    tx = 0,
+    ty = 0,
+    sx = 1,
+    sy = 1,
+    cos = 1,
+    sin = 0,
+    additive = false,
+  ): void {
+    if (!matrixHasSkew(matrix)) {
+      this.pushMesh(textureId, positions, uvs, indices, r, g, b, a, tx, ty, sx, sy, cos, sin, additive)
+      return
+    }
+    const vCount = (positions.length / 2) | 0
+    const iCount = indices.length
+    if (vCount <= 0 || iCount <= 0 || sx === 0 || sy === 0) return
+
+    // The mesh origin in the node's local space: undo translate, rotate, scale.
+    const ox = tx - matrix.tx
+    const oy = ty - matrix.ty
+    const localX = (ox * cos + oy * sin) / sx
+    const localY = (oy * cos - ox * sin) / sy
+    const { a: ma, b: mb, c: mc, d: md } = matrix
+
+    this.ensureCapacities(1, vCount * 4 + 6, 4, iCount)
+    const c = this.packColor(r, g, b, a)
+    this.commands[this.cmdOffset++] = CMD_DRAW_MESH_AFFINE
+    this.writeMeshHeader(textureId, additive, c, vCount, iCount)
+    this.floatBuffer.set(positions, this.floatOffset)
+    this.floatOffset += positions.length
+    this.floatBuffer.set(uvs, this.floatOffset)
+    this.floatOffset += uvs.length
+    this.floatBuffer[this.floatOffset++] = ma
+    this.floatBuffer[this.floatOffset++] = mb
+    this.floatBuffer[this.floatOffset++] = mc
+    this.floatBuffer[this.floatOffset++] = md
+    this.floatBuffer[this.floatOffset++] = matrix.tx + ma * localX + mc * localY
+    this.floatBuffer[this.floatOffset++] = matrix.ty + mb * localX + md * localY
     this.shortBuffer.set(indices, this.shortOffset)
     this.shortOffset += iCount
 
@@ -526,6 +591,13 @@ export class RenderCommandBuffer {
     if (!this.isFrameActive) {
       this.submit()
     }
+  }
+
+  private writeMeshHeader(textureId: number, additive: boolean, color: number, vCount: number, iCount: number): void {
+    this.uintBuffer[this.uintOffset++] = (textureId | (additive ? ADDITIVE_TEXTURE_FLAG : 0)) >>> 0
+    this.uintBuffer[this.uintOffset++] = color
+    this.uintBuffer[this.uintOffset++] = vCount >>> 0
+    this.uintBuffer[this.uintOffset++] = iCount >>> 0
   }
 
   private packColor(r: number, g: number, b: number, a: number): number {
