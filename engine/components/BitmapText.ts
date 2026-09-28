@@ -85,7 +85,7 @@ export class BitmapText extends ComponentX<BitmapTextProps> {
     const sin = Math.sin(radians)
     const scaleX = node.renderScaleX
     const scaleY = node.renderScaleY
-    const opacity = node.opacity * (node.color.a ?? 255)
+    const opacity = node.worldOpacity * (node.color.a ?? 255)
 
     const anchorOriginX = -node.anchorX * layoutWidth
     const anchorOriginY = -node.anchorY * layoutHeight

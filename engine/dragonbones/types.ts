@@ -25,6 +25,7 @@ export interface LoadedDragonBonesData {
 
 export interface DragonBonesRenderNode {
   opacity: number
+  worldOpacity?: number
   worldRotation: number
   worldScaleX: number
   worldScaleY: number

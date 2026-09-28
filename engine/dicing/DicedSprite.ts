@@ -127,7 +127,7 @@ export class DicedSprite extends ComponentX<DicedSpriteProps> {
     const cosine = Math.cos(radians)
     const sine = Math.sin(radians)
     const meshVariant = (node.flipX ? 1 : 0) | (node.flipY ? 2 : 0)
-    const opacity = node.opacity * (node.color.a ?? 255)
+    const opacity = node.worldOpacity * (node.color.a ?? 255)
     const anchorX = -node.anchorX * atlas.meta.rawWidth * node.renderScaleX
     const anchorY = -node.anchorY * atlas.meta.rawHeight * node.renderScaleY
     const translateX = node.renderX + anchorX * cosine - anchorY * sine

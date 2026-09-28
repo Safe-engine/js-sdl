@@ -219,7 +219,7 @@ export class Label extends ComponentX<LabelProps> {
       color.r,
       color.g,
       color.b,
-      this.node.opacity * (color.a ?? 255),
+      this.node.worldOpacity * (color.a ?? 255),
     )
   }
 
@@ -368,7 +368,7 @@ export class Label extends ComponentX<LabelProps> {
     const sin = Math.sin(radians)
     const scaleX = t.renderScaleX
     const scaleY = t.renderScaleY
-    const opacity = t.opacity * (t.color.a ?? 255)
+    const opacity = t.worldOpacity * (t.color.a ?? 255)
 
     let currentY = top - t.anchorY * layoutHeight
 

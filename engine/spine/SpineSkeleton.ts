@@ -199,7 +199,7 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
       * (skeletonColor?.a ?? 1)
       * (slotColor?.a ?? 1)
       * (attachmentColor?.a ?? 1)
-      * (this.node?.opacity ?? 1)
+      * (this.node?.worldOpacity ?? 1)
 
     this.appendToBatch(texture, { red, green, blue, alpha }, [
       vertices[4], vertices[5],
@@ -350,7 +350,7 @@ export class SpineSkeleton extends ComponentX<SpineSkeletonProps> {
         * (skeletonColor?.a ?? 1)
         * (slotColor?.a ?? 1)
         * (attachmentColor?.a ?? 1)
-        * (this.node?.opacity ?? 1),
+        * (this.node?.worldOpacity ?? 1),
     }
   }
 }

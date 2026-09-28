@@ -271,7 +271,7 @@ export class DynamicFontAtlas {
     const scaleX = node.renderScaleX
     const scaleY = node.renderScaleY
     const baseColor = node.color
-    const opacity = node.opacity * (baseColor.a ?? 255)
+    const opacity = node.worldOpacity * (baseColor.a ?? 255)
 
     const drawPass = (
       offsetX: number,
@@ -335,7 +335,7 @@ export class DynamicFontAtlas {
         shadowOffset.width,
         shadowOffset.height,
         shadowColor,
-        node.opacity * (shadowColor.a ?? 255),
+        node.worldOpacity * (shadowColor.a ?? 255),
       )
     }
 

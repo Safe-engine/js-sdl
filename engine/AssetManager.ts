@@ -44,6 +44,12 @@ export class TextureAsset {
       : sdl.getTextureHeight(this.id) || this.cachedHeight
   }
 
+  /** Resolve once the texture has loaded; reject if loading failed. */
+  whenReady(): Promise<void> {
+    // The native backend loads synchronously and does not export this hook.
+    return sdl.whenTextureReady?.(this.id) ?? Promise.resolve()
+  }
+
   release(): void {
     if (this.released) return
     this.released = true
@@ -62,6 +68,11 @@ export class FontAsset {
     private readonly releaseAsset: (key: string) => void,
   ) {}
 
+  /** Resolve once the font has loaded; reject if loading failed. */
+  whenReady(): Promise<void> {
+    return sdl.whenFontReady?.(this.id) ?? Promise.resolve()
+  }
+
   release(): void {
     if (this.released) return
     this.released = true
@@ -77,6 +88,10 @@ export class TextureAtlas {
 
   getFrame(name: string): TextureRegion | null {
     return this.frames[name] ?? null
+  }
+
+  whenReady(): Promise<void> {
+    return this.texture.whenReady()
   }
 
   release(): void {
@@ -162,14 +177,18 @@ export class AssetGroup {
     return this
   }
 
+  /**
+   * Acquire every requested asset and resolve once all have finished loading.
+   * Assets load in parallel; progress is reported as each one completes. If
+   * any asset fails, everything acquired by this call is released.
+   */
   async preload(onProgress?: (progress: PreloadProgress) => void): Promise<this> {
     this.unload()
     const total = this.requests.length
 
     try {
-      for (let i = 0; i < total; i++) {
-        await Promise.resolve()
-        const request = this.requests[i]
+      const pending: Array<{ key: string, asset: TextureAsset | FontAsset | TextureAtlas }> = []
+      for (const request of this.requests) {
         let asset: TextureAsset | FontAsset | TextureAtlas
         if (request.type === 'font') {
           asset = AssetManager.acquireFont(request.path, request.size)
@@ -180,13 +199,23 @@ export class AssetGroup {
         }
         this.assets.get(request.key)?.release()
         this.assets.set(request.key, asset)
-        onProgress?.({
-          loaded: i + 1,
-          total,
-          progress: total === 0 ? 1 : (i + 1) / total,
-          key: request.key,
-        })
+        pending.push({ key: request.key, asset })
       }
+
+      let loaded = 0
+      let failed = false
+      await Promise.all(pending.map(async ({ key, asset }) => {
+        try {
+          await asset.whenReady()
+        } catch (error) {
+          failed = true
+          throw error
+        }
+        // Stay quiet about stragglers once the preload as a whole has failed.
+        if (failed) return
+        loaded++
+        onProgress?.({ loaded, total, progress: loaded / total, key })
+      }))
     } catch (error) {
       this.unload()
       throw error

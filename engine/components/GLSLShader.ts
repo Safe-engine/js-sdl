@@ -64,12 +64,16 @@ export class GLSLShader extends ComponentX<GLSLShaderProps> {
 
   onRender(): void {
     if (!this.program) return
-    // Submit earlier sprite commands so scene order is preserved around this immediate draw.
-    globalCommandBuffer.submit()
-    const topLeft = this.node.contentToWorld(0, 0)
-    const topRight = this.node.contentToWorld(this.node.width, 0)
-    const bottomLeft = this.node.contentToWorld(0, this.node.height)
-    const bottomRight = this.node.contentToWorld(this.node.width, this.node.height)
+    // Flush earlier sprite commands so scene order is preserved around this immediate draw.
+    globalCommandBuffer.flush()
+    const node = this.node
+    const matrix = node.renderMatrix
+    const left = -node.anchorX * node.width
+    const top = -node.anchorY * node.height
+    const topLeft = matrix.transformPoint(left, top)
+    const topRight = matrix.transformPoint(left + node.width, top)
+    const bottomLeft = matrix.transformPoint(left, top + node.height)
+    const bottomRight = matrix.transformPoint(left + node.width, top + node.height)
     const [logicalWidth, logicalHeight] = sdl3.getViewportMetrics()
     sdl3.drawGLSLQuad(this.program, new Float32Array([
       topLeft.x, topLeft.y, topRight.x, topRight.y, bottomLeft.x, bottomLeft.y,

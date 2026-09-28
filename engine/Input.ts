@@ -78,34 +78,58 @@ export class InputEvent extends Touch {
   }
 }
 
+/** How a camera sees the scene: which nodes it renders and how screen maps to world. */
+export interface InputView {
+  mask: number
+  toWorld(x: number, y: number): Vec2
+}
+
+const SCREEN_VIEW: InputView = {
+  mask: 0xffffffff,
+  toWorld: (x, y) => ({ x, y }),
+}
+
 interface InputCandidate {
   component: ComponentX
+  view: InputView
   renderOrder: number
 }
 
+interface CapturedInput {
+  component: ComponentX
+  view: InputView
+  lastX: number
+  lastY: number
+}
+
 export class InputSystem {
-  private captured: ComponentX[] = []
-  private lastX: number | null = null
-  private lastY: number | null = null
+  private captured: CapturedInput[] = []
 
   constructor(private readonly root: Node) {}
 
-  dispatchStart(x: number, y: number): boolean {
-    const candidates = this.collectCandidates(x, y)
+  /**
+   * Dispatch a pointer press. `views` lists the cameras in render order; nodes
+   * drawn later are hit first and receive coordinates in that camera's world.
+   */
+  dispatchStart(x: number, y: number, views: readonly InputView[] = [SCREEN_VIEW]): boolean {
+    const candidates = this.collectCandidates(x, y, views)
     this.captured = []
     if (candidates.length === 0) return false
 
-    this.lastX = x
-    this.lastY = y
-    const event = new InputEvent('start', x, y, candidates[0].component)
-    for (const candidate of candidates) {
-      const component = candidate.component
+    const target = candidates[0].component
+    let stopped = false
+    for (const { component, view } of candidates) {
+      const point = view.toWorld(x, y)
+      const event = new InputEvent('start', point.x, point.y, target)
       event.currentTarget = component
-      this.captured.push(component)
+      this.captured.push({ component, view, lastX: point.x, lastY: point.y })
       component.onPointerStart(event)
-      if (event.propagationStopped) break
+      if (event.propagationStopped) {
+        stopped = true
+        break
+      }
     }
-    return event.propagationStopped
+    return stopped
   }
 
   dispatchMove(x: number, y: number): boolean {
@@ -115,15 +139,11 @@ export class InputSystem {
   dispatchEnd(x: number, y: number): boolean {
     const stopped = this.dispatchCaptured('end', x, y)
     this.captured = []
-    this.lastX = null
-    this.lastY = null
     return stopped
   }
 
   reset(): void {
     this.captured = []
-    this.lastX = null
-    this.lastY = null
   }
 
   private dispatchCaptured(
@@ -131,53 +151,59 @@ export class InputSystem {
     x: number,
     y: number,
   ): boolean {
-    const captured = this.captured.filter(component =>
+    const captured = this.captured.filter(({ component }) =>
       component.inputEnabled && this.isInteractive(component.node)
     )
     if (captured.length === 0) return false
 
-    const previousX = this.lastX ?? x
-    const previousY = this.lastY ?? y
-    const event = new InputEvent(type, x, y, captured[0], previousX, previousY)
-    this.lastX = x
-    this.lastY = y
-    for (const component of captured) {
-      event.currentTarget = component
+    const target = captured[0].component
+    for (const entry of captured) {
+      const point = entry.view.toWorld(x, y)
+      const event = new InputEvent(type, point.x, point.y, target, entry.lastX, entry.lastY)
+      event.currentTarget = entry.component
+      entry.lastX = point.x
+      entry.lastY = point.y
       if (type === 'move') {
-        component.onPointerMove(event)
+        entry.component.onPointerMove(event)
       } else {
-        component.onPointerEnd(event)
+        entry.component.onPointerEnd(event)
       }
-      if (event.propagationStopped) break
+      if (event.propagationStopped) return true
     }
-    return event.propagationStopped
+    return false
   }
 
-  private collectCandidates(x: number, y: number): InputCandidate[] {
-    const candidates: InputCandidate[] = []
+  private collectCandidates(x: number, y: number, views: readonly InputView[]): InputCandidate[] {
+    const byComponent = new Map<ComponentX, InputCandidate>()
     let renderOrder = 0
 
-    const visit = (node: Node): void => {
-      if (!node.active || !node.visible) return
-      let allowChildren = true
-      for (const component of node.components) {
-        if (component.inputEnabled && component.hitTest(x, y)) {
-          candidates.push({ component, renderOrder })
+    for (const view of views) {
+      const point = view.toWorld(x, y)
+      const visit = (node: Node): void => {
+        if (!node.active || !node.visible) return
+        let allowChildren = true
+        // Mirrors Node._renderTree: a masked-out node hides only its own components.
+        if ((view.mask & node.cameraMask) !== 0) {
+          for (const component of node.components) {
+            if (component.inputEnabled && component.hitTest(point.x, point.y)) {
+              // A later camera draws on top, so its hit replaces an earlier one.
+              byComponent.set(component, { component, view, renderOrder })
+            }
+            if (!component.allowsDescendantInput(point.x, point.y)) allowChildren = false
+            renderOrder++
+          }
         }
-        if (!component.allowsDescendantInput(x, y)) allowChildren = false
-        renderOrder++
+        if (allowChildren) {
+          for (const child of node.getRenderChildren()) visit(child)
+        }
       }
-      if (allowChildren) {
-        for (const child of node.getRenderChildren()) visit(child)
-      }
+      visit(this.root)
     }
 
-    visit(this.root)
-    candidates.sort((a, b) =>
+    return [...byComponent.values()].sort((a, b) =>
       b.component.inputPriority - a.component.inputPriority
       || b.renderOrder - a.renderOrder
     )
-    return candidates
   }
 
   private isInteractive(node: Node | null): boolean {

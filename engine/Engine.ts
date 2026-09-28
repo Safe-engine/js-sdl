@@ -25,6 +25,7 @@ import {
 import { Tween } from './animation/Tween'
 import { globalCommandBuffer } from './render/RenderCommandBuffer'
 import { Audio } from './Audio'
+import { InputSystem } from './Input'
 import { Label } from './components/Label'
 import { Node } from './core/Node'
 import { TextInput } from './components/TextInput'
@@ -44,6 +45,10 @@ class EngineImpl {
   readonly viewport = ActiveViewport
   /** Root for nodes that must remain alive while scenes are replaced. */
   readonly persistentNode = new Node('persistent')
+  /** Persistent nodes render above the scene, so they get touches first. */
+  private readonly _persistentInput = new InputSystem(this.persistentNode)
+  /** Whether a persistent node consumed the current touch's start. */
+  private _touchConsumedByPersistent = false
   private _currentScene: Scene | null = null
   /** Scene requested while a platform callback was running; `undefined` if none. */
   private _pendingScene: Scene | null | undefined = undefined
@@ -109,15 +114,19 @@ class EngineImpl {
 
     onTouchStart(this._dispatch((x: number, y: number) => {
       TextInput.handleGlobalPointerStart(x, y)
-      this._currentScene?._dispatchTouchStart(x, y)
+      this._touchConsumedByPersistent = this._persistentInput.dispatchStart(x, y)
+      if (!this._touchConsumedByPersistent) this._currentScene?._dispatchTouchStart(x, y)
     }))
 
     onTouchMove(this._dispatch((x: number, y: number) => {
-      this._currentScene?._dispatchTouchMove(x, y)
+      const consumed = this._persistentInput.dispatchMove(x, y)
+      if (!consumed && !this._touchConsumedByPersistent) this._currentScene?._dispatchTouchMove(x, y)
     }))
 
     onTouchEnd(this._dispatch((x: number, y: number) => {
-      this._currentScene?._dispatchTouchEnd(x, y)
+      const consumed = this._persistentInput.dispatchEnd(x, y)
+      if (!consumed && !this._touchConsumedByPersistent) this._currentScene?._dispatchTouchEnd(x, y)
+      this._touchConsumedByPersistent = false
     }))
 
     onTextInput(this._dispatch((text: string) => {

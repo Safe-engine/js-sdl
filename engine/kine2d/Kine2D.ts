@@ -133,7 +133,7 @@ export class Kine2D extends ComponentX<Kine2DProps> {
     const regions = new Map(atlas.regions.map(region => [region.path, region]))
     const canvasSize = skeleton.canvasSize ?? { width: 800, height: 600 }
     const node = this.node
-    const opacity = node.opacity * (node.color.a ?? 255)
+    const opacity = node.worldOpacity * (node.color.a ?? 255)
     const radians = node.renderRotation * Math.PI / 180
     const cosine = Math.cos(radians)
     const sine = Math.sin(radians)
@@ -257,7 +257,7 @@ export class Kine2D extends ComponentX<Kine2DProps> {
       node.color.r,
       node.color.g,
       node.color.b,
-      node.opacity * (node.color.a ?? 255),
+      node.worldOpacity * (node.color.a ?? 255),
       node.renderX,
       node.renderY,
       node.renderScaleX,

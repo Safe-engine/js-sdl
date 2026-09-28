@@ -59,7 +59,7 @@ export class CircleProgress extends Sprite {
     const center = this.pointAt(0.5, 0.5)
     const centerUv = this.uvAt(0.5, 0.5, sourceX, sourceY, sourceWidth, sourceHeight,
       textureWidth, textureHeight)
-    const alpha = this.node.opacity * (this.node.color.a ?? 255)
+    const alpha = this.node.worldOpacity * (this.node.color.a ?? 255)
 
     for (let i = 0; i < segments; i++) {
       const start = -Math.PI * 0.5 + i / segments * ratio * Math.PI * 2

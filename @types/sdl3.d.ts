@@ -64,6 +64,15 @@ declare module 'sdl3' {
   /** Release one acquired texture/text-texture reference. */
   export function releaseTexture(id: number): void
 
+  /**
+   * Web backend only: resolves when an async texture load finishes, rejects on
+   * failure. Absent on the native backend, which loads synchronously.
+   */
+  export const whenTextureReady: ((id: number) => Promise<void>) | undefined
+
+  /** Web backend only: font counterpart of `whenTextureReady`. */
+  export const whenFontReady: ((id: number) => Promise<void>) | undefined
+
   /** Release one acquired font reference. */
   export function releaseFont(id: number): void
 
@@ -208,6 +217,8 @@ interface TextureAsset {
   pma?: boolean
   textFontId?: number
   text?: string
+  /** Settles when an asynchronously loaded texture is uploaded or fails. */
+  ready?: Promise<void>
 }
 
 interface FontAsset {
@@ -216,6 +227,8 @@ interface FontAsset {
   size: number
   refs: number
   loaded: boolean
+  /** Settles when the font face has loaded or failed. */
+  ready?: Promise<void>
 }
 
 interface AudioAsset {

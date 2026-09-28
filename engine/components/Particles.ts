@@ -182,7 +182,7 @@ export class Particles extends ComponentX<ParticlesProps> {
     this.ensureTexture()
     for (const particle of this.particles) {
       const position = this.node.localToWorld(particle.x, particle.y)
-      const alpha = Math.round(255 * this.node.opacity * particle.life / particle.duration)
+      const alpha = Math.round(255 * this.node.worldOpacity * particle.life / particle.duration)
       const pWidth = (particle.width ?? particle.radius * 2) * scaleX
       const pHeight = (particle.height ?? particle.radius * 2) * scaleY
       const rotation = (particle.rotation ?? 0) + this.node.worldRotation

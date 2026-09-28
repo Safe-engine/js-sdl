@@ -160,7 +160,7 @@ export class Sprite<Props extends SpriteProps = SpriteProps> extends ComponentX<
       this.node.color.r,
       this.node.color.g,
       this.node.color.b,
-      this.node.opacity * (this.node.color.a ?? 255),
+      this.node.worldOpacity * (this.node.color.a ?? 255),
       !!this.props.additive,
     )
   }
@@ -242,7 +242,7 @@ export class Sprite<Props extends SpriteProps = SpriteProps> extends ComponentX<
     height: number,
   ): void {
     const t = this.node
-    const opacity = this.node.opacity * (this.node.color.a ?? 255)
+    const opacity = this.node.worldOpacity * (this.node.color.a ?? 255)
     if (!frame.rotated) {
       globalCommandBuffer.pushRegion(
         this.textureId,
@@ -327,7 +327,7 @@ export class Sprite<Props extends SpriteProps = SpriteProps> extends ComponentX<
       t.anchorY * h - (y - dy),
       this.node.flipX, this.node.flipY,
       this.node.color.r, this.node.color.g, this.node.color.b,
-      this.node.opacity * (this.node.color.a ?? 255),
+      this.node.worldOpacity * (this.node.color.a ?? 255),
       !!this.props.additive,
     )
   }
@@ -342,7 +342,7 @@ export class Sprite<Props extends SpriteProps = SpriteProps> extends ComponentX<
     if (source.width <= 0 || source.height <= 0 || w <= 0 || h <= 0) return
 
     const t = this.node
-    const opacity = this.node.opacity * (this.node.color.a ?? 255)
+    const opacity = this.node.worldOpacity * (this.node.color.a ?? 255)
     const tileWidth = source.width * t.renderScaleX
     const tileHeight = source.height * t.renderScaleY
     if (tileWidth <= 0 || tileHeight <= 0) return
@@ -393,7 +393,7 @@ export class Sprite<Props extends SpriteProps = SpriteProps> extends ComponentX<
     const sourceRows = [topSource, centerSourceHeight, bottomSource]
     const destColumns = [leftDest, centerDestWidth, rightDest]
     const destRows = [topDest, centerDestHeight, bottomDest]
-    const opacity = this.node.opacity * (this.node.color.a ?? 255)
+    const opacity = this.node.worldOpacity * (this.node.color.a ?? 255)
 
     let destY = dy
     let sourceY = source.y

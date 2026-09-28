@@ -944,14 +944,31 @@ export function loadTexture(path: string, pma = false): number {
 
   const image = new Image()
   image.decoding = 'async'
-  image.onload = () => {
-    if (textures.get(id) === asset) {
-      uploadSource(asset, image, image.naturalWidth, image.naturalHeight, pma)
+  asset.ready = new Promise<void>((resolve, reject) => {
+    image.onload = () => {
+      if (textures.get(id) === asset) {
+        uploadSource(asset, image, image.naturalWidth, image.naturalHeight, pma)
+      }
+      resolve()
     }
-  }
-  image.onerror = () => console.error(`Failed to load texture: ${path}`)
+    image.onerror = () => {
+      const message = `Failed to load texture: ${path}`
+      console.error(message)
+      reject(new Error(message))
+    }
+  })
+  // Callers that never wait on readiness still get the console error above.
+  asset.ready.catch(() => {})
   image.src = assetUrl(path)
   return id
+}
+
+/**
+ * Resolve when a texture's pixels are uploaded, or reject if it failed to load.
+ * Web-only: the native backend loads synchronously and may not export this.
+ */
+export function whenTextureReady(id: number): Promise<void> {
+  return textures.get(id)?.ready ?? Promise.resolve()
 }
 
 export function loadTextFile(_path: string): string | null {
@@ -973,18 +990,29 @@ export function loadFont(path: string, ptsize: number): number {
 
   const id = nextFontId++
   const family = `sdl-font-${id}`
-  const asset = { family, path, size: ptsize, refs: 1, loaded: false }
+  const asset: FontAsset = { family, path, size: ptsize, refs: 1, loaded: false }
   fonts.set(id, asset)
   fontIds.set(key, id)
   const face = new FontFace(family, `url("${assetUrl(path)}")`)
-  face.load()
-    .then((loaded) => {
+  asset.ready = face.load().then(
+    (loaded) => {
       document.fonts.add(loaded)
       asset.loaded = true
       rerenderTextTexturesForFont(id)
-    })
-    .catch(() => console.error(`Failed to load font: ${path}`))
+    },
+    () => {
+      const message = `Failed to load font: ${path}`
+      console.error(message)
+      throw new Error(message)
+    },
+  )
+  asset.ready.catch(() => {})
   return id
+}
+
+/** Font counterpart of `whenTextureReady`; web-only. */
+export function whenFontReady(id: number): Promise<void> {
+  return fonts.get(id)?.ready ?? Promise.resolve()
 }
 
 function renderTextSurface(font: FontAsset, text: string): HTMLCanvasElement | null {

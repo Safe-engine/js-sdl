@@ -298,7 +298,7 @@ export class TextInput extends ComponentX<TextInputProps> {
       color.r,
       color.g,
       color.b,
-      this.node.opacity * (color.a ?? 255),
+      this.node.worldOpacity * (color.a ?? 255),
     )
   }
 

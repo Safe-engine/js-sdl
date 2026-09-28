@@ -225,7 +225,7 @@ export class TiledMap extends ComponentX<TiledMapProps> {
     const red = this.node.color.r
     const green = this.node.color.g
     const blue = this.node.color.b
-    const alpha = this.node.opacity * (this.node.color.a ?? 255)
+    const alpha = this.node.worldOpacity * (this.node.color.a ?? 255)
     const translateX = renderX + originX * scaleX * cos - originY * scaleY * sin
     const translateY = renderY + originX * scaleX * sin + originY * scaleY * cos
 

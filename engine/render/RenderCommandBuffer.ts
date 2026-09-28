@@ -368,17 +368,23 @@ export class RenderCommandBuffer {
     return this._bufferView
   }
 
+  /** Submit queued commands and end the frame. */
   public submit(): void {
-    if (this.cmdOffset === 0) {
-      this.isFrameActive = false
-      return
-    }
+    this.isFrameActive = false
+    this.flush()
+  }
+
+  /**
+   * Submit queued commands without ending the frame, e.g. before an immediate
+   * draw that must stay ordered after them. Later pushes keep batching.
+   */
+  public flush(): void {
+    if (this.cmdOffset === 0) return
     const view = this.getBufferView()
     this.cmdOffset = 0
     this.floatOffset = 0
     this.uintOffset = 0
     this.shortOffset = 0
-    this.isFrameActive = false
     submitCommandBuffer(view)
   }
 

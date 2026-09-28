@@ -13,12 +13,17 @@ export function loadTextAsset(path: string, label = 'text asset'): Promise<strin
       })
     } else {
       const text = loadTextFile(path)
-      if (text === null) throw new Error(`Failed to load ${label}: ${path}`)
-      promise = Promise.resolve(text)
+      promise = text === null
+        ? Promise.reject(new Error(`Failed to load ${label}: ${path}`))
+        : Promise.resolve(text)
     }
     promise = promise.then((text) => {
       loadedTextCache.set(path, text)
       return text
+    }, (error) => {
+      // Forget failures so a later call can retry.
+      textCache.delete(path)
+      throw error
     })
     textCache.set(path, promise)
   }

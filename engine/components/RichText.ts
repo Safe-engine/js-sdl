@@ -206,7 +206,7 @@ export class RichText extends ComponentX<RichTextProps> {
       color.r,
       color.g,
       color.b,
-      this.node.opacity * (color.a ?? 255),
+      this.node.worldOpacity * (color.a ?? 255),
     )
   }
 

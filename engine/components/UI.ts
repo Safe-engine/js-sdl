@@ -447,6 +447,6 @@ export class Panel extends UIContainer<PanelProps> {
     const rect = worldRect(this.node)
     globalCommandBuffer.pushRect(rect.x, rect.y, rect.width, rect.height,
       this.props.color?.r, this.props.color?.g, this.props.color?.b,
-      this.node.opacity * (this.props.color?.a ?? 255))
+      this.node.worldOpacity * (this.props.color?.a ?? 255))
   }
 }

@@ -115,4 +115,37 @@ describe('Engine scene switching', () => {
     expect(persistent.x).toBe(50)
     expect(sceneNode.x).toBe(0)
   })
+
+  test('persistent nodes receive touches before the scene and can consume them', () => {
+    const log: string[] = []
+    class Hit extends ComponentX<{ consume: boolean }> {
+      inputEnabled = true
+      override hitTest(): boolean {
+        return true
+      }
+
+      override onPointerStart(event: any): void {
+        log.push(`${this.node.name}:start`)
+        if (this.props.consume) event.stopPropagation()
+      }
+
+      override onPointerEnd(): void {
+        log.push(`${this.node.name}:end`)
+      }
+    }
+    const overlay = Engine.addPersistentNode(new Node('overlay'))
+    const hit = overlay.addComponent(Hit, { consume: true })
+    Engine.scene!.node.addChild(new Node('scene-button')).addComponent(Hit, { consume: false })
+
+    hooks.touchStart(5, 5)
+    hooks.touchEnd(5, 5)
+    expect(log).toEqual(['overlay:start', 'overlay:end'])
+
+    log.length = 0
+    hit.props.consume = false
+    hooks.touchStart(5, 5)
+    hooks.touchEnd(5, 5)
+    expect(log).toEqual(['overlay:start', 'scene-button:start', 'overlay:end', 'scene-button:end'])
+    overlay.destroy()
+  })
 })

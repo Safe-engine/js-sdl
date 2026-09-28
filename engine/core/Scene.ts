@@ -1,4 +1,4 @@
-import { InputSystem, Touch } from '../Input'
+import { InputSystem, InputView, Touch } from '../Input'
 import { Camera2D } from '../components/Camera2D'
 import { setActiveCamera } from './CameraRenderContext'
 import { Node } from './Node'
@@ -148,9 +148,21 @@ export class Scene {
     return cameras.sort((a, b) => a.priority - b.priority)
   }
 
+  /** Cameras in render order as input views; undefined means screen space. */
+  private getInputViews(): InputView[] | undefined {
+    const cameras = this.getActiveCameras()
+    if (cameras.length === 0) return undefined
+    const width = this.node.width
+    const height = this.node.height
+    return cameras.map(camera => ({
+      mask: camera.mask,
+      toWorld: (x: number, y: number) => camera.screenToWorld(x, y, width, height),
+    }))
+  }
+
   /** Engine-internal: dispatch a pointer press to components, then the scene. */
   _dispatchTouchStart(x: number, y: number): void {
-    if (!this.input.dispatchStart(x, y)) {
+    if (!this.input.dispatchStart(x, y, this.getInputViews())) {
       this._lastTouchX = x
       this._lastTouchY = y
       this.onTouchStart(new Touch('start', x, y, null))

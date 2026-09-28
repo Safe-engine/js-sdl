@@ -96,6 +96,13 @@ export class Node {
     return !this._destroyed
   }
 
+  /** Own opacity multiplied by every ancestor's; what renderers should draw with. */
+  get worldOpacity(): number {
+    let opacity = this.opacity
+    for (let node = this._parent; node; node = node._parent) opacity *= node.opacity
+    return opacity
+  }
+
   get childRevision(): number {
     return this._childRevision
   }

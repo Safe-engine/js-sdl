@@ -215,7 +215,7 @@ export class SdlSlot extends Slot {
       display.red,
       display.green,
       display.blue,
-      root.node.opacity * display.alpha * 255,
+      (root.node.worldOpacity ?? root.node.opacity) * display.alpha * 255,
     )
   }
 
