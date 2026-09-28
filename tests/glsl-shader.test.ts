@@ -10,7 +10,7 @@ import { installSdl3 } from './setup/sdl3'
 const submits: number[] = []
 const quads: Float32Array[] = []
 
-beforeAll(() => {
+function installWebGLSdl3(): void {
   installSdl3({
     createGLSLProgram: () => ({}) as any,
     drawGLSLQuad: (_program: unknown, positions: Float32Array) => {
@@ -21,7 +21,9 @@ beforeAll(() => {
       submits.push(buffer.commands.length)
     },
   })
-})
+}
+
+beforeAll(installWebGLSdl3)
 
 class Quad extends ComponentX {
   override onRender(): void {
@@ -45,6 +47,33 @@ describe('GLSLShader', () => {
 
     // One flush before the shader draw, one for the two trailing sprites.
     expect(submits).toEqual([1, 2])
+  })
+
+  test('is skipped without breaking the scene when WebGL is unavailable', () => {
+    installSdl3({ createGLSLProgram: undefined as any })
+    const originalWarn = console.warn
+    const warnings: unknown[] = []
+    console.warn = (...args: unknown[]) => {
+      warnings.push(args[0])
+    }
+    try {
+      const started: string[] = []
+      class Probe extends ComponentX {
+        override onStart(): void {
+          started.push(this.node.name)
+        }
+      }
+      const root = new Node('root')
+      root.addChild(new Node('shader')).addComponent(GLSLShader, { fragment: 'void main() {}' })
+      root.addChild(new Node('after')).addComponent(Probe)
+
+      expect(() => root._startTree()).not.toThrow()
+      expect(started).toEqual(['after'])
+      expect(() => root._renderTree()).not.toThrow()
+    } finally {
+      console.warn = originalWarn
+      installWebGLSdl3()
+    }
   })
 
   test('draws through the active camera', () => {

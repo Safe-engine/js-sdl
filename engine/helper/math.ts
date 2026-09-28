@@ -17,10 +17,10 @@ export function Color4B(r: number, g: number, b: number, a: number): Color {
 }
 
 export function randomRangeInt(minInclude: Integer, maxExclude: Integer) {
-  return Math.round(Math.random() * (maxExclude - minInclude - 1)) + minInclude
+  return Math.floor(Math.random() * (maxExclude - minInclude)) + minInclude
 }
 export function randomRange(minInclude: Float, maxExclude: Float) {
-  return Math.random() * (maxExclude - minInclude - 1) + minInclude
+  return Math.random() * (maxExclude - minInclude) + minInclude
 }
 
 export function getMin(arr: number[]): number | null {

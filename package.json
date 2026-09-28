@@ -16,6 +16,7 @@
   "scripts": {
     "fix": "eslint ./engine --fix",
     "test": "bun test tests",
+    "test:perf": "PERF_LOG=1 bun test tests/performance",
     "sync-res": "bun ./node_modules/safex-sync-res/src/index.ts",
     "predev": "bun run sync-res",
     "compile": "rm -rf lib tsconfig.tsbuildinfo && tsc --build tsconfig.json",
