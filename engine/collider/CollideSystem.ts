@@ -6,6 +6,13 @@ import {
   Contact,
 } from './CollideComponent'
 
+const PAIR_KEY_SCALE = 2 ** 26
+
+class TrackedContact extends Contact {
+  /** Last frame in which the pair's AABBs overlapped. */
+  frame = 0
+}
+
 export interface CollideSystemProps {
   debug?: boolean
 }
@@ -13,9 +20,12 @@ export interface CollideSystemProps {
 export class CollideSystem extends ComponentX<CollideSystemProps> {
   debug = false
   readonly colliders: Collider[] = []
-  private contacts = new Map<string, Contact>()
+  private contacts = new Map<number, TrackedContact>()
   private ids = new WeakMap<Collider, number>()
   private nextId = 1
+  private frame = 0
+  /** Colliders ordered by AABB left edge; kept across frames so re-sorting is cheap. */
+  private sweep: Collider[] = []
 
   onAwake(): void {
     this.debug = this.props.debug ?? false
@@ -51,34 +61,67 @@ export class CollideSystem extends ComponentX<CollideSystemProps> {
     }
   }
 
+  /**
+   * Sweep-and-prune broadphase: only pairs whose AABBs overlap on x are tested,
+   * and only overlapping pairs keep a Contact. Pairs not seen this frame are no
+   * longer overlapping (or were removed), so touching ones receive EXIT.
+   */
   private updateContacts(): void {
-    const activeKeys = new Set<string>()
+    const frame = ++this.frame
+    const sweep = this.sortSweep()
 
-    for (let i = 0; i < this.colliders.length; i++) {
-      for (let j = i + 1; j < this.colliders.length; j++) {
-        const a = this.colliders[i]
-        const b = this.colliders[j]
+    for (let i = 0; i < sweep.length; i++) {
+      const a = sweep[i]
+      const aabbA = a.getAABB()
+      const right = aabbA.x + aabbA.width
+      for (let j = i + 1; j < sweep.length; j++) {
+        const b = sweep[j]
+        const aabbB = b.getAABB()
+        if (aabbB.x > right) break
+        if (aabbB.y > aabbA.y + aabbA.height || aabbA.y > aabbB.y + aabbB.height) continue
+
         const key = this.getPairKey(a, b)
-        activeKeys.add(key)
-
         let contact = this.contacts.get(key)
         if (!contact) {
-          contact = new Contact(a, b)
+          contact = new TrackedContact(a, b)
           this.contacts.set(key, contact)
         }
-
-        this.dispatch(contact.updateState(), a, b)
+        contact.frame = frame
+        this.dispatch(contact.updateState(), contact.collider1, contact.collider2)
       }
     }
 
     for (const [key, contact] of this.contacts) {
-      if (!activeKeys.has(key)) {
-        if (contact.isTouching) {
-          this.dispatch(CollisionType.EXIT, contact.collider1, contact.collider2)
-        }
-        this.contacts.delete(key)
+      if (contact.frame === frame) continue
+      if (contact.isTouching) {
+        this.dispatch(CollisionType.EXIT, contact.collider1, contact.collider2)
+      }
+      this.contacts.delete(key)
+    }
+  }
+
+  /** Insertion-sort by AABB left edge: near O(n) since order changes little per frame. */
+  private sortSweep(): Collider[] {
+    const current = new Set(this.colliders)
+    const sweep = this.sweep.filter(collider => current.has(collider))
+    if (sweep.length !== this.colliders.length) {
+      const kept = new Set(sweep)
+      for (const collider of this.colliders) {
+        if (!kept.has(collider)) sweep.push(collider)
       }
     }
+    for (let i = 1; i < sweep.length; i++) {
+      const item = sweep[i]
+      const x = item.getAABB().x
+      let j = i - 1
+      while (j >= 0 && sweep[j].getAABB().x > x) {
+        sweep[j + 1] = sweep[j]
+        j--
+      }
+      sweep[j + 1] = item
+    }
+    this.sweep = sweep
+    return sweep
   }
 
   private dispatch(type: typeof CollisionType[keyof typeof CollisionType], a: Collider, b: Collider): void {
@@ -100,10 +143,11 @@ export class CollideSystem extends ComponentX<CollideSystemProps> {
     }
   }
 
-  private getPairKey(a: Collider, b: Collider): string {
+  private getPairKey(a: Collider, b: Collider): number {
     const aId = this.getId(a)
     const bId = this.getId(b)
-    return aId < bId ? `${aId}:${bId}` : `${bId}:${aId}`
+    // Exact while ids stay below 2^26 (~67M colliders per system).
+    return aId < bId ? aId * PAIR_KEY_SCALE + bId : bId * PAIR_KEY_SCALE + aId
   }
 
   private getId(collider: Collider): number {

@@ -132,4 +132,39 @@ describe('Camera2D', () => {
 
     expect(log[0]?.x).toBe(25)
   })
+
+  test('only uses cameras that are alive, active and inside this scene', () => {
+    const scene = new Scene()
+    scene.node.width = 800
+    scene.node.height = 600
+    const otherScene = new Scene()
+
+    const log: RenderEntry[] = []
+    const target = new Node('target')
+    target.x = 400
+    target.y = 300
+    target.addComponent(RenderRecorder, { id: 'target', log })
+    scene.node.addChild(target)
+
+    // Would shift the target if it were used.
+    const inactiveParent = scene.node.addChild(new Node('inactive'))
+    inactiveParent.active = false
+    inactiveParent.addChild(new Node('hidden-camera')).addComponent(Camera2D)
+    const destroyed = scene.node.addChild(new Node('destroyed-camera'))
+    destroyed.x = 1000
+    destroyed.addComponent(Camera2D)
+    destroyed.destroy()
+    const foreign = otherScene.node.addChild(new Node('foreign-camera'))
+    foreign.x = 1000
+    foreign.addComponent(Camera2D)
+
+    scene.render()
+    expect(log.map(entry => entry.x)).toEqual([400])
+
+    log.length = 0
+    inactiveParent.active = true
+    inactiveParent.children[0].x = 500
+    scene.render()
+    expect(log.map(entry => entry.x)).toEqual([300])
+  })
 })

@@ -126,9 +126,7 @@ export class Node {
   }
 
   set width(value: number) {
-    if (this._width === value) return
     this._width = value
-    this._markTransformDirty()
   }
 
   get height(): number {
@@ -136,9 +134,7 @@ export class Node {
   }
 
   set height(value: number) {
-    if (this._height === value) return
     this._height = value
-    this._markTransformDirty()
   }
 
   get size(): Size {
@@ -146,10 +142,8 @@ export class Node {
   }
 
   set size(value: Size) {
-    if (this._width === value.width && this._height === value.height) return
     this._width = value.width
     this._height = value.height
-    this._markTransformDirty()
   }
 
   get x(): number {
@@ -277,9 +271,7 @@ export class Node {
   }
 
   set anchorX(value: number) {
-    if (this._anchorX === value) return
     this._anchorX = value
-    this._markTransformDirty()
   }
 
   get anchorY(): number {
@@ -287,9 +279,7 @@ export class Node {
   }
 
   set anchorY(value: number) {
-    if (this._anchorY === value) return
     this._anchorY = value
-    this._markTransformDirty()
   }
 
   contentToWorld(x: number, y: number): Point {
@@ -587,6 +577,9 @@ export class Node {
   }
 
   private _markTransformDirty(): void {
+    // A node only becomes clean after its parent does, so a dirty node's
+    // subtree is already dirty and needs no further traversal.
+    if (this._transformDirty) return
     this._transformDirty = true
     for (const child of this.children) {
       child._markTransformDirty()

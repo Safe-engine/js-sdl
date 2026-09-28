@@ -1,4 +1,5 @@
 import { ComponentX } from '../core/ComponentX'
+import type { Node } from '../core/Node'
 import { Matrix2D } from '../math/Matrix2D'
 
 export interface Camera2DProps {
@@ -8,7 +9,32 @@ export interface Camera2DProps {
   zoom?: number
 }
 
+/** Every camera attached to a node and not yet destroyed, in creation order. */
+const cameras = new Set<Camera2D>()
+
+function isActiveUnder(node: Node, root: Node): boolean {
+  for (let current: Node | null = node; current; current = current.parent) {
+    if (!current.active) return false
+    if (current === root) return true
+  }
+  return false
+}
+
 export class Camera2D extends ComponentX<Camera2DProps> {
+  /**
+   * Engine-internal: enabled cameras under active nodes of `root`, sorted by
+   * priority (ties keep creation order). Avoids walking the scene tree.
+   */
+  static _collectActive(root: Node): Camera2D[] {
+    const active: Camera2D[] = []
+    for (const camera of cameras) {
+      if (camera.enabled && camera.node && isActiveUnder(camera.node, root)) {
+        active.push(camera)
+      }
+    }
+    return active.sort((a, b) => a.priority - b.priority)
+  }
+
   enabled = true
   mask = 0xffffffff
   priority = 0
@@ -22,6 +48,11 @@ export class Camera2D extends ComponentX<Camera2DProps> {
     this.mask = this.props.mask ?? 0xffffffff
     this.priority = this.props.priority ?? 0
     this.zoom = this.props.zoom ?? 1
+    cameras.add(this)
+  }
+
+  onDestroy(): void {
+    cameras.delete(this)
   }
 
   onRender(): void {}

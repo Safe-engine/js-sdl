@@ -25,6 +25,8 @@ let nextAudioId = 0
 let nextAudioVoiceId = 0
 let running = false
 let lastFrameTime = 0
+/** Scheduled time of the next update; advances in fixed steps to pace any refresh rate. */
+let nextFrameTime = 0
 let frameDrawCalls = 0
 let frameVertices = 0
 let pointerDown = false
@@ -800,10 +802,15 @@ function frame(time: number): void {
   if (!running) return
   requestAnimationFrame(frame)
 
-  const elapsed = lastFrameTime === 0 ? FRAME_INTERVAL_MS : time - lastFrameTime
-  if (lastFrameTime !== 0 && elapsed < FRAME_INTERVAL_MS - 1.5) {
+  // Skipping frames by elapsed time alone locks 90/144 Hz displays to 45/48 FPS;
+  // stepping a schedule by the target interval averages out to TARGET_FPS.
+  if (lastFrameTime !== 0 && time < nextFrameTime - 1.5) {
     return
   }
+  nextFrameTime = lastFrameTime === 0 || time - nextFrameTime > FRAME_INTERVAL_MS
+    ? time + FRAME_INTERVAL_MS
+    : nextFrameTime + FRAME_INTERVAL_MS
+  const elapsed = lastFrameTime === 0 ? FRAME_INTERVAL_MS : time - lastFrameTime
 
   resizeDrawingBuffer()
   const dt = lastFrameTime === 0 ? 1 / TARGET_FPS : Math.min(elapsed / 1000, 0.1)

@@ -137,15 +137,7 @@ export class Scene {
   }
 
   private getActiveCameras(): Camera2D[] {
-    const cameras: Camera2D[] = []
-    const visit = (node: Node): void => {
-      if (!node.active) return
-      const camera = node.getComponent(Camera2D)
-      if (camera?.enabled) cameras.push(camera)
-      for (const child of node.children) visit(child)
-    }
-    visit(this.node)
-    return cameras.sort((a, b) => a.priority - b.priority)
+    return Camera2D._collectActive(this.node)
   }
 
   /** Cameras in render order as input views; undefined means screen space. */
