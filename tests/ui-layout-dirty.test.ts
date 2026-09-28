@@ -1,14 +1,15 @@
-import { describe, expect, mock, test } from 'bun:test'
+import { describe, expect, test } from 'bun:test'
 import { Node } from '../engine/core/Node'
+import { installSdl3 } from './setup/sdl3'
 
-mock.module('sdl3', () => ({
+installSdl3({
   drawRect: () => {},
   drawTextureRegionRotated: () => {},
   getTextureHeight: () => 0,
   getTextureWidth: () => 0,
   loadTexture: () => 1,
   releaseTexture: () => {},
-}))
+})
 
 const { UIContainer, UIElement, UILayout } = await import('../engine/components/UI')
 

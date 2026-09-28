@@ -1,9 +1,10 @@
-import { expect, mock, test } from 'bun:test'
+import { expect, test } from 'bun:test'
+import { installSdl3 } from './setup/sdl3'
 
 let widthQueries = 0
 let heightQueries = 0
 
-mock.module('sdl3', () => ({
+installSdl3({
   getTextureHeight: () => {
     heightQueries++
     return 32
@@ -15,9 +16,11 @@ mock.module('sdl3', () => ({
   isNative: true,
   loadTexture: () => 1,
   releaseTexture: () => {},
-}))
+})
 
-const { AssetManager } = await import('../engine/AssetManager')
+// AssetManager reads `isNative` at module load; the query string gives this
+// file its own instance instead of the one cached by earlier test files.
+const { AssetManager } = await import('../engine/AssetManager?native')
 
 test('native texture dimensions are queried once when acquired', () => {
   const texture = AssetManager.acquireTexture('native-cache-test.png')

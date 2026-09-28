@@ -1,9 +1,10 @@
 import { describe, expect, mock, test } from 'bun:test'
 import { Scene } from '../engine/core/Scene'
+import { installSdl3 } from './setup/sdl3'
 
 const loadTexture = mock(() => 1)
 
-mock.module('sdl3', () => ({
+installSdl3({
   getTextureHeight: () => 16,
   getTextureWidth: () => 16,
   isNative: true,
@@ -11,7 +12,7 @@ mock.module('sdl3', () => ({
   loadTexture,
   releaseTexture: () => {},
   submitCommandBuffer: () => {},
-}))
+})
 
 const { Particles } = await import('../engine/components/Particles')
 const { CMD_DRAW_SPRITE, globalCommandBuffer } = await import('../engine/render/RenderCommandBuffer')

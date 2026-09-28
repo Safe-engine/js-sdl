@@ -6,6 +6,10 @@
  * from engine/sdl3.ts and exercise them.
  */
 import { beforeEach, describe, expect, it } from 'bun:test'
+import { installSdl3, realSdl3 } from './setup/sdl3'
+
+// Exercises the real web backend rather than the shared fake.
+installSdl3(realSdl3)
 
 // ─── Minimal Web Audio API Mock ────────────────────────────────────────────────
 

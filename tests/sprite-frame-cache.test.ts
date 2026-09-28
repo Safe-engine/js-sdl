@@ -1,8 +1,9 @@
-import { describe, expect, mock, test } from 'bun:test'
+import { describe, expect, test } from 'bun:test'
+import { installSdl3 } from './setup/sdl3'
 
-mock.module('sdl3', () => ({
+installSdl3({
   loadTextFile: () => null,
-}))
+})
 
 const {
   parseSpriteAtlasFrames,

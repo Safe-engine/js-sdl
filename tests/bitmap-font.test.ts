@@ -6,6 +6,10 @@ import { Sprite } from '../engine/components/Sprite'
 import { Node } from '../engine/core/Node'
 import { Scene } from '../engine/core/Scene'
 import { globalCommandBuffer } from '../engine/render/RenderCommandBuffer'
+import { installSdl3, realSdl3 } from './setup/sdl3'
+
+// Exercises the real web backend rather than the shared fake.
+installSdl3(realSdl3)
 
 describe('BitmapFont & BitmapText', () => {
   let mockTexture: TextureAsset

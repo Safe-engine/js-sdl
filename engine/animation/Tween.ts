@@ -1,3 +1,4 @@
+import { Node } from '../core/Node'
 import { clamp01 } from '../helper/math'
 import { Easing, EasingFunction } from './Easing'
 
@@ -10,6 +11,12 @@ export type TweenValues<T> = {
 }
 
 export interface TweenOptions {
+  /**
+   * Node whose lifetime bounds the tween: it stops when the node is destroyed
+   * and waits while the node's actions are paused. Defaults to the target when
+   * it is a Node, or the target's `node` when it is a component.
+   */
+  owner?: Node
   ease?: EasingFunction
   delay?: number
   onStart?: () => void
@@ -26,8 +33,21 @@ interface TweenTrack {
 }
 
 interface Animation {
+  readonly owner: Node | null
   update(dt: number): boolean
   stop(): void
+}
+
+function inferOwner(target: Record<string, any>): Node | null {
+  if (target instanceof Node) return target
+  return target.node instanceof Node ? target.node : null
+}
+
+function isInside(node: Node, ancestor: Node): boolean {
+  for (let current: Node | null = node; current; current = current.parent) {
+    if (current === ancestor) return true
+  }
+  return false
 }
 
 function collectTracks(
@@ -53,13 +73,16 @@ export class TweenHandle implements Animation {
   private elapsed = 0
   private started = false
   private finished = false
+  readonly owner: Node | null
 
   constructor(
     private readonly target: Record<string, any>,
     private readonly values: Record<string, any>,
     private readonly duration: number,
     private readonly options: TweenOptions = {},
-  ) {}
+  ) {
+    this.owner = options.owner ?? inferOwner(target)
+  }
 
   update(dt: number): boolean {
     if (this.finished) return true
@@ -107,6 +130,14 @@ export class TweenSequence implements Animation {
   private index = 0
   private running = false
   private finished = false
+
+  /** Owner of the first tween step, if any. */
+  get owner(): Node | null {
+    for (const step of this.steps) {
+      if (step.type === 'tween' && step.tween.owner) return step.tween.owner
+    }
+    return null
+  }
 
   to<T extends object>(
     target: T,
@@ -213,15 +244,33 @@ export class Tween {
     this.animations = []
     this.updating = current
     for (const animation of current) {
+      const owner = animation.owner
+      if (owner && !owner.isValid) {
+        animation.stop()
+        continue
+      }
+      if (owner?.actionsAndSchedulePaused) {
+        this.animations.push(animation)
+        continue
+      }
       if (!animation.update(dt)) this.animations.push(animation)
     }
     this.updating = null
   }
 
-  static stopAll(): void {
-    for (const animation of this.updating ?? []) animation.stop()
-    for (const animation of this.animations) animation.stop()
-    this.animations.length = 0
+  /** Stop all animations, except those owned by `except` or its descendants. */
+  static stopAll(except?: Node): void {
+    const keep = (animation: Animation) =>
+      !!except && !!animation.owner && isInside(animation.owner, except)
+    for (const animation of this.updating ?? []) {
+      if (!keep(animation)) animation.stop()
+    }
+    const kept: Animation[] = []
+    for (const animation of this.animations) {
+      if (keep(animation)) kept.push(animation)
+      else animation.stop()
+    }
+    this.animations = kept
   }
 
   static _add(animation: Animation): void {

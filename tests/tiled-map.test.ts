@@ -1,4 +1,5 @@
-import { describe, expect, mock, test } from 'bun:test'
+import { describe, expect, test } from 'bun:test'
+import { installSdl3 } from './setup/sdl3'
 
 const tiledMapJson = JSON.stringify({
   width: 1,
@@ -28,7 +29,7 @@ const tiledMapJson = JSON.stringify({
   ],
 })
 
-mock.module('sdl3', () => ({
+installSdl3({
   submitCommandBuffer: () => {},
   drawTextureMesh: () => {},
   drawTextureRegionRotated: () => {},
@@ -37,7 +38,7 @@ mock.module('sdl3', () => ({
   loadTextFile: () => tiledMapJson,
   loadTexture: () => 1,
   releaseTexture: () => {},
-}))
+})
 
 const { TiledMap, TiledMapLayer } = await import('../engine/components/TiledMap')
 const { loadTextAsset } = await import('../engine/helper/text-resource')

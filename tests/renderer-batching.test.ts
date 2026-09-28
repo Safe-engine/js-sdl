@@ -1,4 +1,8 @@
 import { describe, expect, it, beforeEach } from 'bun:test'
+import { installSdl3, realSdl3 } from './setup/sdl3'
+
+// Exercises the real web backend rather than the shared fake.
+installSdl3(realSdl3)
 
 describe('WebGL Renderer Batching', async () => {
   let drawArraysCalls: Array<{ mode: number; first: number; count: number }> = []

@@ -1,9 +1,10 @@
-import { describe, expect, mock, test } from 'bun:test'
+import { describe, expect, test } from 'bun:test'
 import { InputSystem } from '../engine/Input'
 import { Slider } from '../engine/components/Slider'
 import { Node } from '../engine/core/Node'
+import { installSdl3 } from './setup/sdl3'
 
-mock.module('sdl3', () => ({
+installSdl3({
   drawRect: () => {},
   drawTextureRegionRotated: () => {},
   popClipRect: () => {},
@@ -15,7 +16,7 @@ mock.module('sdl3', () => ({
   loadTexture: () => 1,
   releaseFont: () => {},
   releaseTexture: () => {},
-}))
+})
 
 describe('Slider', () => {
   test('snaps values to the configured range and step', () => {

@@ -1,11 +1,12 @@
-import { describe, expect, mock, test } from 'bun:test'
+import { describe, expect, test } from 'bun:test'
 import { Node } from '../engine/core/Node'
+import { installSdl3 } from './setup/sdl3'
 
 const textureSizes = new Map<number, { width: number, height: number }>()
 const quads: number[] = []
 let nextTextureId = 1
 
-mock.module('sdl3', () => ({
+installSdl3({
   drawTextureQuad: (id: number) => quads.push(id),
   drawTextureRegionRotated: () => {},
   drawTextureRotated: () => {},
@@ -27,7 +28,7 @@ mock.module('sdl3', () => ({
       }
     }
   },
-}))
+})
 
 const { CircleProgress } = await import('../engine/components/CircleProgress')
 const { Sprite } = await import('../engine/components/Sprite')

@@ -48,6 +48,11 @@ export class Node {
   private _eventListeners = new Map<string, EventListenerEntry[]>()
   private _childRevision = 0
   private _started = false
+  private _destroyed = false
+  /** Depth of in-progress traversals over `children`. */
+  private _iteratingChildren = 0
+  /** Whether a traversal still holds the current `children` array. */
+  private _childrenShared = false
 
   private _x = Number.NaN
   private _y = Number.NaN
@@ -84,6 +89,11 @@ export class Node {
     let curr: Node = this
     while (curr._parent) curr = curr._parent
     return curr
+  }
+
+  /** False once `destroy()` has been called on this node or an ancestor. */
+  get isValid(): boolean {
+    return !this._destroyed
   }
 
   get childRevision(): number {
@@ -360,10 +370,11 @@ export class Node {
   addChild(child: Node, index?: number): Node {
     if (child.parent) child.removeFromParent()
     child.parent = this
+    const children = this._mutableChildren()
     if (index !== undefined) {
-      this.children.splice(index, 0, child)
+      children.splice(index, 0, child)
     } else {
-      this.children.push(child)
+      children.push(child)
     }
     this._childRevision += 1
     if (this._started) child._startTree()
@@ -383,7 +394,7 @@ export class Node {
     if (!this.parent) return
     const idx = this.parent.children.indexOf(this)
     if (idx >= 0) {
-      this.parent.children.splice(idx, 1)
+      this.parent._mutableChildren().splice(idx, 1)
       this.parent._childRevision += 1
     }
     this.parent = null
@@ -475,23 +486,35 @@ export class Node {
     this._actionsAndSchedulePaused = false
   }
 
+  get actionsAndSchedulePaused(): boolean {
+    return this._actionsAndSchedulePaused
+  }
+
   /** Internal: traverse update through tree. */
   _updateTree(dt: number): void {
-    if (!this.active) return
+    if (!this.active || this._destroyed) return
     if (!this._actionsAndSchedulePaused) {
       this._updateScheduledCallbacks(dt)
       for (let i = 0; i < this.components.length; i++) {
         this.components[i].onUpdate(dt)
       }
     }
-    for (let i = 0; i < this.children.length; i++) {
-      this.children[i]._updateTree(dt)
+    const children = this.children
+    this._iteratingChildren++
+    this._childrenShared = true
+    try {
+      for (let i = 0; i < children.length; i++) {
+        const child = children[i]
+        if (child._parent === this) child._updateTree(dt)
+      }
+    } finally {
+      this._iteratingChildren--
     }
   }
 
   /** Internal: traverse render through tree. */
   _renderTree(): void {
-    if (!this.active || !this.visible) return
+    if (!this.active || !this.visible || this._destroyed) return
     const camera = getActiveCamera()
     const renderComponents = !camera || (camera.mask & this.cameraMask) !== 0
     if (renderComponents) {
@@ -500,8 +523,15 @@ export class Node {
       }
     }
     const renderChildren = this.getRenderChildren()
-    for (let i = 0; i < renderChildren.length; i++) {
-      renderChildren[i]._renderTree()
+    this._iteratingChildren++
+    this._childrenShared = true
+    try {
+      for (let i = 0; i < renderChildren.length; i++) {
+        const child = renderChildren[i]
+        if (child._parent === this) child._renderTree()
+      }
+    } finally {
+      this._iteratingChildren--
     }
     if (renderComponents) {
       for (let i = this.components.length - 1; i >= 0; i--) {
@@ -512,21 +542,41 @@ export class Node {
 
   /** Internal: start all components (called once on first tick). */
   _startTree(): void {
-    if (this._started) return
+    if (this._started || this._destroyed) return
     this._started = true
-    for (const c of this.components) c.onStart()
-    for (const child of this.children) child._startTree()
+    for (const c of [...this.components]) c.onStart()
+    const children = this.children
+    this._iteratingChildren++
+    this._childrenShared = true
+    try {
+      for (const child of children) {
+        if (child._parent === this) child._startTree()
+      }
+    } finally {
+      this._iteratingChildren--
+    }
   }
 
   destroy(): void {
+    if (this._destroyed) return
+    this._destroyed = true
     this.unscheduleAllCallbacks()
     this._eventListeners.clear()
-    for (const c of this.components) c.onDestroy()
+    for (const c of [...this.components]) c.onDestroy()
     for (const child of [...this.children]) child.destroy()
     this.removeFromParent()
-    this.components.length = 0
-    this.children.length = 0
+    this.components = []
+    this.children = []
     this._childRevision += 1
+  }
+
+  /** Children array safe to mutate; copied once if a traversal is iterating it. */
+  private _mutableChildren(): Node[] {
+    if (this._iteratingChildren > 0 && this._childrenShared) {
+      this.children = this.children.slice()
+      this._childrenShared = false
+    }
+    return this.children
   }
 
   private _markTransformDirty(): void {

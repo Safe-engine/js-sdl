@@ -1,13 +1,14 @@
-import { describe, expect, mock, test } from 'bun:test'
+import { describe, expect, test } from 'bun:test'
 import { Node } from '../engine/core/Node'
+import { installSdl3 } from './setup/sdl3'
 
 let startTextInputCalls = 0
 
-mock.module('../engine/sdl3', () => ({
+installSdl3({
   startTextInput: () => { startTextInputCalls += 1 },
   stopTextInput: () => {},
   submitCommandBuffer: () => {},
-}))
+})
 
 const { TextInput } = await import('../engine/components/TextInput')
 

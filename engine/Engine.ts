@@ -45,6 +45,9 @@ class EngineImpl {
   /** Root for nodes that must remain alive while scenes are replaced. */
   readonly persistentNode = new Node('persistent')
   private _currentScene: Scene | null = null
+  /** Scene requested while a platform callback was running; `undefined` if none. */
+  private _pendingScene: Scene | null | undefined = undefined
+  private _dispatchDepth = 0
   private _ready = false
   private _paused = false
   private _backgrounded = false
@@ -81,7 +84,8 @@ class EngineImpl {
       })
     })
 
-    onUpdate((dt: number) => {
+    onUpdate(this._dispatch((dt: number) => {
+      this._applyPendingScene()
       this._fps = dt > 0 ? 1 / dt : 60
       this._frameTimeMs = dt * 1000
       Audio._update(dt)
@@ -90,9 +94,9 @@ class EngineImpl {
         this._currentScene.tick(dt)
       }
       this._tickPersistentNode(dt)
-    })
+    }))
 
-    onRender(() => {
+    onRender(this._dispatch(() => {
       clear()
       globalCommandBuffer.beginFrame()
       if (this._currentScene) {
@@ -101,85 +105,85 @@ class EngineImpl {
       this.persistentNode._renderTree()
       globalCommandBuffer.submit()
       present()
-    })
+    }))
 
-    onTouchStart((x: number, y: number) => {
+    onTouchStart(this._dispatch((x: number, y: number) => {
       TextInput.handleGlobalPointerStart(x, y)
       this._currentScene?._dispatchTouchStart(x, y)
-    })
+    }))
 
-    onTouchMove((x: number, y: number) => {
+    onTouchMove(this._dispatch((x: number, y: number) => {
       this._currentScene?._dispatchTouchMove(x, y)
-    })
+    }))
 
-    onTouchEnd((x: number, y: number) => {
+    onTouchEnd(this._dispatch((x: number, y: number) => {
       this._currentScene?._dispatchTouchEnd(x, y)
-    })
+    }))
 
-    onTextInput((text: string) => {
+    onTextInput(this._dispatch((text: string) => {
       TextInput.handleTextInput(text)
       this._currentScene?.onTextInput(text)
-    })
+    }))
 
-    onKeyDown((key: string) => {
+    onKeyDown(this._dispatch((key: string) => {
       TextInput.handleKeyDown(key)
       this._currentScene?.onKeyDown(key)
-    })
+    }))
 
-    onKeyUp((key: string) => {
+    onKeyUp(this._dispatch((key: string) => {
       this._currentScene?.onKeyUp(key)
-    })
+    }))
 
-    onPause(() => {
+    onPause(this._dispatch(() => {
       if (this._paused) return
       this._paused = true
       this._syncAudioLifecycle()
       this._currentScene?.onSaveProgress()
       this._currentScene?.onPause()
-    })
+    }))
 
-    onResume(() => {
+    onResume(this._dispatch(() => {
       if (!this._paused) return
       this._paused = false
       this._syncAudioLifecycle()
       this._currentScene?.onResume()
-    })
+    }))
 
-    onBackground(() => {
+    onBackground(this._dispatch(() => {
       if (this._backgrounded) return
       this._backgrounded = true
       this._syncAudioLifecycle()
       this._currentScene?.onBackground()
-    })
+    }))
 
-    onForeground(() => {
+    onForeground(this._dispatch(() => {
       if (!this._backgrounded) return
       this._backgrounded = false
       this._syncAudioLifecycle()
       this._currentScene?.onForeground()
-    })
+    }))
 
-    onInterruption((active: boolean) => {
+    onInterruption(this._dispatch((active: boolean) => {
       this._interrupted = active
       this._syncAudioLifecycle()
       this._currentScene?.onInterruption(active)
-    })
+    }))
 
-    onLowMemory(() => {
+    onLowMemory(this._dispatch(() => {
       this._currentScene?.onLowMemory()
-    })
+    }))
 
-    onOrientationChange((value: number, width: number, height: number) => {
+    onOrientationChange(this._dispatch((value: number, width: number, height: number) => {
       this.refreshViewport()
       if (this._currentScene) this._resizeSceneToViewport(this._currentScene)
       const orientation = ORIENTATIONS[value] ?? 'unknown'
       this._currentScene?.onOrientationChange(orientation, width, height)
-    })
+    }))
 
-    onTerminate(() => {
+    onTerminate(this._dispatch(() => {
       Audio.stopAll()
       this._currentScene?.onSaveProgress()
-    })
+    }))
 
     return this._startPromise
   }
@@ -227,12 +231,25 @@ class EngineImpl {
     return this.viewport.worldToScreen(x, y)
   }
 
-  /** Set active scene and destroy the scene it replaces. */
+  /**
+   * Set active scene and destroy the scene it replaces. When set from inside a
+   * frame or input callback, the switch is deferred to the start of the next
+   * update so the old scene is never destroyed while its code is running; the
+   * getter keeps returning the old scene until then.
+   */
   get scene(): Scene | null {
     return this._currentScene
   }
 
   set scene(s: Scene | null) {
+    if (this._dispatchDepth > 0) {
+      this._pendingScene = s
+      return
+    }
+    this._replaceScene(s)
+  }
+
+  private _replaceScene(s: Scene | null): void {
     if (this._currentScene === s) return
 
     const previous = this._currentScene
@@ -243,7 +260,7 @@ class EngineImpl {
         s.node.width = previous.node.width
         s.node.height = previous.node.height
       }
-      Tween.stopAll()
+      Tween.stopAll(this.persistentNode)
       previous.input.reset()
       if (this._ready) {
         previous.onExit()
@@ -255,6 +272,25 @@ class EngineImpl {
     if (s && this._ready) {
       this._resizeSceneToViewport(s)
       this._activateScene(s)
+    }
+  }
+
+  private _applyPendingScene(): void {
+    if (this._pendingScene === undefined) return
+    const scene = this._pendingScene
+    this._pendingScene = undefined
+    this._replaceScene(scene)
+  }
+
+  /** Wrap a platform callback so scene changes made inside it are deferred. */
+  private _dispatch<A extends unknown[]>(handler: (...args: A) => void): (...args: A) => void {
+    return (...args: A) => {
+      this._dispatchDepth++
+      try {
+        handler(...args)
+      } finally {
+        this._dispatchDepth--
+      }
     }
   }
 

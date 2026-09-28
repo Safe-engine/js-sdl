@@ -1,7 +1,8 @@
 import { describe, expect, mock, test } from 'bun:test'
 import { Node } from '../engine/core/Node'
+import { installSdl3 } from './setup/sdl3'
 
-mock.module('../engine/sdl3', () => ({
+installSdl3({
   drawTextureMesh: () => {},
   drawTextureQuad: () => {},
   getTextureHeight: () => 0,
@@ -10,7 +11,7 @@ mock.module('../engine/sdl3', () => ({
   loadTextFile: () => null,
   releaseTexture: () => {},
   submitCommandBuffer: () => {},
-}))
+})
 
 const { SpineBonesControl } = await import('../engine/spine/SpineBonesControl')
 const { SpineSkeleton } = await import('../engine/spine/SpineSkeleton')

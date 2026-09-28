@@ -1,4 +1,5 @@
-import { describe, expect, mock, test } from 'bun:test'
+import { describe, expect, test } from 'bun:test'
+import { installSdl3 } from './setup/sdl3'
 
 const sdlState = globalThis as typeof globalThis & {
   __jsSdlDrawCalls?: Array<{
@@ -26,7 +27,7 @@ function nextAssetId(): number {
   return id
 }
 
-mock.module('sdl3', () => ({
+installSdl3({
   drawTextureRegionRotated: () => {},
   drawTextureRotated: (
     id: number,
@@ -95,7 +96,7 @@ mock.module('sdl3', () => ({
       }
     }
   },
-}))
+})
 
 const { RichText } = await import('../engine/components/RichText')
 

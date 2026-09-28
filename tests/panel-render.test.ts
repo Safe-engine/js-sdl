@@ -1,9 +1,10 @@
-import { describe, expect, mock, test } from 'bun:test'
+import { describe, expect, test } from 'bun:test'
 import { Node } from '../engine/core/Node'
+import { installSdl3 } from './setup/sdl3'
 
-mock.module('sdl3', () => ({
+installSdl3({
   submitCommandBuffer: () => {},
-}))
+})
 
 const { Panel } = await import('../engine/components/UI')
 const { ComponentX } = await import('../engine/core/ComponentX')

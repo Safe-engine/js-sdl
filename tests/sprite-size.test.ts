@@ -1,6 +1,7 @@
-import { describe, expect, mock, test } from 'bun:test'
+import { describe, expect, test } from 'bun:test'
 import { ComponentX } from '../engine/core/ComponentX'
 import { Node } from '../engine/core/Node'
+import { installSdl3 } from './setup/sdl3'
 
 const sdlState = globalThis as typeof globalThis & {
   __jsSdlDrawCalls?: Array<{ id: number, x: number, y: number, width: number, height: number }>
@@ -31,7 +32,7 @@ function nextAssetId(): number {
   return id
 }
 
-mock.module('sdl3', () => ({
+installSdl3({
   drawTextureRegionRotated: (
     id: number,
     sourceX: number,
@@ -140,7 +141,7 @@ mock.module('sdl3', () => ({
       }
     }
   },
-}))
+})
 
 const { Sprite } = await import('../engine/components/Sprite')
 const { Button } = await import('../engine/components/Button')

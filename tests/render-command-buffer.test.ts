@@ -11,6 +11,10 @@ import {
   RenderCommandBuffer,
 } from '../engine/render/RenderCommandBuffer'
 import { submitCommandBuffer } from '../engine/sdl3'
+import { installSdl3, realSdl3 } from './setup/sdl3'
+
+// Exercises the real web backend rather than the shared fake.
+installSdl3(realSdl3)
 
 describe('RenderCommandBuffer', () => {
   it('should encode sprite regions and quads correctly into TypedArrays', () => {
