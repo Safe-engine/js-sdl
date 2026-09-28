@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { budget, measure, report } from './perf-utils'
 import {
+  cameraSceneTree,
   colliders,
   commandBufferGrowth,
   commandBufferSprites,
@@ -33,6 +34,10 @@ describe('performance', () => {
 
   test('updates and renders a 5k-node scene tree within a frame budget', () => {
     expect(time(sceneTree())).toBeLessThan(budget(16))
+  })
+
+  test('renders a 5k-node scene tree through a camera within a frame budget', () => {
+    expect(time(cameraSceneTree())).toBeLessThan(budget(16))
   })
 
   test('collision broadphase scales sub-quadratically', () => {

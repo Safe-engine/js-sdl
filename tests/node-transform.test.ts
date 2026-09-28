@@ -1,7 +1,9 @@
 import { describe, expect, test } from 'bun:test'
 import { Tween } from '../engine/animation/Tween'
 import { ComponentX } from '../engine/core/ComponentX'
+import { setActiveCamera } from '../engine/core/CameraRenderContext'
 import { Node } from '../engine/core/Node'
+import { Matrix2D } from '../engine/math/Matrix2D'
 import { Scene } from '../engine/core/Scene'
 
 class TestComponent extends ComponentX {}
@@ -187,5 +189,28 @@ describe('Node transforms', () => {
     expect(parent.children).toEqual([])
     expect(parent.components).toContain(component)
     expect(component.node).toBe(parent)
+  })
+
+  test('renderMatrix follows node moves and camera changes within and across passes', () => {
+    const parent = new Node('parent')
+    const child = parent.addChild(new Node('child'))
+    child.x = 10
+    const pass = (tx: number) => ({ viewMatrix: new Matrix2D(1, 0, 0, 1, tx, 0), mask: 0xffffffff })
+    try {
+      setActiveCamera(pass(100))
+      expect(child.renderMatrix.tx).toBe(110)
+      // Same pass, node moved (directly and through its parent).
+      child.x = 20
+      expect(child.renderX).toBe(120)
+      parent.x = 5
+      expect(child.renderMatrix.tx).toBe(125)
+
+      // A new pass with a different view is picked up even with no node change.
+      setActiveCamera(pass(-50))
+      expect(child.renderX).toBe(-25)
+    } finally {
+      setActiveCamera(null)
+    }
+    expect(child.renderMatrix.tx).toBe(25)
   })
 })

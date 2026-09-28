@@ -29,8 +29,24 @@ const SKEW_EPSILON = 1e-6
  * decomposed x/y/w/h/angle draw commands cannot represent.
  */
 export function matrixHasSkew(matrix: AffineMatrix): boolean {
-  const { a, b, c, d } = matrix
-  return Math.abs(a * c + b * d) > SKEW_EPSILON * Math.abs(a * d - b * c)
+  const b = matrix.b
+  const c = matrix.c
+  // Unrotated matrices (the common case) cannot shear.
+  if (b === 0 && c === 0) return false
+  const a = matrix.a
+  const d = matrix.d
+  const dot = a * c + b * d
+  const det = a * d - b * c
+  return (dot < 0 ? -dot : dot) > SKEW_EPSILON * (det < 0 ? -det : det)
+}
+
+/**
+ * Rounds and clamps a colour channel to 0..255 (NaN becomes 0). Plain
+ * comparisons instead of Math.min/max/round: this runs for every command and
+ * native calls are costly in QuickJS.
+ */
+function clampByte(value: number): number {
+  return value >= 255 ? 255 : value > 0 ? (value + 0.5) | 0 : 0
 }
 
 export class RenderCommandBuffer {
@@ -92,24 +108,30 @@ export class RenderCommandBuffer {
 
     this.commands[this.cmdOffset++] = CMD_DRAW_REGION
 
-    this.uintBuffer[this.uintOffset++] = (textureId | (additive ? ADDITIVE_TEXTURE_FLAG : 0)) >>> 0
-    this.uintBuffer[this.uintOffset++] = c
+    const uints = this.uintBuffer
+    const u = this.uintOffset
+    uints[u] = (textureId | (additive ? ADDITIVE_TEXTURE_FLAG : 0)) >>> 0
+    uints[u + 1] = c
+    this.uintOffset = u + 2
 
-    this.floatBuffer[this.floatOffset++] = sx
-    this.floatBuffer[this.floatOffset++] = sy
-    this.floatBuffer[this.floatOffset++] = sw
-    this.floatBuffer[this.floatOffset++] = sh
-    this.floatBuffer[this.floatOffset++] = dx
-    this.floatBuffer[this.floatOffset++] = dy
-    this.floatBuffer[this.floatOffset++] = dw
-    this.floatBuffer[this.floatOffset++] = dh
-    this.floatBuffer[this.floatOffset++] = angle
-    this.floatBuffer[this.floatOffset++] = cx
-    this.floatBuffer[this.floatOffset++] = cy
-    this.floatBuffer[this.floatOffset++] = flipX ? 1 : 0
-    this.floatBuffer[this.floatOffset++] = flipY ? 1 : 0
+    const floats = this.floatBuffer
+    const f = this.floatOffset
+    floats[f] = sx
+    floats[f + 1] = sy
+    floats[f + 2] = sw
+    floats[f + 3] = sh
+    floats[f + 4] = dx
+    floats[f + 5] = dy
+    floats[f + 6] = dw
+    floats[f + 7] = dh
+    floats[f + 8] = angle
+    floats[f + 9] = cx
+    floats[f + 10] = cy
+    floats[f + 11] = flipX ? 1 : 0
+    floats[f + 12] = flipY ? 1 : 0
+    this.floatOffset = f + 13
 
-    this.autoSubmitIfInactive()
+    if (!this.isFrameActive) this.submit()
   }
 
   /**
@@ -254,20 +276,28 @@ export class RenderCommandBuffer {
 
     this.commands[this.cmdOffset++] = CMD_DRAW_SPRITE
 
-    this.uintBuffer[this.uintOffset++] = (textureId | (additive ? ADDITIVE_TEXTURE_FLAG : 0)) >>> 0
-    this.uintBuffer[this.uintOffset++] = c
+    const uints = this.uintBuffer
+    const u = this.uintOffset
+    uints[u] = (textureId | (additive ? ADDITIVE_TEXTURE_FLAG : 0)) >>> 0
+    uints[u + 1] = c
+    this.uintOffset = u + 2
 
-    this.floatBuffer[this.floatOffset++] = x
-    this.floatBuffer[this.floatOffset++] = y
-    this.floatBuffer[this.floatOffset++] = width
-    this.floatBuffer[this.floatOffset++] = height
-    this.floatBuffer[this.floatOffset++] = angle
-    this.floatBuffer[this.floatOffset++] = centerX
-    this.floatBuffer[this.floatOffset++] = centerY
-    this.floatBuffer[this.floatOffset++] = flipX ? 1 : 0
-    this.floatBuffer[this.floatOffset++] = flipY ? 1 : 0
+    // Locals instead of `this.floatBuffer[this.floatOffset++]`: fewer property
+    // loads per store under QuickJS, which does not optimise them away.
+    const floats = this.floatBuffer
+    const f = this.floatOffset
+    floats[f] = x
+    floats[f + 1] = y
+    floats[f + 2] = width
+    floats[f + 3] = height
+    floats[f + 4] = angle
+    floats[f + 5] = centerX
+    floats[f + 6] = centerY
+    floats[f + 7] = flipX ? 1 : 0
+    floats[f + 8] = flipY ? 1 : 0
+    this.floatOffset = f + 9
 
-    this.autoSubmitIfInactive()
+    if (!this.isFrameActive) this.submit()
   }
 
   public pushQuad(
@@ -299,27 +329,33 @@ export class RenderCommandBuffer {
 
     this.commands[this.cmdOffset++] = CMD_DRAW_QUAD
 
-    this.uintBuffer[this.uintOffset++] = (textureId | (additive ? ADDITIVE_TEXTURE_FLAG : 0)) >>> 0
-    this.uintBuffer[this.uintOffset++] = c
+    const uints = this.uintBuffer
+    const u = this.uintOffset
+    uints[u] = (textureId | (additive ? ADDITIVE_TEXTURE_FLAG : 0)) >>> 0
+    uints[u + 1] = c
+    this.uintOffset = u + 2
 
-    this.floatBuffer[this.floatOffset++] = x0
-    this.floatBuffer[this.floatOffset++] = y0
-    this.floatBuffer[this.floatOffset++] = u0
-    this.floatBuffer[this.floatOffset++] = v0
-    this.floatBuffer[this.floatOffset++] = x1
-    this.floatBuffer[this.floatOffset++] = y1
-    this.floatBuffer[this.floatOffset++] = u1
-    this.floatBuffer[this.floatOffset++] = v1
-    this.floatBuffer[this.floatOffset++] = x2
-    this.floatBuffer[this.floatOffset++] = y2
-    this.floatBuffer[this.floatOffset++] = u2
-    this.floatBuffer[this.floatOffset++] = v2
-    this.floatBuffer[this.floatOffset++] = x3
-    this.floatBuffer[this.floatOffset++] = y3
-    this.floatBuffer[this.floatOffset++] = u3
-    this.floatBuffer[this.floatOffset++] = v3
+    const floats = this.floatBuffer
+    const f = this.floatOffset
+    floats[f] = x0
+    floats[f + 1] = y0
+    floats[f + 2] = u0
+    floats[f + 3] = v0
+    floats[f + 4] = x1
+    floats[f + 5] = y1
+    floats[f + 6] = u1
+    floats[f + 7] = v1
+    floats[f + 8] = x2
+    floats[f + 9] = y2
+    floats[f + 10] = u2
+    floats[f + 11] = v2
+    floats[f + 12] = x3
+    floats[f + 13] = y3
+    floats[f + 14] = u3
+    floats[f + 15] = v3
+    this.floatOffset = f + 16
 
-    this.autoSubmitIfInactive()
+    if (!this.isFrameActive) this.submit()
   }
 
   public pushMesh(
@@ -365,7 +401,7 @@ export class RenderCommandBuffer {
     this.shortBuffer.set(indices, this.shortOffset)
     this.shortOffset += iCount
 
-    this.autoSubmitIfInactive()
+    if (!this.isFrameActive) this.submit()
   }
 
   /**
@@ -424,7 +460,7 @@ export class RenderCommandBuffer {
     this.shortBuffer.set(indices, this.shortOffset)
     this.shortOffset += iCount
 
-    this.autoSubmitIfInactive()
+    if (!this.isFrameActive) this.submit()
   }
 
   public pushRect(
@@ -444,12 +480,15 @@ export class RenderCommandBuffer {
 
     this.uintBuffer[this.uintOffset++] = c
 
-    this.floatBuffer[this.floatOffset++] = x
-    this.floatBuffer[this.floatOffset++] = y
-    this.floatBuffer[this.floatOffset++] = width
-    this.floatBuffer[this.floatOffset++] = height
+    const floats = this.floatBuffer
+    const f = this.floatOffset
+    floats[f] = x
+    floats[f + 1] = y
+    floats[f + 2] = width
+    floats[f + 3] = height
+    this.floatOffset = f + 4
 
-    this.autoSubmitIfInactive()
+    if (!this.isFrameActive) this.submit()
   }
 
   public pushLine(
@@ -469,12 +508,15 @@ export class RenderCommandBuffer {
 
     this.uintBuffer[this.uintOffset++] = c
 
-    this.floatBuffer[this.floatOffset++] = x1
-    this.floatBuffer[this.floatOffset++] = y1
-    this.floatBuffer[this.floatOffset++] = x2
-    this.floatBuffer[this.floatOffset++] = y2
+    const floats = this.floatBuffer
+    const f = this.floatOffset
+    floats[f] = x1
+    floats[f + 1] = y1
+    floats[f + 2] = x2
+    floats[f + 3] = y2
+    this.floatOffset = f + 4
 
-    this.autoSubmitIfInactive()
+    if (!this.isFrameActive) this.submit()
   }
 
   public pushPoint(
@@ -538,14 +580,14 @@ export class RenderCommandBuffer {
     this.floatBuffer[this.floatOffset++] = width
     this.floatBuffer[this.floatOffset++] = height
 
-    this.autoSubmitIfInactive()
+    if (!this.isFrameActive) this.submit()
   }
 
   public popClipRect(): void {
     this.ensureCapacities(1, 0, 0, 0)
     this.commands[this.cmdOffset++] = CMD_POP_CLIP
 
-    this.autoSubmitIfInactive()
+    if (!this.isFrameActive) this.submit()
   }
 
   private _bufferView: SpriteBatchBuffer = {
@@ -587,12 +629,6 @@ export class RenderCommandBuffer {
     submitCommandBuffer(view)
   }
 
-  private autoSubmitIfInactive(): void {
-    if (!this.isFrameActive) {
-      this.submit()
-    }
-  }
-
   private writeMeshHeader(textureId: number, additive: boolean, color: number, vCount: number, iCount: number): void {
     this.uintBuffer[this.uintOffset++] = (textureId | (additive ? ADDITIVE_TEXTURE_FLAG : 0)) >>> 0
     this.uintBuffer[this.uintOffset++] = color
@@ -601,11 +637,9 @@ export class RenderCommandBuffer {
   }
 
   private packColor(r: number, g: number, b: number, a: number): number {
-    const cr = Math.min(255, Math.max(0, Math.round(r))) & 0xff
-    const cg = Math.min(255, Math.max(0, Math.round(g))) & 0xff
-    const cb = Math.min(255, Math.max(0, Math.round(b))) & 0xff
-    const ca = Math.min(255, Math.max(0, Math.round(a))) & 0xff
-    return (((cr << 24) | (cg << 16) | (cb << 8) | ca) >>> 0)
+    // Opaque white is by far the most common tint.
+    if (r === 255 && g === 255 && b === 255 && a === 255) return 0xffffffff
+    return (((clampByte(r) << 24) | (clampByte(g) << 16) | (clampByte(b) << 8) | clampByte(a)) >>> 0)
   }
 
   private ensureCapacities(

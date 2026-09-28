@@ -16,7 +16,8 @@ export class ComponentX<Props = unknown> {
   declare node: Node
   inputEnabled = false
   inputPriority = 0
-  private _enabled = true
+  /** Engine-internal: backing field of `enabled`, read directly by tree traversal. */
+  _enabled = true
   /** Engine-internal: whether onEnable has run without a matching onDisable. */
   _enableCalled = false
   __view?()

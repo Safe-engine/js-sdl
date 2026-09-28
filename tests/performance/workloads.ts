@@ -5,6 +5,7 @@
  */
 import { Tween } from '../../engine/animation/Tween'
 import { BoxCollider, CircleCollider, CollideSystem } from '../../engine/collider'
+import { setActiveCamera } from '../../engine/core/CameraRenderContext'
 import { ComponentX } from '../../engine/core/ComponentX'
 import { Node } from '../../engine/core/Node'
 import { Matrix2D } from '../../engine/math/Matrix2D'
@@ -31,6 +32,20 @@ class SpriteLike extends ComponentX {
   }
 }
 
+/** Reads the render transform the way Sprite.onRender does. */
+class CameraSpriteLike extends ComponentX {
+  override onRender(): void {
+    const node = this.node
+    const w = node.width * node.renderScaleX
+    const h = node.height * node.renderScaleY
+    SpriteLike.buffer!.pushSpriteTransformed(
+      node.renderMatrix, 1, 64, 64,
+      node.renderX - node.anchorX * w, node.renderY - node.anchorY * h, w, h,
+      node.renderRotation, node.anchorX * w, node.anchorY * h, false, false,
+    )
+  }
+}
+
 class Spinner extends ComponentX {
   override onUpdate(dt: number): void {
     this.node.rotation += dt * 90
@@ -38,7 +53,7 @@ class Spinner extends ComponentX {
 }
 
 /** A root with `groups` children of `perGroup` leaves, every leaf drawing a sprite. */
-function buildTree(groups: number, perGroup: number): Node {
+function buildTree(groups: number, perGroup: number, sprite: typeof ComponentX = SpriteLike): Node {
   const root = new Node('root')
   for (let g = 0; g < groups; g++) {
     const group = root.addChild(new Node(`g${g}`))
@@ -50,7 +65,7 @@ function buildTree(groups: number, perGroup: number): Node {
       leaf.y = i * 2
       leaf.width = 32
       leaf.height = 32
-      leaf.addComponent(SpriteLike)
+      leaf.addComponent(sprite)
     }
   }
   root._startTree()
@@ -118,6 +133,31 @@ export function sceneTree(groups = 50, perGroup = 100): Workload {
       root._updateTree(1 / 60)
       buffer.beginFrame()
       root._renderTree()
+      buffer.isFrameActive = false
+      SpriteLike.buffer = null
+    },
+    verify: () => buffer.getBufferView().commands.length === groups * perGroup,
+    dispose: () => root.destroy(),
+  }
+}
+
+/** Like sceneTree, rendered through a camera pass as Scene.render does. */
+export function cameraSceneTree(groups = 50, perGroup = 100): Workload {
+  const root = buildTree(groups, perGroup, CameraSpriteLike)
+  const buffer = new RenderCommandBuffer()
+  const viewMatrix = new Matrix2D(1.25, 0, 0, 1.25, -40, 30)
+  return {
+    name: `${groups * perGroup}-node update+render with camera`,
+    run() {
+      SpriteLike.buffer = buffer
+      root._updateTree(1 / 60)
+      buffer.beginFrame()
+      setActiveCamera({ viewMatrix, mask: 0xffffffff })
+      try {
+        root._renderTree()
+      } finally {
+        setActiveCamera(null)
+      }
       buffer.isFrameActive = false
       SpriteLike.buffer = null
     },

@@ -1,6 +1,5 @@
 import { Node } from '../core/Node'
-import { clamp01 } from '../helper/math'
-import { Easing, EasingFunction } from './Easing'
+import type { EasingFunction } from './Easing'
 
 export type TweenValues<T> = {
   [K in keyof T]?: T[K] extends number
@@ -86,26 +85,35 @@ export class TweenHandle implements Animation {
 
   update(dt: number): boolean {
     if (this.finished) return true
-    this.elapsed += Math.max(0, dt)
-    const delay = Math.max(0, this.options.delay ?? 0)
+    // Runs for every live tween each frame: comparisons instead of Math.max
+    // and clamp01, and an indexed loop, keep it cheap under QuickJS.
+    if (dt > 0) this.elapsed += dt
+    const options = this.options
+    const rawDelay = options.delay ?? 0
+    const delay = rawDelay > 0 ? rawDelay : 0
     if (this.elapsed < delay) return false
 
     if (!this.started) {
       this.started = true
       this.tracks = []
       collectTracks(this.target, this.values, this.tracks)
-      this.options.onStart?.()
+      options.onStart?.()
     }
 
-    const duration = Math.max(0, this.duration)
-    const progress = duration === 0
-      ? 1
-      : clamp01((this.elapsed - delay) / duration)
-    const eased = (this.options.ease ?? Easing.linear)(progress)
-    for (const track of this.tracks!) {
+    const duration = this.duration
+    let progress = 1
+    if (duration > 0) {
+      progress = (this.elapsed - delay) / duration
+      if (progress > 1) progress = 1
+      else if (!(progress > 0)) progress = 0
+    }
+    const eased = options.ease ? options.ease(progress) : progress
+    const tracks = this.tracks!
+    for (let i = 0; i < tracks.length; i++) {
+      const track = tracks[i]
       track.target[track.key] = track.from + (track.to - track.from) * eased
     }
-    this.options.onUpdate?.(progress)
+    options.onUpdate?.(progress)
 
     if (progress < 1) return false
     this.finished = true

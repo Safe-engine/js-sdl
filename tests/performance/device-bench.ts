@@ -6,6 +6,7 @@
  */
 import { measure } from './perf-utils'
 import {
+  cameraSceneTree,
   colliders,
   commandBufferGrowth,
   commandBufferSprites,
@@ -19,6 +20,7 @@ const suite: Array<() => Workload> = [
   () => commandBufferSprites(),
   () => commandBufferGrowth(),
   () => sceneTree(),
+  () => cameraSceneTree(),
   () => colliders(250),
   () => colliders(1000),
   () => tweens(),

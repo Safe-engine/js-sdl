@@ -37,29 +37,32 @@ export function polygonPolygon(a: Vec2[], b: Vec2[]): boolean {
   return !hasSeparatingAxis(a, b) && !hasSeparatingAxis(b, a)
 }
 
+// Collision tests run for every overlapping pair each frame, so these helpers
+// avoid allocating vectors and calling Math.min/max (costly under QuickJS).
 function hasSeparatingAxis(a: Vec2[], b: Vec2[]): boolean {
   for (let i = 0; i < a.length; i++) {
     const p1 = a[i]
     const p2 = a[(i + 1) % a.length]
-    const axis = { x: -(p2.y - p1.y), y: p2.x - p1.x }
-    const aProjection = projectPolygon(a, axis)
-    const bProjection = projectPolygon(b, axis)
-    if (aProjection.max < bProjection.min || bProjection.max < aProjection.min) {
-      return true
+    const axisX = -(p2.y - p1.y)
+    const axisY = p2.x - p1.x
+
+    let aMin = a[0].x * axisX + a[0].y * axisY
+    let aMax = aMin
+    for (let k = 1; k < a.length; k++) {
+      const projected = a[k].x * axisX + a[k].y * axisY
+      if (projected < aMin) aMin = projected
+      else if (projected > aMax) aMax = projected
     }
+    let bMin = b[0].x * axisX + b[0].y * axisY
+    let bMax = bMin
+    for (let k = 1; k < b.length; k++) {
+      const projected = b[k].x * axisX + b[k].y * axisY
+      if (projected < bMin) bMin = projected
+      else if (projected > bMax) bMax = projected
+    }
+    if (aMax < bMin || bMax < aMin) return true
   }
   return false
-}
-
-function projectPolygon(points: Vec2[], axis: Vec2): { min: number, max: number } {
-  let min = dot(points[0], axis)
-  let max = min
-  for (let i = 1; i < points.length; i++) {
-    const projected = dot(points[i], axis)
-    min = Math.min(min, projected)
-    max = Math.max(max, projected)
-  }
-  return { min, max }
 }
 
 function pointInPolygon(point: Vec2, polygon: Vec2[]): boolean {
@@ -79,21 +82,15 @@ function distancePointToSegmentSquared(point: Vec2, a: Vec2, b: Vec2): number {
   const dy = b.y - a.y
   if (dx === 0 && dy === 0) return distanceSquared(point, a)
 
-  const t = Math.max(0, Math.min(1, (
-    (point.x - a.x) * dx + (point.y - a.y) * dy
-  ) / (dx * dx + dy * dy)))
-  return distanceSquared(point, {
-    x: a.x + t * dx,
-    y: a.y + t * dy,
-  })
+  let t = ((point.x - a.x) * dx + (point.y - a.y) * dy) / (dx * dx + dy * dy)
+  t = t < 0 ? 0 : t > 1 ? 1 : t
+  const ex = point.x - (a.x + t * dx)
+  const ey = point.y - (a.y + t * dy)
+  return ex * ex + ey * ey
 }
 
 function distanceSquared(a: Vec2, b: Vec2): number {
   const dx = a.x - b.x
   const dy = a.y - b.y
   return dx * dx + dy * dy
-}
-
-function dot(a: Vec2, b: Vec2): number {
-  return a.x * b.x + a.y * b.y
 }

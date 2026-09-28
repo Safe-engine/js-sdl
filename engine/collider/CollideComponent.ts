@@ -37,6 +37,10 @@ export class Collider<Props extends ColliderProps = ColliderProps> extends Compo
   worldRadius = 0
   readonly aabb = Rect()
   readonly previousAabb = Rect()
+  /** Engine-internal: CollideSystem bookkeeping (sweep membership, pair id cache). */
+  _sweepStamp = 0
+  _pairIdOwner: object | null = null
+  _pairId = 0
 
   onAwake(): void {
     this.syncProps()
@@ -67,17 +71,27 @@ export class Collider<Props extends ColliderProps = ColliderProps> extends Compo
   }
 
   protected localToWorld(localX: number, localY: number): Vec2 {
-    const node = this.node!
-    const x = localX * node.worldScaleX
-    const y = localY * node.worldScaleY
-    const radians = node.worldRotation * Math.PI / 180
-    const cos = Math.cos(radians)
-    const sin = Math.sin(radians)
+    return this.setWorldPoint({ x: 0, y: 0 }, localX, localY)
+  }
 
-    return {
-      x: node.worldX + x * cos - y * sin,
-      y: node.worldY + x * sin + y * cos,
-    }
+  /**
+   * Maps a node-local point through the node's world matrix into `out`.
+   * Refresh runs for every collider each frame, so this avoids allocating and
+   * the per-point trigonometry of decomposed rotation/scale.
+   */
+  protected setWorldPoint(out: Vec2, localX: number, localY: number): Vec2 {
+    const m = this.node!.worldMatrix
+    out.x = m.a * localX + m.c * localY + m.tx
+    out.y = m.b * localX + m.d * localY + m.ty
+    return out
+  }
+
+  /** Resizes `worldPoints` to `count`, reusing the existing point objects. */
+  protected resizeWorldPoints(count: number): Vec2[] {
+    const points = this.worldPoints
+    while (points.length < count) points.push({ x: 0, y: 0 })
+    points.length = count
+    return points
   }
 
   protected setAabbFromPoints(points: Vec2[]): void {
@@ -91,15 +105,16 @@ export class Collider<Props extends ColliderProps = ColliderProps> extends Compo
     }
 
     let minX = points[0].x
-    let maxX = points[0].x
+    let maxX = minX
     let minY = points[0].y
-    let maxY = points[0].y
+    let maxY = minY
     for (let i = 1; i < points.length; i++) {
-      const p = points[i]
-      minX = Math.min(minX, p.x)
-      maxX = Math.max(maxX, p.x)
-      minY = Math.min(minY, p.y)
-      maxY = Math.max(maxY, p.y)
+      const x = points[i].x
+      const y = points[i].y
+      if (x < minX) minX = x
+      else if (x > maxX) maxX = x
+      if (y < minY) minY = y
+      else if (y > maxY) maxY = y
     }
     this.aabb.x = minX
     this.aabb.y = minY
@@ -115,20 +130,18 @@ export class BoxCollider extends Collider<BoxColliderProps> {
 
     const width = this.props.width ?? this.node.width
     const height = this.props.height ?? this.node.height
-    const [offsetX, offsetY] = this.props.offset ?? [0, 0]
-    const left = offsetX - width * this.node.anchorX
-    const top = offsetY - height * this.node.anchorY
+    const offset = this.props.offset
+    const left = (offset ? offset[0] : 0) - width * this.node.anchorX
+    const top = (offset ? offset[1] : 0) - height * this.node.anchorY
     const right = left + width
     const bottom = top + height
 
-    this.worldPoints.length = 0
-    this.worldPoints.push(
-      this.localToWorld(left, top),
-      this.localToWorld(left, bottom),
-      this.localToWorld(right, bottom),
-      this.localToWorld(right, top),
-    )
-    this.setAabbFromPoints(this.worldPoints)
+    const points = this.resizeWorldPoints(4)
+    this.setWorldPoint(points[0], left, top)
+    this.setWorldPoint(points[1], left, bottom)
+    this.setWorldPoint(points[2], right, bottom)
+    this.setWorldPoint(points[3], right, top)
+    this.setAabbFromPoints(points)
   }
 }
 
@@ -137,8 +150,8 @@ export class CircleCollider extends Collider<CircleColliderProps> {
     super.refresh()
     if (!this.node) return
 
-    const [offsetX, offsetY] = this.props.offset ?? [0, 0]
-    this.worldPosition = this.localToWorld(offsetX, offsetY)
+    const offset = this.props.offset
+    this.setWorldPoint(this.worldPosition, offset ? offset[0] : 0, offset ? offset[1] : 0)
     this.worldRadius = this.props.radius * Math.max(
       Math.abs(this.node.worldScaleX),
       Math.abs(this.node.worldScaleY),
@@ -167,12 +180,18 @@ export class PolygonCollider extends Collider<PolygonColliderProps> {
     super.refresh()
     if (!this.node) return
 
-    const [offsetX, offsetY] = this.props.offset ?? [0, 0]
-    this.worldPoints.length = 0
-    for (const point of this.points) {
-      this.worldPoints.push(this.localToWorld(point.x + offsetX, point.y + offsetY))
+    const offset = this.props.offset
+    const offsetX = offset ? offset[0] : 0
+    const offsetY = offset ? offset[1] : 0
+    const localPoints = this.props.points
+    const points = this.resizeWorldPoints(localPoints.length)
+    for (let i = 0; i < localPoints.length; i++) {
+      const point = localPoints[i]
+      const x = Array.isArray(point) ? point[0] : point.x
+      const y = Array.isArray(point) ? point[1] : point.y
+      this.setWorldPoint(points[i], x + offsetX, y + offsetY)
     }
-    this.setAabbFromPoints(this.worldPoints)
+    this.setAabbFromPoints(points)
   }
 }
 

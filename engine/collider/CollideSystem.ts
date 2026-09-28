@@ -8,9 +8,13 @@ import {
 
 const PAIR_KEY_SCALE = 2 ** 26
 
+/** Marks the colliders collected by one sortSweep call; unique across systems. */
+let nextSweepStamp = 1
+
 class TrackedContact extends Contact {
   /** Last frame in which the pair's AABBs overlapped. */
   frame = 0
+  key = 0
 }
 
 export interface CollideSystemProps {
@@ -26,6 +30,8 @@ export class CollideSystem extends ComponentX<CollideSystemProps> {
   private frame = 0
   /** Colliders ordered by AABB left edge; kept across frames so re-sorting is cheap. */
   private sweep: Collider[] = []
+  /** Per-frame [left, right, top, bottom] of each collider in sweep order. */
+  private bounds = new Float64Array(0)
 
   onAwake(): void {
     this.debug = this.props.debug ?? false
@@ -50,14 +56,19 @@ export class CollideSystem extends ComponentX<CollideSystemProps> {
   private walk(node: Node): void {
     if (!node.active) return
 
-    for (const component of node.components) {
-      if (component instanceof Collider && component.enabled) {
+    // Indexed loops: array iterators are costly in QuickJS and this visits
+    // every node each frame.
+    const components = node.components
+    for (let i = 0; i < components.length; i++) {
+      const component = components[i]
+      if (component instanceof Collider && component._enabled) {
         this.colliders.push(component)
       }
     }
 
-    for (const child of node.children) {
-      this.walk(child)
+    const children = node.children
+    for (let i = 0; i < children.length; i++) {
+      this.walk(children[i])
     }
   }
 
@@ -70,20 +81,35 @@ export class CollideSystem extends ComponentX<CollideSystemProps> {
     const frame = ++this.frame
     const sweep = this.sortSweep()
 
-    for (let i = 0; i < sweep.length; i++) {
+    // Snapshot the AABBs (fixed since refresh) into typed arrays in sweep
+    // order: the inner loop runs ~n * overlap times per frame and plain
+    // array reads are far cheaper than method calls in QuickJS.
+    const count = sweep.length
+    if (this.bounds.length < count * 4) this.bounds = new Float64Array(count * 8)
+    const bounds = this.bounds
+    for (let i = 0; i < count; i++) {
+      const aabb = sweep[i].getAABB()
+      bounds[i * 4] = aabb.x
+      bounds[i * 4 + 1] = aabb.x + aabb.width
+      bounds[i * 4 + 2] = aabb.y
+      bounds[i * 4 + 3] = aabb.y + aabb.height
+    }
+
+    for (let i = 0; i < count; i++) {
       const a = sweep[i]
-      const aabbA = a.getAABB()
-      const right = aabbA.x + aabbA.width
-      for (let j = i + 1; j < sweep.length; j++) {
+      const right = bounds[i * 4 + 1]
+      const top = bounds[i * 4 + 2]
+      const bottom = bounds[i * 4 + 3]
+      for (let j = i + 1; j < count; j++) {
+        if (bounds[j * 4] > right) break
+        if (bounds[j * 4 + 2] > bottom || top > bounds[j * 4 + 3]) continue
         const b = sweep[j]
-        const aabbB = b.getAABB()
-        if (aabbB.x > right) break
-        if (aabbB.y > aabbA.y + aabbA.height || aabbA.y > aabbB.y + aabbB.height) continue
 
         const key = this.getPairKey(a, b)
         let contact = this.contacts.get(key)
         if (!contact) {
           contact = new TrackedContact(a, b)
+          contact.key = key
           this.contacts.set(key, contact)
         }
         contact.frame = frame
@@ -91,23 +117,39 @@ export class CollideSystem extends ComponentX<CollideSystemProps> {
       }
     }
 
-    for (const [key, contact] of this.contacts) {
+    // values() avoids allocating a [key, value] entry per contact.
+    for (const contact of this.contacts.values()) {
       if (contact.frame === frame) continue
       if (contact.isTouching) {
         this.dispatch(CollisionType.EXIT, contact.collider1, contact.collider2)
       }
-      this.contacts.delete(key)
+      this.contacts.delete(contact.key)
     }
   }
 
   /** Insertion-sort by AABB left edge: near O(n) since order changes little per frame. */
   private sortSweep(): Collider[] {
-    const current = new Set(this.colliders)
-    const sweep = this.sweep.filter(collider => current.has(collider))
-    if (sweep.length !== this.colliders.length) {
-      const kept = new Set(sweep)
-      for (const collider of this.colliders) {
-        if (!kept.has(collider)) sweep.push(collider)
+    // Stamps on the colliders instead of Sets: no per-frame allocation.
+    const colliders = this.colliders
+    const current = nextSweepStamp++
+    const kept = nextSweepStamp++
+    for (let i = 0; i < colliders.length; i++) colliders[i]._sweepStamp = current
+    const previous = this.sweep
+    const sweep: Collider[] = []
+    for (let i = 0; i < previous.length; i++) {
+      const collider = previous[i]
+      if (collider._sweepStamp === current) {
+        collider._sweepStamp = kept
+        sweep.push(collider)
+      }
+    }
+    if (sweep.length !== colliders.length) {
+      for (let i = 0; i < colliders.length; i++) {
+        const collider = colliders[i]
+        if (collider._sweepStamp !== kept) {
+          collider._sweepStamp = kept
+          sweep.push(collider)
+        }
       }
     }
     for (let i = 1; i < sweep.length; i++) {
@@ -151,11 +193,15 @@ export class CollideSystem extends ComponentX<CollideSystemProps> {
   }
 
   private getId(collider: Collider): number {
+    // Cached on the collider to skip the WeakMap on the common single-system path.
+    if (collider._pairIdOwner === this) return collider._pairId
     let id = this.ids.get(collider)
     if (!id) {
       id = this.nextId++
       this.ids.set(collider, id)
     }
+    collider._pairIdOwner = this
+    collider._pairId = id
     return id
   }
 

@@ -62,8 +62,8 @@ export class Node {
   private _anchorX = 0.5
   private _anchorY = 0.5
   private _transformDirty = true
-  private _worldX = 0
-  private _worldY = 0
+  /** Whether _worldRotation/_worldScaleX/_worldScaleY match the world matrix. */
+  private _worldDecomposed = false
   private _worldRotation = 0
   private _worldScaleX = 1
   private _worldScaleY = 1
@@ -71,6 +71,11 @@ export class Node {
   private readonly _worldMatrix = new Matrix2D()
   private readonly _invWorldMatrix = new Matrix2D()
   private readonly _renderMatrix = new Matrix2D()
+  /** Bumped whenever _worldMatrix is recomputed. */
+  private _worldRevision = 0
+  /** Camera pass and world revision that _renderMatrix was computed for. */
+  private _renderCamera: object | null = null
+  private _renderRevision = -1
   constructor(name?: string) {
     this.name = name
   }
@@ -202,26 +207,26 @@ export class Node {
 
   get worldX(): number {
     this._ensureWorldTransform()
-    return this._worldX
+    return this._worldMatrix.tx
   }
 
   get worldY(): number {
     this._ensureWorldTransform()
-    return this._worldY
+    return this._worldMatrix.ty
   }
 
   get worldRotation(): number {
-    this._ensureWorldTransform()
+    this._ensureWorldDecomposed()
     return this._worldRotation
   }
 
   get worldScaleX(): number {
-    this._ensureWorldTransform()
+    this._ensureWorldDecomposed()
     return this._worldScaleX
   }
 
   get worldScaleY(): number {
-    this._ensureWorldTransform()
+    this._ensureWorldDecomposed()
     return this._worldScaleY
   }
 
@@ -229,7 +234,14 @@ export class Node {
     this._ensureWorldTransform()
     const camera = getActiveCamera()
     if (!camera) return this._worldMatrix
-    return camera.viewMatrix.multiply(this._worldMatrix, this._renderMatrix)
+    // Renderers read renderX/Y/Rotation/Scale and renderMatrix separately; each
+    // camera pass gets a new state object, so reuse the product within a pass.
+    if (this._renderCamera !== camera || this._renderRevision !== this._worldRevision) {
+      camera.viewMatrix.multiply(this._worldMatrix, this._renderMatrix)
+      this._renderCamera = camera
+      this._renderRevision = this._worldRevision
+    }
+    return this._renderMatrix
   }
 
   get renderX(): number {
@@ -513,12 +525,15 @@ export class Node {
 
   /** Internal: traverse update through tree. */
   _updateTree(dt: number): void {
-    if (!this.active || this._destroyed) return
+    // Fields instead of the `active`/`enabled` getters: this runs for every
+    // node each frame, and getter calls are costly in QuickJS.
+    if (!this._active || this._destroyed) return
     if (!this._actionsAndSchedulePaused) {
-      this._updateScheduledCallbacks(dt)
+      if (this._scheduledCallbacks.length !== 0) this._updateScheduledCallbacks(dt)
+      // Read `this.components` live: a component may destroy the node mid-loop.
       for (let i = 0; i < this.components.length; i++) {
         const component = this.components[i]
-        if (component.enabled) component.onUpdate(dt)
+        if (component._enabled) component.onUpdate(dt)
       }
     }
     const children = this.children
@@ -536,13 +551,13 @@ export class Node {
 
   /** Internal: traverse render through tree. */
   _renderTree(): void {
-    if (!this.active || !this.visible || this._destroyed) return
+    if (!this._active || !this.visible || this._destroyed) return
     const camera = getActiveCamera()
     const renderComponents = !camera || (camera.mask & this.cameraMask) !== 0
     if (renderComponents) {
       for (let i = 0; i < this.components.length; i++) {
         const component = this.components[i]
-        if (component.enabled) component.onRender()
+        if (component._enabled) component.onRender()
       }
     }
     const renderChildren = this.getRenderChildren()
@@ -559,7 +574,7 @@ export class Node {
     if (renderComponents) {
       for (let i = this.components.length - 1; i >= 0; i--) {
         const component = this.components[i]
-        if (component.enabled) component.onRenderEnd()
+        if (component._enabled) component.onRenderEnd()
       }
     }
   }
@@ -633,8 +648,9 @@ export class Node {
     // subtree is already dirty and needs no further traversal.
     if (this._transformDirty) return
     this._transformDirty = true
-    for (const child of this.children) {
-      child._markTransformDirty()
+    const children = this.children
+    for (let i = 0; i < children.length; i++) {
+      children[i]._markTransformDirty()
     }
   }
 
@@ -642,39 +658,53 @@ export class Node {
     this._renderChildrenRevision = -1
   }
 
+  /**
+   * Hot path, run for every moved node each frame: reads fields rather than
+   * getters, and leaves rotation/scale decomposition to _ensureWorldDecomposed
+   * since only a few callers need it (native calls are costly in QuickJS).
+   */
   private _ensureWorldTransform(): void {
     if (!this._transformDirty) return
 
-    const parent = this.parent
+    const parent = this._parent
+    // `x !== x` is the NaN test the `x`/`y` getters do with Number.isNaN.
+    const x = this._x
+    const y = this._y
     this._localMatrix.fromTransform(
-      this.x,
-      this.y,
-      this.scaleX,
-      this.scaleY,
-      this.rotation,
+      x !== x ? 0 : x,
+      y !== y ? 0 : y,
+      this._scaleX,
+      this._scaleY,
+      this._rotation,
     )
 
     if (!parent) {
       this._worldMatrix.copy(this._localMatrix)
-      this._worldX = this.x
-      this._worldY = this.y
-      this._worldRotation = this.rotation
-      this._worldScaleX = this.scaleX
-      this._worldScaleY = this.scaleY
-      this._transformDirty = false
+    } else {
+      parent._ensureWorldTransform()
+      parent._worldMatrix.multiply(this._localMatrix, this._worldMatrix)
+    }
+    this._worldDecomposed = false
+    this._worldRevision++
+    this._transformDirty = false
+  }
+
+  private _ensureWorldDecomposed(): void {
+    this._ensureWorldTransform()
+    if (this._worldDecomposed) return
+    this._worldDecomposed = true
+
+    if (!this._parent) {
+      this._worldRotation = this._rotation
+      this._worldScaleX = this._scaleX
+      this._worldScaleY = this._scaleY
       return
     }
-
-    parent._ensureWorldTransform()
-    parent._worldMatrix.multiply(this._localMatrix, this._worldMatrix)
-
-    this._worldX = this._worldMatrix.tx
-    this._worldY = this._worldMatrix.ty
-    this._worldRotation = (Math.atan2(this._worldMatrix.b, this._worldMatrix.a) * 180) / Math.PI
-    this._worldScaleX = Math.hypot(this._worldMatrix.a, this._worldMatrix.b)
-    const det = this._worldMatrix.a * this._worldMatrix.d - this._worldMatrix.b * this._worldMatrix.c
-    this._worldScaleY = Math.hypot(this._worldMatrix.c, this._worldMatrix.d) * (det < 0 ? -1 : 1)
-    this._transformDirty = false
+    const m = this._worldMatrix
+    this._worldRotation = (Math.atan2(m.b, m.a) * 180) / Math.PI
+    this._worldScaleX = Math.hypot(m.a, m.b)
+    const det = m.a * m.d - m.b * m.c
+    this._worldScaleY = Math.hypot(m.c, m.d) * (det < 0 ? -1 : 1)
   }
 
   private _updateScheduledCallbacks(dt: number): void {
