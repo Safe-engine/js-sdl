@@ -32,6 +32,8 @@ const DEFAULT_VERTEX_SHADER = `
   }
 `
 
+let warnedUnsupported = false
+
 /** Renders a node-sized quad through a user-provided WebGL 1 GLSL shader. */
 export class GLSLShader extends ComponentX<GLSLShaderProps> {
   private program: GLSLProgram | null = null
@@ -55,7 +57,10 @@ export class GLSLShader extends ComponentX<GLSLShaderProps> {
 
   onStart(): void {
     if (!sdl3.createGLSLProgram) {
-      throw new Error('GLSLShader requires the WebGL renderer')
+      // Throwing here would abort starting the rest of the scene tree on native.
+      if (!warnedUnsupported) console.warn('GLSLShader requires the WebGL renderer; shader skipped')
+      warnedUnsupported = true
+      return
     }
     this.program = sdl3.createGLSLProgram(this.props.vertex ?? DEFAULT_VERTEX_SHADER, this.props.fragment)
     this.started = true
